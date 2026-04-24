@@ -10,3 +10,10 @@ pydantic[email]==2.11.3
 passlib[bcrypt]==1.7.4
 pyjwt==2.10.1
 bcrypt==4.2.1
+
+# Test harness (PX-002)
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1
+asgi-lifespan==2.1.0
+mongomock-motor==0.0.35

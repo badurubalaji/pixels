@@ -1,10 +1,19 @@
+"""Asset upload / retrieval / deletion endpoints.
+
+Assets are stored on-disk under ``UPLOAD_DIR`` with metadata in MongoDB.
+All DB handles arrive via FastAPI's ``Depends(get_db)`` pattern.
+"""
+from __future__ import annotations
+
 import os
 import uuid
 from datetime import datetime, timezone
+from typing import Annotated
 
 from bson import ObjectId
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.database import get_db
 from app.models import AssetResponse
@@ -23,9 +32,23 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @asset_router.post("/upload", response_model=AssetResponse)
 async def upload_asset(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     file: UploadFile = File(...),
     project_id: str = Query(default=None),
 ):
+    """Upload an image asset, persist to disk, record metadata in Mongo.
+
+    Args:
+        db: Async Mongo database handle.
+        file: Uploaded file (must match ``ALLOWED_TYPES``).
+        project_id: Optional project to associate this asset with.
+
+    Returns:
+        ``AssetResponse`` with the persisted asset's metadata and URL.
+
+    Raises:
+        HTTPException: 400 for unsupported type or oversize payload.
+    """
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
 
@@ -42,7 +65,6 @@ async def upload_asset(
         f.write(contents)
 
     # Save metadata to DB
-    db = get_db()
     now = datetime.now(timezone.utc)
 
     doc = {
@@ -69,9 +91,22 @@ async def upload_asset(
 
 
 @asset_router.get("/{asset_id}")
-async def get_asset(asset_id: str):
-    db = get_db()
+async def get_asset(
+    asset_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+):
+    """Stream an asset's bytes from disk.
 
+    Args:
+        asset_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+
+    Returns:
+        ``FileResponse`` streaming the file with its recorded content-type.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing record or file.
+    """
     if not ObjectId.is_valid(asset_id):
         raise HTTPException(status_code=400, detail="Invalid asset ID")
 
@@ -91,9 +126,22 @@ async def get_asset(asset_id: str):
 
 
 @asset_router.delete("/{asset_id}")
-async def delete_asset(asset_id: str):
-    db = get_db()
+async def delete_asset(
+    asset_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+):
+    """Delete an asset record and its on-disk file.
 
+    Args:
+        asset_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+
+    Returns:
+        Dict ``{"status": "deleted", "id": asset_id}``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing record.
+    """
     if not ObjectId.is_valid(asset_id):
         raise HTTPException(status_code=400, detail="Invalid asset ID")
 
@@ -110,9 +158,19 @@ async def delete_asset(asset_id: str):
 
 
 @asset_router.get("", response_model=list[AssetResponse])
-async def list_assets(project_id: str = Query(default=None)):
-    db = get_db()
+async def list_assets(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    project_id: str = Query(default=None),
+):
+    """List assets, optionally scoped to a project.
 
+    Args:
+        db: Async Mongo database handle.
+        project_id: Optional project id filter.
+
+    Returns:
+        Up to 100 ``AssetResponse`` entries, newest first.
+    """
     query = {}
     if project_id:
         query["project_id"] = project_id

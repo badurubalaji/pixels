@@ -1,23 +1,41 @@
+"""Project CRUD, versioning, and share-link API endpoints.
+
+All handlers receive the MongoDB handle via FastAPI's ``Depends(get_db)``
+pattern (§5.1 project-context.md) so dependency-injection, testing, and
+OpenAPI stay idiomatic.
+"""
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Annotated, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.database import get_db, is_connected
 from app.auth import get_current_user
+from app.database import get_db, is_connected
 from app.models import (
     ProjectCreate,
-    ProjectUpdate,
-    ProjectResponse,
     ProjectDetailResponse,
+    ProjectResponse,
+    ProjectUpdate,
 )
 
 project_router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
 def _doc_to_response(doc: dict, detail: bool = False) -> dict:
-    """Convert MongoDB document to response dict."""
+    """Convert a MongoDB project document to the API response shape.
+
+    Args:
+        doc: Raw project document from MongoDB (includes ``_id``).
+        detail: When True, include the full ``canvas_json`` payload.
+
+    Returns:
+        A dict matching ``ProjectResponse`` (or ``ProjectDetailResponse`` when
+        ``detail`` is True).
+    """
     data = {
         "id": str(doc["_id"]),
         "name": doc.get("name", "Untitled"),
@@ -33,8 +51,21 @@ def _doc_to_response(doc: dict, detail: bool = False) -> dict:
 
 
 @project_router.post("", response_model=ProjectDetailResponse)
-async def create_project(body: ProjectCreate, current_user: Optional[dict] = Depends(get_current_user)):
-    db = get_db()
+async def create_project(
+    body: ProjectCreate,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Create a new project owned by the current user (or anonymous).
+
+    Args:
+        body: Project creation payload (name, dimensions, canvas_json, thumbnail).
+        db: Async Mongo database handle injected by FastAPI.
+        current_user: Optional authenticated user dict; anonymous if None.
+
+    Returns:
+        The newly-created project as ``ProjectDetailResponse``.
+    """
     now = datetime.now(timezone.utc)
 
     doc = {
@@ -55,15 +86,25 @@ async def create_project(body: ProjectCreate, current_user: Optional[dict] = Dep
 
 @project_router.get("", response_model=list[ProjectResponse])
 async def list_projects(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: Optional[dict] = Depends(get_current_user),
 ):
+    """List projects visible to the current user, newest first.
+
+    Args:
+        db: Async Mongo database handle.
+        skip: Pagination offset (defaults to 0).
+        limit: Maximum projects to return (1-100, defaults to 50).
+        current_user: Optional authenticated user dict.
+
+    Returns:
+        List of ``ProjectResponse`` entries (empty list if DB offline).
+    """
     # Gracefully degrade when DB is offline — frontend falls back to localStorage
     if not is_connected():
         return []
-
-    db = get_db()
 
     # Scope to user if authenticated, else anonymous projects
     query = {"user_id": current_user["id"]} if current_user else {"user_id": None}
@@ -80,9 +121,24 @@ async def list_projects(
 
 
 @project_router.get("/{project_id}", response_model=ProjectDetailResponse)
-async def get_project(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    db = get_db()
+async def get_project(
+    project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Fetch a single project by ID, honoring ownership and share tokens.
 
+    Args:
+        project_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict.
+
+    Returns:
+        Full ``ProjectDetailResponse`` including canvas_json.
+
+    Raises:
+        HTTPException: 400 if id invalid, 404 if missing, 403 if access denied.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -103,10 +159,23 @@ async def get_project(project_id: str, current_user: Optional[dict] = Depends(ge
 async def update_project(
     project_id: str,
     body: ProjectUpdate,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     current_user: Optional[dict] = Depends(get_current_user),
 ):
-    db = get_db()
+    """Apply partial updates to an owned project.
 
+    Args:
+        project_id: MongoDB ObjectId as a string.
+        body: Partial update payload; only set fields are applied.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        The updated project as ``ProjectDetailResponse``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -133,9 +202,24 @@ async def update_project(
 
 
 @project_router.delete("/{project_id}")
-async def delete_project(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    db = get_db()
+async def delete_project(
+    project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Delete an owned project and its associated assets.
 
+    Args:
+        project_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        Dict ``{"status": "deleted", "id": project_id}``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -156,10 +240,24 @@ async def delete_project(project_id: str, current_user: Optional[dict] = Depends
 
 
 @project_router.get("/{project_id}/versions")
-async def list_versions(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    """List all version snapshots for a project (newest first)."""
-    db = get_db()
+async def list_versions(
+    project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """List all version snapshots for a project (newest first, capped at 20).
 
+    Args:
+        project_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        List of version summary dicts.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -193,12 +291,24 @@ async def list_versions(project_id: str, current_user: Optional[dict] = Depends(
 @project_router.post("/{project_id}/versions")
 async def create_version(
     project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     note: Optional[str] = None,
     current_user: Optional[dict] = Depends(get_current_user),
 ):
-    """Snapshot the current canvas state as a new version."""
-    db = get_db()
+    """Snapshot the current canvas state as a new version.
 
+    Args:
+        project_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+        note: Optional caption describing this snapshot.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        Dict with the new version's ``id``, ``project_id``, ``created_at``.
+
+    Raises:
+        HTTPException: 400 invalid id or empty canvas, 404 missing, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -244,11 +354,23 @@ async def create_version(
 async def restore_version(
     project_id: str,
     version_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     current_user: Optional[dict] = Depends(get_current_user),
 ):
-    """Restore a project to a specific version's state."""
-    db = get_db()
+    """Restore a project to a specific version's canvas state.
 
+    Args:
+        project_id: MongoDB ObjectId of the project.
+        version_id: MongoDB ObjectId of the version to restore.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        Dict ``{"status": "restored"}``.
+
+    Raises:
+        HTTPException: 400 invalid ids, 404 missing project/version, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id) or not ObjectId.is_valid(version_id):
         raise HTTPException(status_code=400, detail="Invalid ID")
 
@@ -278,11 +400,25 @@ async def restore_version(
 
 
 @project_router.post("/{project_id}/share")
-async def create_share_link(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    """Generate or return existing share token for read-only access."""
-    import secrets
+async def create_share_link(
+    project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Generate or return an existing share token for read-only access.
 
-    db = get_db()
+    Args:
+        project_id: MongoDB ObjectId of the project.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        Dict with ``share_token`` and ``project_id``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not owner.
+    """
+    import secrets
 
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
@@ -307,9 +443,24 @@ async def create_share_link(project_id: str, current_user: Optional[dict] = Depe
 
 
 @project_router.delete("/{project_id}/share")
-async def revoke_share_link(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    db = get_db()
+async def revoke_share_link(
+    project_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Revoke the share token on a project, disabling public read access.
 
+    Args:
+        project_id: MongoDB ObjectId of the project.
+        db: Async Mongo database handle.
+        current_user: Optional authenticated user dict (owner check).
+
+    Returns:
+        Dict ``{"status": "revoked"}``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not owner.
+    """
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
@@ -331,9 +482,22 @@ async def revoke_share_link(project_id: str, current_user: Optional[dict] = Depe
 
 
 @project_router.get("/shared/{share_token}", response_model=ProjectDetailResponse)
-async def get_shared_project(share_token: str):
-    db = get_db()
+async def get_shared_project(
+    share_token: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+):
+    """Fetch a shared project by its public share token (read-only).
 
+    Args:
+        share_token: Opaque URL-safe share identifier.
+        db: Async Mongo database handle.
+
+    Returns:
+        Full ``ProjectDetailResponse``.
+
+    Raises:
+        HTTPException: 404 if no project matches the token.
+    """
     doc = await db.projects.find_one({"share_token": share_token})
     if not doc:
         raise HTTPException(status_code=404, detail="Shared project not found")

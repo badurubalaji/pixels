@@ -1,18 +1,33 @@
 """Public template gallery: community-shared templates anyone can clone."""
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Annotated, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
-from app.auth import get_current_user, require_user
+from app.auth import require_user
 from app.database import get_db, is_connected
 
 template_router = APIRouter(prefix="/public-templates", tags=["Public Templates"])
 
 
 class PublicTemplateCreate(BaseModel):
+    """Payload for publishing a new public template.
+
+    Attributes:
+        name: Template display name.
+        category: Taxonomy bucket (defaults to ``Other``).
+        description: Optional long-form description.
+        canvas_json: Serialized fabric.js canvas state.
+        thumbnail: Optional data-URL thumbnail.
+        width: Canvas width in pixels.
+        height: Canvas height in pixels.
+    """
+
     name: str
     category: str = "Other"
     description: Optional[str] = None
@@ -23,6 +38,8 @@ class PublicTemplateCreate(BaseModel):
 
 
 class PublicTemplate(BaseModel):
+    """Summary record for a public template (no canvas_json)."""
+
     id: str
     name: str
     category: str
@@ -37,20 +54,35 @@ class PublicTemplate(BaseModel):
 
 
 class PublicTemplateDetail(PublicTemplate):
+    """Full template record including the serialized canvas_json."""
+
     canvas_json: str
 
 
 @template_router.get("", response_model=list[PublicTemplate])
 async def list_public_templates(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
     category: Optional[str] = None,
     search: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
+    """List public templates, optionally filtered by category or search term.
+
+    Args:
+        db: Async Mongo database handle.
+        category: Optional category filter (``all`` disables the filter).
+        search: Optional case-insensitive substring match on template name.
+        skip: Pagination offset.
+        limit: Maximum entries to return (1-100).
+
+    Returns:
+        List of ``PublicTemplate`` summaries sorted by ``uses_count`` desc.
+        Empty list when the DB is offline.
+    """
     if not is_connected():
         return []
 
-    db = get_db()
     query: dict = {}
     if category and category != "all":
         query["category"] = category
@@ -66,8 +98,22 @@ async def list_public_templates(
 
 
 @template_router.get("/{template_id}", response_model=PublicTemplateDetail)
-async def get_public_template(template_id: str):
-    db = get_db()
+async def get_public_template(
+    template_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+):
+    """Fetch a public template by id and bump its ``uses_count``.
+
+    Args:
+        template_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+
+    Returns:
+        Full ``PublicTemplateDetail`` including canvas_json.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing.
+    """
     if not ObjectId.is_valid(template_id):
         raise HTTPException(status_code=400, detail="Invalid template ID")
 
@@ -85,9 +131,21 @@ async def get_public_template(template_id: str):
 
 
 @template_router.post("", response_model=PublicTemplateDetail)
-async def publish_template(body: PublicTemplateCreate, current_user: dict = Depends(require_user)):
-    db = get_db()
+async def publish_template(
+    body: PublicTemplateCreate,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+):
+    """Publish a new template to the public gallery.
 
+    Args:
+        body: Template creation payload.
+        db: Async Mongo database handle.
+        current_user: Authenticated user dict (required; becomes author).
+
+    Returns:
+        The newly-created ``PublicTemplateDetail``.
+    """
     # Get author name from users collection
     user_doc = await db.users.find_one({"_id": ObjectId(current_user["id"])})
     author_name = user_doc.get("name") if user_doc else current_user.get("email", "Anonymous")
@@ -112,8 +170,24 @@ async def publish_template(body: PublicTemplateCreate, current_user: dict = Depe
 
 
 @template_router.delete("/{template_id}")
-async def delete_public_template(template_id: str, current_user: dict = Depends(require_user)):
-    db = get_db()
+async def delete_public_template(
+    template_id: str,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+):
+    """Delete a public template. Only the original author may delete.
+
+    Args:
+        template_id: MongoDB ObjectId as a string.
+        db: Async Mongo database handle.
+        current_user: Authenticated user dict (must match template author_id).
+
+    Returns:
+        Dict ``{"status": "deleted"}``.
+
+    Raises:
+        HTTPException: 400 invalid id, 404 missing, 403 not author.
+    """
     if not ObjectId.is_valid(template_id):
         raise HTTPException(status_code=400, detail="Invalid template ID")
 
@@ -129,6 +203,15 @@ async def delete_public_template(template_id: str, current_user: dict = Depends(
 
 
 def _doc_to_response(doc: dict, with_json: bool = False) -> dict:
+    """Project a MongoDB template document into the response shape.
+
+    Args:
+        doc: Raw template document from MongoDB.
+        with_json: When True, include the ``canvas_json`` field.
+
+    Returns:
+        A plain dict matching ``PublicTemplate`` (or ``PublicTemplateDetail``).
+    """
     data = {
         "id": str(doc["_id"]),
         "name": doc.get("name", "Untitled"),

@@ -75,3 +75,15 @@ Non-blocking on the current sprint. Queue as individual stories after Sprint 1 P
 - [ ] **PX-001f — SCSS budget warnings.** Fix SCSS component-style budget warnings on `dashboard/` and `sidebar-drawer` components (pre-existing, surfaced by the clean build). Size: S. Priority: P3.
 
 Queue into Sprint 2 backlog once Sprint 1 P0s close out.
+
+---
+
+## Wave #4 — follow-ups Amelia raised during PX-002 execution (2026-04-24)
+
+Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non-blocking on Sprint 1 P0s; queue for Sprint 2 hardening.
+
+- [ ] **PX-002-FUP-1 — Backend mypy-strict cleanup.** 96 pre-existing mypy-strict errors across the route files (`Missing type arguments for dict`, `no-untyped-def`, etc.). Dedicated hardening story. Size: M. Priority: P2.
+- [ ] **PX-002-FUP-2 — Ruff E741 in `brand_routes.py`.** Lines 67 + 95 use ambiguous `l` variable (rename to `logo`). Trivial. Size: XS. Priority: P3.
+- [ ] **PX-002-FUP-3 — `get_db()` return type annotation in `database.py`.** Folds into FUP-1 ideally. Size: XS. Priority: P3.
+- [ ] **PX-002-FUP-4 — `app/routes.py` deprecated `Query(regex=...)`.** Pydantic v2 wants `pattern=`. Size: XS. Priority: P2.
+- [ ] **PX-002-FUP-5 — passlib imports deprecated `crypt` (Python 3.13 EoL).** Upstream concern; consider migration to `argon2-cffi` or `pwdhash`. Size: M. Priority: P2.

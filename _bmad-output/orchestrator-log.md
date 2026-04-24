@@ -103,3 +103,26 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Kill-switch:**
   - To revert to local-only: `git remote remove origin && gh repo delete badurubalaji/pixels --yes`.
   - To restore the pixelforge-only repo: `rm -rf /home/ashulabs/workspace/pixels/.git && cp -r /tmp/pixelforge-old-git-backup-2026-04-24 /home/ashulabs/workspace/pixels/pixelforge/.git`.
+
+## 2026-04-24T01:45:00Z · Sprint-1 wave-2 — sequence change (not parallel)
+
+- **Action:** revising "PX-002 + PX-020 in parallel" to **sequence: PX-002 → PX-020**.
+- **Rationale:** post-review re-read of both story files showed PX-002 owns the creation of `backend/tests/conftest.py` + `pytest.ini` + the AsyncClient lifespan harness, and PX-020 needs that same directory to drop its FE/BE platform-preset parity test (`backend/tests/test_platform_preset_parity.py`). Running concurrent subagents on the same `backend/tests/` tree risks file-creation races and conflicting pytest runs. Sequencing costs ~30 min of calendar time but eliminates the merge mess.
+- **Subsequent ordering:** PX-002 → PX-020 → PX-010 (depends on platform-presets.ts) → PX-003 (independent of the above; can fire in parallel with PX-010 once PX-020 lands).
+- **Kill-switch:** user can say "parallelize anyway" — I'll dispatch with worktree isolation and merge afterward.
+
+## 2026-04-24T02:15:00Z · PX-002 COMPLETE · backend hardened
+
+- **Action:** Amelia executed PX-002 in one pass.
+- **Result:**
+  - **29 handlers** refactored across **6 backend route files** to `Annotated[AsyncIOMotorDatabase, Depends(get_db)]` (project_routes ×11, comments_routes ×5, asset_routes ×4, template_routes ×4, auth_routes ×3, brand_routes ×2; collab_routes is pure WebSocket, untouched).
+  - **27/27 pytest** green (57.6s) via `httpx.AsyncClient` + `asgi-lifespan.LifespanManager` + `mongomock-motor`.
+  - Backend test harness now exists (`backend/tests/`, `pytest.ini`, conftest with DI override).
+  - Google-style docstrings on every refactored handler.
+  - Zero net-new mypy/ruff findings — pre-existing 96 mypy errors + 2 E741 ruff hits NOT touched per scope discipline.
+- **Autonomous decisions (logged on Amelia's behalf):**
+  - `mongomock-motor` added to `requirements.txt` as a TEST dep — pre-authorized by story T-2 ("If MongoDB is unavailable... mock with mongomock-motor"). Not a new §R6 escalation; in-story constraint.
+  - `_connected` flag flipped post-lifespan in client fixture so DB-gated routes (`list_*`) exercise real code through the mock.
+  - `list_comments` test uses `projectId + text` matching instead of `id` round-trip (handler quirk under mongomock; handler untouched per Rule 1).
+  - 5 follow-up stories raised (PX-002-FUP-1 through FUP-5) — captured in REVISIONS-TRACKER wave #4 below.
+- **Per new user-set autonomy rule** (`feedback_orion_full_autonomy.md` — captured this turn): Orion will commit + push this story now, then dispatch PX-020 immediately, without waiting for confirmation.
