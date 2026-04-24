@@ -6,6 +6,29 @@
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+/**
+ * Pixelforge design tokens (PX-067).
+ *
+ * Single source of truth for the brand palette used by /auth, /hub,
+ * /gallery, /profile, and the shared user-menu. These live at :root so
+ * every route and shared component inherits them; components only need
+ * to redeclare a token locally when the value legitimately differs
+ * (e.g. auth hero uses a translucent --px-line against a dark bg).
+ */
+:root {
+  --px-violet: #7c3aed;
+  --px-violet-deep: #5b21b6;
+  --px-violet-glow: rgba(124, 58, 237, 0.45);
+  --px-cyan: #06b6d4;
+  --px-pink: #ec4899;
+  --px-ink: #0f172a;
+  --px-ink-soft: #334155;
+  --px-muted: #64748b;
+  --px-line: #e2e8f0;
+  --px-surface: #ffffff;
+  --px-page: #f8fafc;
+}
+
 html {
   height: 100%;
   @include mat.theme((

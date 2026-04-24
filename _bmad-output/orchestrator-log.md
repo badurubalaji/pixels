@@ -375,4 +375,12 @@ This is the authoritative record of every autonomous decision Orion has taken on
   - `/dashboard` view itself still uses old Material theming — redesign pass would be PX-068 when the user flags it.
   - Palette tokens (`--px-*`) now duplicated in 4 components (auth, hub, gallery, profile, user-menu). Hoist to `src/styles.scss :root` when the fifth consumer lands (PX-067).
 
+## 2026-04-24T23:34:00Z · PX-067 design-token consolidation (:root)
+
+- **Trigger.** PX-065 added a 5th consumer (user-menu) and put the palette-duplication problem over threshold. User said *"continue all sprint"* so doing it now rather than when a 6th consumer appears.
+- **Change.** Added a single `:root { --px-violet, --px-violet-deep, --px-violet-glow, --px-cyan, --px-pink, --px-ink, --px-ink-soft, --px-muted, --px-line, --px-surface, --px-page }` block to `src/styles.scss` (the only project-wide stylesheet per §4.2). Removed the duplicated token declarations from 5 components' `:host` blocks (auth, hub, gallery, profile, user-menu).
+- **One legitimate local override kept.** `auth.ts` still sets `--px-ink-soft: #1e293b` locally because its form panel sits next to a dark-violet hero and the default `#334155` looked muddy against that context. Comment added at the override explaining why, so future edits don't delete it blindly.
+- **Added `--px-violet-glow: rgba(124, 58, 237, 0.45)`** — the value was hand-typed identically in 5+ places (focus rings on buttons, links, primary CTAs); pulled it up alongside the rest for symmetry.
+- **Tests:** all 374 FE pass unchanged (CSS-var hoisting is visually equivalent — components still reference `var(--px-violet)` which resolves from `:root` instead of `:host`). `tsc --noEmit` clean.
+
 

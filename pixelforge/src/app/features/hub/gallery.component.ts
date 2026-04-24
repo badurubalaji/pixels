@@ -245,17 +245,6 @@ interface GalleryTile {
   styles: [
     `
       :host {
-        --px-violet: #7c3aed;
-        --px-violet-deep: #5b21b6;
-        --px-cyan: #06b6d4;
-        --px-pink: #ec4899;
-        --px-ink: #0f172a;
-        --px-ink-soft: #334155;
-        --px-muted: #64748b;
-        --px-line: #e2e8f0;
-        --px-surface: #ffffff;
-        --px-page: #f8fafc;
-
         display: block;
         height: 100%;
         overflow-y: auto;

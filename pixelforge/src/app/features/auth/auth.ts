@@ -194,13 +194,10 @@ import { AuthService } from '../../core/services/auth.service';
   `,
   styles: [`
     :host {
-      --px-violet: #7c3aed;
-      --px-violet-deep: #5b21b6;
-      --px-cyan: #06b6d4;
-      --px-pink: #ec4899;
-      --px-ink: #0f172a;
+      /* --px-ink-soft is locally overridden to a deeper slate because the
+         auth form sits over a dark hero, where the default #334155 looks
+         muddy against the white form panel's adjacent gradient glow. */
       --px-ink-soft: #1e293b;
-      --px-line: rgba(255, 255, 255, 0.08);
       display: block;
       height: 100%;
       overflow-y: auto;

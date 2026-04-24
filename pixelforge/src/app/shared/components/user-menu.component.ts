@@ -111,13 +111,6 @@ import { AuthService, AuthUser } from '../../core/services/auth.service';
   styles: [
     `
       :host {
-        --px-violet: #7c3aed;
-        --px-cyan: #06b6d4;
-        --px-ink: #0f172a;
-        --px-ink-soft: #334155;
-        --px-muted: #64748b;
-        --px-line: #e2e8f0;
-        --px-surface: #ffffff;
         display: inline-block;
       }
 
