@@ -215,6 +215,19 @@ export class AuthComponent {
   readonly loading = signal(false);
   readonly error = signal('');
 
+  /**
+   * Submit the login/signup form.
+   *
+   * @param event - The form-submit DOM event; the default action is suppressed.
+   * @returns void. On success, navigates the router to `/hub` (PX-011 AC-1 / AC-2).
+   *
+   * @remarks
+   * Delegates to {@link AuthService.login} or {@link AuthService.signup} based
+   * on `mode()`. Failures surface via the `error()` signal; success flips
+   * `loading()` off and routes the user to the content hub.
+   *
+   * @see PX-011
+   */
   submit(event: Event): void {
     event.preventDefault();
     this.loading.set(true);
@@ -222,7 +235,8 @@ export class AuthComponent {
 
     const onSuccess = () => {
       this.loading.set(false);
-      this.router.navigate(['/']);
+      // PX-011 AC-1/AC-2: default post-auth landing is /hub.
+      this.router.navigate(['/hub']);
     };
 
     const onError = (err: any) => {
@@ -243,7 +257,20 @@ export class AuthComponent {
     }
   }
 
+  /**
+   * Skip auth and continue as a guest.
+   *
+   * @returns void. Navigates the router to `/hub` (PX-011 AC-6).
+   *
+   * @remarks
+   * No token is set — downstream auth-guarded routes will still redirect to
+   * `/auth`. Guest mode is a pure UI convenience; project-persistence is
+   * local-storage only.
+   *
+   * @see PX-011 AC-6
+   */
   continueAsGuest(): void {
-    this.router.navigate(['/']);
+    // PX-011 AC-6: guest lands on /hub.
+    this.router.navigate(['/hub']);
   }
 }
