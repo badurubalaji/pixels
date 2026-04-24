@@ -88,3 +88,18 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Autonomous decision:** DEFER the full update. Rationale: this wave is test additions + TSDoc on existing methods — AST-level symbols barely change. Spawning semantic subagents for the 1 unchanged-intent markdown file in `graphify-out/` burns tokens for no new edges. Per §R5 autonomous decisions: "Whether to run `/graphify --update` now or after the next wave" is within my bounded autonomy.
 - **When we will run it:** after PX-002 OR PX-020 merges (both introduce genuinely new call-graph structure — new backend test dir, new constants file, new `CanvasService.resize` / `addSvg` methods).
 - **Kill-switch:** user can say "graphify now" to force an immediate update.
+
+## 2026-04-24T01:30:00Z · Public OSS release · github.com/badurubalaji/pixels
+
+- **Action (user-directed):** unified `pixels/` into a single git repo, absorbed pixelforge's 1-commit Angular-CLI scaffold history (backed up at `/tmp/pixelforge-old-git-backup-2026-04-24/`), wrote MIT LICENSE + comprehensive root README.md + project-spanning `.gitignore`, committed everything as one founding commit (1219 files), created PUBLIC GitHub repo and pushed.
+- **Rationale:** user said "create remote git and push changes till now" then "make it public, open source." Single-repo strategy chosen because the only existing git history was a useless Angular CLI scaffold; unified history keeps planning docs / orchestrator-log / code in lockstep so every story commit is auditable against the PRD/ARD that drove it. MIT license matches the permissive licenses of the project's dependency stack (Angular, FastAPI, fabric.js, BMAD, graphify all MIT/BSD).
+- **Autonomous decisions logged:**
+  1. Repo name = `pixels` (matches product + directory).
+  2. License = MIT (zero-friction OSS default; matches deps).
+  3. README synthesized from existing planning docs (vision, PRD, ARD, epics) — single source of truth, links back into `_bmad-output/`.
+  4. Commit message: per project-specific feedback rule (`feedback_commit_messages.md`), no Claude/AI/Co-Authored-By trailer added.
+  5. Pre-push secrets scan completed — clean (no .env, no credentials, no API keys staged).
+- **Result:** https://github.com/badurubalaji/pixels — public, 1 commit on `main`, tracking origin/main.
+- **Kill-switch:**
+  - To revert to local-only: `git remote remove origin && gh repo delete badurubalaji/pixels --yes`.
+  - To restore the pixelforge-only repo: `rm -rf /home/ashulabs/workspace/pixels/.git && cp -r /tmp/pixelforge-old-git-backup-2026-04-24 /home/ashulabs/workspace/pixels/pixelforge/.git`.
