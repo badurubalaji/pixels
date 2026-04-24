@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pixelforge - Free Design Studio</title>
+  <meta name="description" content="Free Canva alternative. Design logos, social posts, presentations and more with AI-powered tools.">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0c29">
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+
+  <!-- iOS / mobile PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pixelforge">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Pixelforge - Free Design Studio">
+  <meta property="og:description" content="Free Canva alternative. Design with AI-powered tools.">
+  <meta property="og:type" content="website">
+
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <style>
+    /* Splash / loading screen */
+    .pf-splash {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.4s;
+    }
+    .pf-splash-logo {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, sans-serif;
+      font-size: 36px; font-weight: 700; color: white;
+      box-shadow: 0 10px 40px rgba(124,58,237,0.4);
+    }
+    .pf-splash-text {
+      margin-top: 18px;
+      color: #d4d4d8;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+    }
+    .pf-splash-spinner {
+      margin-top: 24px;
+      width: 24px; height: 24px;
+      border: 2.5px solid rgba(255,255,255,0.15);
+      border-top-color: #7c3aed;
+      border-radius: 50%;
+      animation: pfspin 0.8s linear infinite;
+    }
+    @keyframes pfspin { to { transform: rotate(360deg); } }
+    .pf-fade-out { opacity: 0; pointer-events: none; }
+
+    /* Disable iOS bounce/overscroll */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Safe area for notches */
+    body {
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+  </style>
+</head>
+<body>
+  <div class="pf-splash" id="pfSplash">
+    <div class="pf-splash-logo">P</div>
+    <div class="pf-splash-text">Loading Pixelforge...</div>
+    <div class="pf-splash-spinner"></div>
+  </div>
+
+  <app-root></app-root>
+
+  <noscript>Please enable JavaScript to continue using this application.</noscript>
+
+  <script>
+    // Hide splash once Angular has rendered the root
+    window.addEventListener('load', function() {
+      var check = setInterval(function() {
+        var root = document.querySelector('app-root');
+        if (root && root.children.length > 0) {
+          clearInterval(check);
+          var splash = document.getElementById('pfSplash');
+          if (splash) {
+            splash.classList.add('pf-fade-out');
+            setTimeout(function() { splash.remove(); }, 400);
+          }
+        }
+      }, 80);
+      // Hard timeout: hide after 5s no matter what
+      setTimeout(function() {
+        var splash = document.getElementById('pfSplash');
+        if (splash) splash.remove();
+      }, 5000);
+    });
+  </script>
+</body>
+</html>

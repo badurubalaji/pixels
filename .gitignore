@@ -1,0 +1,125 @@
+# =============================================================================
+# pixels — root .gitignore
+# Covers Angular frontend (pixelforge/), Python FastAPI backend (pixelforge/backend/),
+# BMAD framework artifacts, graphify outputs, and OS / IDE clutter.
+# =============================================================================
+
+# ---- Node / Angular ---------------------------------------------------------
+**/node_modules/
+**/dist/
+**/tmp/
+**/out-tsc/
+**/.angular/cache/
+**/coverage/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnp.*
+.yarn/
+
+# ---- Python / FastAPI -------------------------------------------------------
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+**/.venv/
+**/venv/
+**/env/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.tox/
+**/.coverage
+**/htmlcov/
+**/.hypothesis/
+*.pid
+*.sock
+
+# ---- Backend runtime artifacts ---------------------------------------------
+pixelforge/backend/uploads/
+pixelforge/backend/data/
+pixelforge/backend/.env
+pixelforge/backend/*.db
+pixelforge/backend/*.sqlite*
+
+# ---- Secrets / env files (defence in depth) --------------------------------
+.env
+.env.*
+!.env.example
+*.secret
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+credentials.*.json
+.credentials.json
+service-account*.json
+*-secrets.*
+
+# ---- Graphify ---------------------------------------------------------------
+# Keep top-level outputs (graph, report, cost) but ignore the cache + temp files.
+pixelforge/graphify-out/cache/
+pixelforge/graphify-out/.graphify_python
+pixelforge/graphify-out/.graphify_*.json
+pixelforge/graphify-out/.graphify_chunk_*.json
+pixelforge/graphify-out/.needs_update
+pixelforge/graphify-out/.graphify_old.json
+pixelforge/graphify-out/obsidian/
+pixelforge/graphify-out/wiki/
+**/graphify-out/cache/
+**/graphify-out/.graphify_*
+
+# ---- OS ---------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---- IDEs / editors ---------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+.history/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+.sass-cache/
+
+# ---- Logs / coverage --------------------------------------------------------
+*.log
+logs/
+coverage/
+.nyc_output/
+
+# ---- BMAD operational state -------------------------------------------------
+# (planning artifacts in _bmad-output/ ARE tracked — they're the project's design history.
+#  But ignore any operational scratch state if it shows up.)
+_bmad-output/scratch/
+_bmad-output/.cache/
+
+# ---- Misc -------------------------------------------------------------------
+*.tsbuildinfo
+.eslintcache
+.parcel-cache/
+.next/
+.nuxt/
+.cache/
+__screenshots__/
+testem.log
+/typings/
+/connect.lock
+libpeerconnection.log

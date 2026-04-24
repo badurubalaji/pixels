@@ -1,0 +1,1290 @@
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { CanvasService } from '../../../core/services/canvas.service';
+import { FontService } from '../../../core/services/font.service';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatChipsModule } from '@angular/material/chips';
+import { AlignmentPanelComponent } from './alignment-panel';
+import { GradientPanelComponent } from './gradient-panel';
+import { GOOGLE_FONTS, SYSTEM_FONTS, FontEntry } from '../../../core/services/font.service';
+import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../core/services/animation.service';
+import { AccessibilityService, ContrastResult } from '../../../core/services/accessibility.service';
+import * as fabric from 'fabric';
+
+interface ObjectProps {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  angle: number;
+  opacity: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  // Text-specific
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textAlign?: string;
+  text?: string;
+  underline?: boolean;
+  linethrough?: boolean;
+  charSpacing?: number;
+  lineHeight?: number;
+}
+
+@Component({
+  selector: 'app-property-panel',
+  imports: [
+    FormsModule,
+    MatExpansionModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSliderModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDividerModule,
+    MatButtonToggleModule,
+    MatTooltipModule,
+    AlignmentPanelComponent,
+    GradientPanelComponent,
+    MatAutocompleteModule,
+    MatChipsModule,
+  ],
+  template: `
+    <aside class="property-panel">
+      <div class="panel-header">
+        <h3>Properties</h3>
+      </div>
+
+      @if (props(); as p) {
+        <div class="panel-content">
+          <!-- Position & Size -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Transform</mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="prop-grid">
+              <mat-form-field appearance="outline" class="prop-field">
+                <mat-label>X</mat-label>
+                <input matInput type="number" [ngModel]="p.left" (ngModelChange)="updateProp('left', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="prop-field">
+                <mat-label>Y</mat-label>
+                <input matInput type="number" [ngModel]="p.top" (ngModelChange)="updateProp('top', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="prop-field">
+                <mat-label>W</mat-label>
+                <input matInput type="number" [ngModel]="p.width" (ngModelChange)="updateScaledWidth($event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="prop-field">
+                <mat-label>H</mat-label>
+                <input matInput type="number" [ngModel]="p.height" (ngModelChange)="updateScaledHeight($event)" />
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Rotation</mat-label>
+              <input matInput type="number" [ngModel]="p.angle" (ngModelChange)="updateProp('angle', $event)" />
+            </mat-form-field>
+
+            <div class="slider-row">
+              <span>Opacity</span>
+              <mat-slider min="0" max="1" step="0.01" class="flex-slider">
+                <input matSliderThumb [ngModel]="p.opacity" (ngModelChange)="updateProp('opacity', $event)" />
+              </mat-slider>
+              <span class="slider-value">{{ (p.opacity * 100).toFixed(0) }}%</span>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Fill & Stroke -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Appearance</mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <app-gradient-panel />
+
+            <div class="color-row">
+              <label>Stroke</label>
+              <input type="color" [ngModel]="p.stroke || '#000000'" (ngModelChange)="updateProp('stroke', $event)" class="color-input" />
+              <mat-form-field appearance="outline" class="color-text">
+                <input matInput type="number" [ngModel]="p.strokeWidth" (ngModelChange)="updateProp('strokeWidth', $event)" placeholder="Width" />
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Animation -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Animation</mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Enter Animation</mat-label>
+              <mat-select [ngModel]="objectAnimation()" (ngModelChange)="setObjectAnimation($event)">
+                @for (preset of animationPresets; track preset.type) {
+                  <mat-option [value]="preset.type">{{ preset.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            @if (objectAnimation() !== 'none') {
+              <div class="slider-row">
+                <span>Duration</span>
+                <mat-slider min="200" max="2000" step="100" class="flex-slider">
+                  <input matSliderThumb [ngModel]="animationDuration()" (ngModelChange)="setAnimationDuration($event)" />
+                </mat-slider>
+                <span class="slider-value">{{ animationDuration() }}ms</span>
+              </div>
+
+              <div class="slider-row">
+                <span>Delay</span>
+                <mat-slider min="0" max="2000" step="100" class="flex-slider">
+                  <input matSliderThumb [ngModel]="animationDelay()" (ngModelChange)="setAnimationDelay($event)" />
+                </mat-slider>
+                <span class="slider-value">{{ animationDelay() }}ms</span>
+              </div>
+
+              <button mat-stroked-button class="full-width" (click)="previewAnimation()">
+                <mat-icon>play_arrow</mat-icon>
+                Preview
+              </button>
+            }
+          </mat-expansion-panel>
+
+          <!-- Blend Mode -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Blend Mode</mat-panel-title>
+            </mat-expansion-panel-header>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Mode</mat-label>
+              <mat-select [ngModel]="blendMode()" (ngModelChange)="setBlendMode($event)">
+                @for (mode of blendModes; track mode.value) {
+                  <mat-option [value]="mode.value">{{ mode.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </mat-expansion-panel>
+
+          <!-- Text Properties -->
+          @if (isTextObject()) {
+            <mat-expansion-panel expanded>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Typography</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <!-- Font category chips -->
+              <div class="font-categories">
+                @for (cat of fontCategories; track cat.value) {
+                  <button
+                    class="font-cat-chip"
+                    [class.active]="activeFontCategory() === cat.value"
+                    (click)="setFontCategory(cat.value)"
+                  >{{ cat.label }}</button>
+                }
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Font Family</mat-label>
+                <input
+                  matInput
+                  [ngModel]="fontSearchText()"
+                  (ngModelChange)="onFontSearchChange($event)"
+                  [matAutocomplete]="fontAuto"
+                  placeholder="Search fonts..."
+                />
+                <mat-autocomplete #fontAuto="matAutocomplete" (optionSelected)="onFontSelected($event.option.value)">
+                  @for (font of filteredFonts(); track font) {
+                    <mat-option [value]="font" [style.fontFamily]="font">{{ font }}</mat-option>
+                  }
+                </mat-autocomplete>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Font Size</mat-label>
+                <input matInput type="number" [ngModel]="p.fontSize" (ngModelChange)="updateProp('fontSize', $event)" min="1" />
+              </mat-form-field>
+
+              <div class="text-style-row">
+                <mat-button-toggle-group multiple>
+                  <mat-button-toggle
+                    [checked]="p.fontWeight === 'bold'"
+                    (change)="toggleFontWeight()"
+                    matTooltip="Bold"
+                  >
+                    <mat-icon>format_bold</mat-icon>
+                  </mat-button-toggle>
+                  <mat-button-toggle
+                    [checked]="p.fontStyle === 'italic'"
+                    (change)="toggleFontStyle()"
+                    matTooltip="Italic"
+                  >
+                    <mat-icon>format_italic</mat-icon>
+                  </mat-button-toggle>
+                  <mat-button-toggle
+                    [checked]="p.underline"
+                    (change)="toggleUnderline()"
+                    matTooltip="Underline"
+                  >
+                    <mat-icon>format_underlined</mat-icon>
+                  </mat-button-toggle>
+                  <mat-button-toggle
+                    [checked]="p.linethrough"
+                    (change)="toggleLinethrough()"
+                    matTooltip="Strikethrough"
+                  >
+                    <mat-icon>strikethrough_s</mat-icon>
+                  </mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+
+              <div class="text-style-row">
+                <mat-button-toggle-group [ngModel]="p.textAlign" (ngModelChange)="updateProp('textAlign', $event)">
+                  <mat-button-toggle value="left" matTooltip="Align Left">
+                    <mat-icon>format_align_left</mat-icon>
+                  </mat-button-toggle>
+                  <mat-button-toggle value="center" matTooltip="Align Center">
+                    <mat-icon>format_align_center</mat-icon>
+                  </mat-button-toggle>
+                  <mat-button-toggle value="right" matTooltip="Align Right">
+                    <mat-icon>format_align_right</mat-icon>
+                  </mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+
+              <div class="slider-row">
+                <span>Spacing</span>
+                <mat-slider min="0" max="1000" step="10" class="flex-slider">
+                  <input matSliderThumb [ngModel]="p.charSpacing ?? 0" (ngModelChange)="updateProp('charSpacing', $event)" />
+                </mat-slider>
+                <span class="slider-value">{{ p.charSpacing ?? 0 }}</span>
+              </div>
+
+              <div class="slider-row">
+                <span>Line H.</span>
+                <mat-slider min="0.5" max="3" step="0.1" class="flex-slider">
+                  <input matSliderThumb [ngModel]="p.lineHeight ?? 1.16" (ngModelChange)="updateProp('lineHeight', $event)" />
+                </mat-slider>
+                <span class="slider-value">{{ (p.lineHeight ?? 1.16).toFixed(1) }}</span>
+              </div>
+
+              <button mat-stroked-button class="full-width" (click)="toggleUppercase()">
+                <mat-icon>text_fields</mat-icon>
+                UPPERCASE
+              </button>
+
+              @if (contrastResult(); as cr) {
+                <div class="contrast-badge"
+                  [class.pass]="cr.passAA"
+                  [class.fail]="!cr.passAA"
+                  [matTooltip]="cr.passAAA ? 'WCAG AAA pass' : (cr.passAA ? 'WCAG AA pass' : 'Below WCAG AA — improve readability')">
+                  <mat-icon>{{ cr.passAA ? 'check_circle' : 'warning' }}</mat-icon>
+                  <span>Contrast {{ cr.ratio }}:1</span>
+                  <span class="badge-tag">
+                    @if (cr.passAAA) { AAA }
+                    @else if (cr.passAA) { AA }
+                    @else if (cr.passAALarge) { AA Large }
+                    @else { Fail }
+                  </span>
+                </div>
+              }
+
+              <!-- Curve Text -->
+              <div class="slider-row" style="margin-top: 8px;">
+                <span>Curve</span>
+                <mat-slider min="-100" max="100" step="5" class="flex-slider">
+                  <input matSliderThumb [ngModel]="textCurve()" (ngModelChange)="textCurve.set($event)" />
+                </mat-slider>
+                <span class="slider-value">{{ textCurve() }}</span>
+              </div>
+              <button mat-stroked-button class="full-width" [disabled]="textCurve() === 0" (click)="applyCurveToText()">
+                <mat-icon>text_rotation_none</mat-icon>
+                Apply Curve
+              </button>
+            </mat-expansion-panel>
+
+            <!-- Text Outline -->
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Text Outline</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="color-row">
+                <label>Color</label>
+                <input type="color" [ngModel]="textStrokeColor()" (ngModelChange)="updateTextStroke('color', $event)" class="color-input" />
+                <mat-form-field appearance="outline" class="color-text">
+                  <input matInput [ngModel]="textStrokeColor()" (ngModelChange)="updateTextStroke('color', $event)" />
+                </mat-form-field>
+              </div>
+              <div class="slider-row">
+                <span>Width</span>
+                <mat-slider min="0" max="10" step="0.5" class="flex-slider">
+                  <input matSliderThumb [ngModel]="textStrokeWidth()" (ngModelChange)="updateTextStroke('width', $event)" />
+                </mat-slider>
+                <span class="slider-value">{{ textStrokeWidth() }}</span>
+              </div>
+              <button mat-button (click)="removeTextStroke()">Remove Outline</button>
+            </mat-expansion-panel>
+          }
+
+          <!-- Alignment -->
+          <app-alignment-panel />
+
+          <!-- Shadow -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Shadow</mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="shadow-presets">
+              @for (preset of shadowPresets; track preset.name) {
+                <button class="shadow-preset-btn" (click)="applyShadowPreset(preset)" [matTooltip]="preset.name">
+                  <div class="preset-preview" [style.box-shadow]="preset.css"></div>
+                  <span>{{ preset.name }}</span>
+                </button>
+              }
+            </div>
+
+            <div class="slider-row">
+              <span>Blur</span>
+              <mat-slider min="0" max="50" step="1" class="flex-slider">
+                <input matSliderThumb [ngModel]="shadowBlur()" (ngModelChange)="updateShadow('blur', $event)" />
+              </mat-slider>
+              <span class="slider-value">{{ shadowBlur() }}</span>
+            </div>
+            <div class="slider-row">
+              <span>X</span>
+              <mat-slider min="-50" max="50" step="1" class="flex-slider">
+                <input matSliderThumb [ngModel]="shadowOffsetX()" (ngModelChange)="updateShadow('offsetX', $event)" />
+              </mat-slider>
+              <span class="slider-value">{{ shadowOffsetX() }}</span>
+            </div>
+            <div class="slider-row">
+              <span>Y</span>
+              <mat-slider min="-50" max="50" step="1" class="flex-slider">
+                <input matSliderThumb [ngModel]="shadowOffsetY()" (ngModelChange)="updateShadow('offsetY', $event)" />
+              </mat-slider>
+              <span class="slider-value">{{ shadowOffsetY() }}</span>
+            </div>
+            <div class="color-row">
+              <label>Color</label>
+              <input type="color" [ngModel]="shadowColor()" (ngModelChange)="updateShadow('color', $event)" class="color-input" />
+            </div>
+            <button mat-button (click)="removeShadow()">Remove Shadow</button>
+          </mat-expansion-panel>
+
+          <!-- Corner Radius -->
+          @if (isRectObject()) {
+            <div class="slider-row" style="padding: 8px 12px;">
+              <span>Radius</span>
+              <mat-slider min="0" max="100" step="1" class="flex-slider">
+                <input matSliderThumb [ngModel]="cornerRadius()" (ngModelChange)="updateCornerRadius($event)" />
+              </mat-slider>
+              <span class="slider-value">{{ cornerRadius() }}</span>
+            </div>
+          }
+
+          <!-- Quick Actions -->
+          <div class="quick-actions">
+            <button mat-stroked-button (click)="bringForward()">
+              <mat-icon>flip_to_front</mat-icon> Forward
+            </button>
+            <button mat-stroked-button (click)="sendBackward()">
+              <mat-icon>flip_to_back</mat-icon> Back
+            </button>
+          </div>
+          <!-- Rotate & Flip -->
+          <div class="quick-actions">
+            <button mat-icon-button matTooltip="Rotate 90° CW" (click)="rotateCW()">
+              <mat-icon>rotate_right</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Rotate 90° CCW" (click)="rotateCCW()">
+              <mat-icon>rotate_left</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Flip Horizontal" (click)="flipH()">
+              <mat-icon>swap_horiz</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Flip Vertical" (click)="flipV()">
+              <mat-icon>swap_vert</mat-icon>
+            </button>
+            <button mat-icon-button [matTooltip]="isLocked() ? 'Unlock' : 'Lock'" (click)="toggleLock()">
+              <mat-icon>{{ isLocked() ? 'lock' : 'lock_open' }}</mat-icon>
+            </button>
+          </div>
+
+          <div class="quick-actions">
+            <button mat-stroked-button (click)="groupSelected()" matTooltip="Ctrl+G">
+              <mat-icon>group_work</mat-icon> Group
+            </button>
+            <button mat-stroked-button (click)="ungroupSelected()" matTooltip="Ctrl+Shift+G">
+              <mat-icon>workspaces</mat-icon> Ungroup
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="no-selection">
+          <mat-icon>touch_app</mat-icon>
+          <p>Select an object to edit its properties</p>
+        </div>
+      }
+    </aside>
+  `,
+  styles: [`
+    .property-panel {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+      h3 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+      }
+    }
+
+    .panel-content {
+      padding: 8px;
+    }
+
+    .prop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .prop-field {
+      width: 100%;
+    }
+
+    .full-width {
+      width: 100%;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+
+      span:first-child {
+        font-size: 0.85rem;
+        min-width: 52px;
+      }
+
+      .flex-slider {
+        flex: 1;
+      }
+
+      .slider-value {
+        font-size: 0.8rem;
+        min-width: 36px;
+        text-align: right;
+        opacity: 0.7;
+      }
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      label {
+        font-size: 0.85rem;
+        min-width: 40px;
+      }
+
+      .color-input {
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 0;
+        background: none;
+      }
+
+      .color-text {
+        flex: 1;
+      }
+    }
+
+    .font-categories {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .font-cat-chip {
+      padding: 3px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background: none;
+      color: inherit;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+
+      &:hover {
+        border-color: var(--mat-sys-primary);
+      }
+
+      &.active {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+        border-color: var(--mat-sys-primary);
+      }
+    }
+
+    .text-style-row {
+      margin-bottom: 12px;
+
+      mat-button-toggle-group {
+        width: 100%;
+      }
+    }
+
+    .contrast-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-top: 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      border: 1px solid var(--mat-sys-outline-variant);
+
+      mat-icon { font-size: 18px; height: 18px; width: 18px; }
+      .badge-tag {
+        margin-left: auto;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--mat-sys-surface-container-highest);
+      }
+
+      &.pass {
+        background: rgba(16, 185, 129, 0.12);
+        color: #10b981;
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+      &.fail {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+    }
+
+    .shadow-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .shadow-preset-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      background: var(--mat-sys-surface-container-high);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      color: inherit;
+      transition: all 0.15s;
+
+      .preset-preview {
+        width: 28px;
+        height: 28px;
+        background: var(--mat-sys-on-surface);
+        border-radius: 4px;
+      }
+
+      span {
+        font-size: 0.68rem;
+        opacity: 0.6;
+      }
+
+      &:hover {
+        border-color: var(--mat-sys-primary);
+      }
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px 0;
+
+      button {
+        flex: 1;
+        font-size: 0.8rem;
+      }
+    }
+
+    .no-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      opacity: 0.4;
+      text-align: center;
+
+      mat-icon {
+        font-size: 48px;
+        height: 48px;
+        width: 48px;
+        margin-bottom: 12px;
+      }
+
+      p {
+        font-size: 0.85rem;
+      }
+    }
+
+    ::ng-deep .property-panel {
+      .mat-expansion-panel {
+        margin-bottom: 4px;
+        box-shadow: none !important;
+      }
+
+      .mat-expansion-panel-header {
+        padding: 0 12px;
+        height: 40px;
+      }
+
+      .mat-expansion-panel-body {
+        padding: 8px 12px;
+      }
+
+      .mat-mdc-form-field {
+        font-size: 0.85rem;
+      }
+    }
+  `],
+})
+export class PropertyPanelComponent implements OnInit, OnDestroy {
+  private readonly canvasService = inject(CanvasService);
+
+  readonly props = signal<ObjectProps | null>(null);
+  private readonly _isText = signal(false);
+  private readonly _isRect = signal(false);
+  private readonly _isLocked = signal(false);
+
+  readonly shadowBlur = signal(0);
+  readonly shadowOffsetX = signal(5);
+  readonly shadowOffsetY = signal(5);
+  readonly shadowColor = signal('#000000');
+  readonly cornerRadius = signal(0);
+  readonly textStrokeColor = signal('#000000');
+  readonly textStrokeWidth = signal(0);
+  readonly textCurve = signal(0);
+  readonly objectAnimation = signal<AnimationType>('none');
+  readonly animationDuration = signal(600);
+  readonly animationDelay = signal(0);
+  readonly animationPresets = ANIMATION_PRESETS;
+
+  private readonly animationService = inject(AnimationService);
+  private readonly a11yService = inject(AccessibilityService);
+  readonly contrastResult = signal<ContrastResult | null>(null);
+  readonly blendMode = signal('source-over');
+
+  readonly blendModes = [
+    { value: 'source-over', label: 'Normal' },
+    { value: 'multiply', label: 'Multiply' },
+    { value: 'screen', label: 'Screen' },
+    { value: 'overlay', label: 'Overlay' },
+    { value: 'darken', label: 'Darken' },
+    { value: 'lighten', label: 'Lighten' },
+    { value: 'color-dodge', label: 'Color Dodge' },
+    { value: 'color-burn', label: 'Color Burn' },
+    { value: 'hard-light', label: 'Hard Light' },
+    { value: 'soft-light', label: 'Soft Light' },
+    { value: 'difference', label: 'Difference' },
+    { value: 'exclusion', label: 'Exclusion' },
+  ];
+
+  readonly fontSearchText = signal('');
+  readonly activeFontCategory = signal<string>('all');
+
+  readonly fontCategories = [
+    { value: 'all', label: 'All' },
+    { value: 'sans-serif', label: 'Sans' },
+    { value: 'serif', label: 'Serif' },
+    { value: 'display', label: 'Display' },
+    { value: 'handwriting', label: 'Script' },
+    { value: 'monospace', label: 'Mono' },
+  ];
+
+  readonly filteredFonts = computed(() => {
+    const search = this.fontSearchText().toLowerCase();
+    const cat = this.activeFontCategory();
+
+    let fonts: string[];
+    if (cat === 'all') {
+      fonts = [...SYSTEM_FONTS, ...GOOGLE_FONTS.map(f => f.family)];
+    } else {
+      fonts = [
+        ...SYSTEM_FONTS.filter(() => cat === 'sans-serif'),
+        ...GOOGLE_FONTS.filter(f => f.category === cat).map(f => f.family),
+      ];
+    }
+
+    if (search) {
+      fonts = fonts.filter(f => f.toLowerCase().includes(search));
+    }
+    return fonts;
+  });
+
+  readonly shadowPresets = [
+    { name: 'None', blur: 0, offsetX: 0, offsetY: 0, color: '#000000', css: 'none' },
+    { name: 'Soft', blur: 15, offsetX: 0, offsetY: 4, color: 'rgba(0,0,0,0.2)', css: '0 4px 15px rgba(0,0,0,0.2)' },
+    { name: 'Medium', blur: 10, offsetX: 3, offsetY: 6, color: 'rgba(0,0,0,0.35)', css: '3px 6px 10px rgba(0,0,0,0.35)' },
+    { name: 'Hard', blur: 2, offsetX: 4, offsetY: 4, color: 'rgba(0,0,0,0.6)', css: '4px 4px 2px rgba(0,0,0,0.6)' },
+    { name: 'Glow', blur: 20, offsetX: 0, offsetY: 0, color: 'rgba(124,58,237,0.5)', css: '0 0 20px rgba(124,58,237,0.5)' },
+    { name: 'Drop', blur: 8, offsetX: 6, offsetY: 8, color: 'rgba(0,0,0,0.4)', css: '6px 8px 8px rgba(0,0,0,0.4)' },
+  ];
+
+  private readonly fontService = inject(FontService);
+
+  readonly fonts = this.fontService.getAllFontFamilies();
+
+  private canvasListeners: (() => void)[] = [];
+
+  ngOnInit(): void {
+    this.attachWhenReady();
+  }
+
+  private attachWhenReady(attempts = 0): void {
+    const canvas = this.canvasService.getCanvas();
+    if (!canvas) {
+      if (attempts > 50) return;
+      setTimeout(() => this.attachWhenReady(attempts + 1), 100);
+      return;
+    }
+
+    const onSelect = () => this.readProps();
+    const onModified = () => this.readProps();
+    const onDeselect = () => {
+      this.props.set(null);
+      this._isText.set(false);
+    };
+
+    canvas.on('selection:created', onSelect);
+    canvas.on('selection:updated', onSelect);
+    canvas.on('selection:cleared', onDeselect);
+    canvas.on('object:modified', onModified);
+    canvas.on('object:scaling', onModified);
+    canvas.on('object:moving', onModified);
+    canvas.on('object:rotating', onModified);
+
+    this.canvasListeners = [
+      () => canvas.off('selection:created', onSelect),
+      () => canvas.off('selection:updated', onSelect),
+      () => canvas.off('selection:cleared', onDeselect),
+      () => canvas.off('object:modified', onModified),
+      () => canvas.off('object:scaling', onModified),
+      () => canvas.off('object:moving', onModified),
+      () => canvas.off('object:rotating', onModified),
+    ];
+
+    // Handle existing selection
+    onSelect();
+  }
+
+  ngOnDestroy(): void {
+    this.canvasListeners.forEach(unsub => unsub());
+  }
+
+  isTextObject(): boolean {
+    return this._isText();
+  }
+
+  setFontCategory(cat: string): void {
+    this.activeFontCategory.set(cat);
+  }
+
+  onFontSearchChange(text: string): void {
+    this.fontSearchText.set(text);
+  }
+
+  onFontSelected(font: string): void {
+    this.fontSearchText.set(font);
+    this.updateProp('fontFamily', font);
+  }
+
+  updateProp(key: string, value: any): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    // Load Google Font if needed
+    if (key === 'fontFamily') {
+      this.fontService.loadFont(value).then(() => {
+        obj.set(key as keyof fabric.FabricObject, value);
+        this.canvasService.commitChange(obj);
+        this.readProps();
+      });
+      return;
+    }
+
+    obj.set(key as keyof fabric.FabricObject, value);
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  updateScaledWidth(newWidth: number): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !newWidth) return;
+
+    const currentWidth = (obj.width ?? 1) * (obj.scaleX ?? 1);
+    const scale = newWidth / (obj.width ?? 1);
+    obj.set('scaleX', scale);
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  updateScaledHeight(newHeight: number): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !newHeight) return;
+
+    const scale = newHeight / (obj.height ?? 1);
+    obj.set('scaleY', scale);
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  toggleFontWeight(): void {
+    const current = this.props()?.fontWeight;
+    this.updateProp('fontWeight', current === 'bold' ? 'normal' : 'bold');
+  }
+
+  toggleFontStyle(): void {
+    const current = this.props()?.fontStyle;
+    this.updateProp('fontStyle', current === 'italic' ? 'normal' : 'italic');
+  }
+
+  toggleUnderline(): void {
+    this.updateProp('underline', !this.props()?.underline);
+  }
+
+  toggleLinethrough(): void {
+    this.updateProp('linethrough', !this.props()?.linethrough);
+  }
+
+  toggleUppercase(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !(obj instanceof fabric.IText)) return;
+
+    const currentText = obj.text ?? '';
+    const isUpper = currentText === currentText.toUpperCase();
+    obj.set('text', isUpper ? currentText.toLowerCase() : currentText.toUpperCase());
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  bringForward(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    canvas!.bringObjectForward(obj);
+    this.canvasService.commitChange(obj);
+  }
+
+  sendBackward(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    canvas!.sendObjectBackwards(obj);
+    this.canvasService.commitChange(obj);
+  }
+
+  groupSelected(): void {
+    this.canvasService.groupSelected();
+  }
+
+  ungroupSelected(): void {
+    this.canvasService.ungroupSelected();
+  }
+
+  rotateCW(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    obj.rotate((obj.angle ?? 0) + 90);
+    obj.setCoords();
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  rotateCCW(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    obj.rotate((obj.angle ?? 0) - 90);
+    obj.setCoords();
+    this.canvasService.commitChange(obj);
+    this.readProps();
+  }
+
+  flipH(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    obj.set('flipX', !obj.flipX);
+    this.canvasService.commitChange(obj);
+  }
+
+  flipV(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    obj.set('flipY', !obj.flipY);
+    this.canvasService.commitChange(obj);
+  }
+
+  isLocked(): boolean {
+    return this._isLocked();
+  }
+
+  toggleLock(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    const locked = !(obj as any)._locked;
+    (obj as any)._locked = locked;
+    this._isLocked.set(locked);
+
+    obj.set({
+      selectable: true,
+      evented: true,
+      lockMovementX: locked,
+      lockMovementY: locked,
+      lockRotation: locked,
+      lockScalingX: locked,
+      lockScalingY: locked,
+      lockSkewingX: locked,
+      lockSkewingY: locked,
+      hasControls: !locked,
+      hoverCursor: locked ? 'not-allowed' : 'move',
+    });
+
+    this.canvasService.commitChange(obj);
+  }
+
+  isRectObject(): boolean {
+    return this._isRect();
+  }
+
+  applyShadowPreset(preset: typeof this.shadowPresets[0]): void {
+    if (preset.name === 'None') {
+      this.removeShadow();
+      return;
+    }
+    this.shadowBlur.set(preset.blur);
+    this.shadowOffsetX.set(preset.offsetX);
+    this.shadowOffsetY.set(preset.offsetY);
+    this.shadowColor.set(preset.color);
+
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    obj.shadow = new fabric.Shadow({
+      color: preset.color,
+      blur: preset.blur,
+      offsetX: preset.offsetX,
+      offsetY: preset.offsetY,
+    });
+    this.canvasService.commitChange(obj);
+  }
+
+  updateShadow(prop: string, value: any): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    if (prop === 'blur') this.shadowBlur.set(value);
+    if (prop === 'offsetX') this.shadowOffsetX.set(value);
+    if (prop === 'offsetY') this.shadowOffsetY.set(value);
+    if (prop === 'color') this.shadowColor.set(value);
+
+    obj.shadow = new fabric.Shadow({
+      color: this.shadowColor(),
+      blur: this.shadowBlur(),
+      offsetX: this.shadowOffsetX(),
+      offsetY: this.shadowOffsetY(),
+    });
+    this.canvasService.commitChange(obj);
+  }
+
+  removeShadow(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    obj.shadow = null;
+    this.shadowBlur.set(0);
+    this.shadowOffsetX.set(5);
+    this.shadowOffsetY.set(5);
+    this.shadowColor.set('#000000');
+    this.canvasService.commitChange(obj);
+  }
+
+  setObjectAnimation(type: AnimationType): void {
+    this.objectAnimation.set(type);
+    this.persistAnimation();
+  }
+
+  setAnimationDuration(d: number): void {
+    this.animationDuration.set(d);
+    this.persistAnimation();
+  }
+
+  setAnimationDelay(d: number): void {
+    this.animationDelay.set(d);
+    this.persistAnimation();
+  }
+
+  private persistAnimation(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    this.animationService.setAnimation(obj, {
+      type: this.objectAnimation(),
+      duration: this.animationDuration(),
+      delay: this.animationDelay(),
+    });
+  }
+
+  async previewAnimation(): Promise<void> {
+    await this.animationService.playAll();
+  }
+
+  setBlendMode(mode: string): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    this.blendMode.set(mode);
+    (obj as any).globalCompositeOperation = mode;
+    this.canvasService.commitChange(obj);
+  }
+
+  applyCurveToText(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !(obj instanceof fabric.IText || obj instanceof fabric.FabricText)) return;
+
+    const t = obj as fabric.IText;
+    const text = t.text ?? '';
+    if (!text) return;
+
+    const curve = this.textCurve(); // -100 to 100
+    const fontSize = t.fontSize ?? 48;
+    const fontFamily = t.fontFamily ?? 'Arial';
+    const fill = (typeof t.fill === 'string' ? t.fill : '#000000') ?? '#000000';
+    const fontWeight = t.fontWeight ?? 'normal';
+    const fontStyle = t.fontStyle ?? 'normal';
+
+    // Estimate text width
+    const charWidth = fontSize * 0.6;
+    const textWidth = text.length * charWidth;
+
+    // Build arc path
+    // curve direction: positive = curve up (concave), negative = curve down (convex)
+    const radius = Math.max(80, 300 - Math.abs(curve) * 2);
+    const pathWidth = textWidth + fontSize * 2;
+    const svgHeight = radius + fontSize + 20;
+
+    let pathD: string;
+    if (curve > 0) {
+      pathD = `M 0,${svgHeight - 10} A ${radius},${radius} 0 0,1 ${pathWidth},${svgHeight - 10}`;
+    } else if (curve < 0) {
+      pathD = `M 0,20 A ${radius},${radius} 0 0,0 ${pathWidth},20`;
+    } else {
+      return;
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pathWidth} ${svgHeight}" width="${pathWidth}" height="${svgHeight}">
+      <defs>
+        <path id="curvePath" d="${pathD}" fill="none" />
+      </defs>
+      <text font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" font-style="${fontStyle}" fill="${fill}">
+        <textPath href="#curvePath" startOffset="50%" text-anchor="middle">${this.escapeXml(text)}</textPath>
+      </text>
+    </svg>`;
+
+    // Preserve position
+    const left = t.left ?? 0;
+    const top = t.top ?? 0;
+
+    canvas!.remove(obj);
+    this.canvasService.addSvg(svg).then(() => {
+      const newObj = canvas!.getObjects().slice(-1)[0];
+      if (newObj) {
+        newObj.set({ left, top, originX: 'center', originY: 'center' });
+        canvas!.setActiveObject(newObj);
+        this.canvasService.commitChange(obj);
+      }
+    });
+  }
+
+  private escapeXml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  updateTextStroke(prop: string, value: any): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !(obj instanceof fabric.IText || obj instanceof fabric.FabricText)) return;
+
+    if (prop === 'color') {
+      this.textStrokeColor.set(value);
+      obj.set('stroke', value);
+      if (this.textStrokeWidth() === 0) {
+        this.textStrokeWidth.set(1);
+        obj.set('strokeWidth', 1);
+      }
+    } else if (prop === 'width') {
+      this.textStrokeWidth.set(value);
+      obj.set('strokeWidth', value);
+    }
+
+    this.canvasService.commitChange(obj);
+  }
+
+  removeTextStroke(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+
+    obj.set({ stroke: '', strokeWidth: 0 });
+    this.textStrokeColor.set('#000000');
+    this.textStrokeWidth.set(0);
+    this.canvasService.commitChange(obj);
+  }
+
+  updateCornerRadius(value: number): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || !(obj instanceof fabric.Rect)) return;
+
+    this.cornerRadius.set(value);
+    obj.set({ rx: value, ry: value });
+    this.canvasService.commitChange(obj);
+  }
+
+  private readProps(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) {
+      this.props.set(null);
+      this._isText.set(false);
+      return;
+    }
+
+    const isText = obj instanceof fabric.IText || obj instanceof fabric.FabricText;
+    this._isText.set(isText);
+    this._isRect.set(obj instanceof fabric.Rect);
+    this._isLocked.set(!!(obj as any)._locked);
+
+    // Read shadow
+    if (obj.shadow && obj.shadow instanceof fabric.Shadow) {
+      this.shadowBlur.set(obj.shadow.blur ?? 0);
+      this.shadowOffsetX.set(obj.shadow.offsetX ?? 5);
+      this.shadowOffsetY.set(obj.shadow.offsetY ?? 5);
+      this.shadowColor.set(obj.shadow.color ?? '#000000');
+    }
+
+    // Read corner radius
+    if (obj instanceof fabric.Rect) {
+      this.cornerRadius.set(obj.rx ?? 0);
+    }
+
+    // Read blend mode
+    this.blendMode.set((obj as any).globalCompositeOperation ?? 'source-over');
+
+    // Read animation
+    const anim = this.animationService.getAnimation(obj);
+    this.objectAnimation.set(anim?.type ?? 'none');
+    this.animationDuration.set(anim?.duration ?? 600);
+    this.animationDelay.set(anim?.delay ?? 0);
+
+    // Read text stroke + contrast
+    if (isText) {
+      this.textStrokeColor.set(typeof obj.stroke === 'string' && obj.stroke ? obj.stroke : '#000000');
+      this.textStrokeWidth.set(obj.strokeWidth ?? 0);
+
+      // Contrast against background
+      if (typeof obj.fill === 'string' && obj.fill) {
+        const bg = this.a11yService.getEffectiveBackground(obj);
+        this.contrastResult.set(this.a11yService.contrastRatio(obj.fill, bg));
+      } else {
+        this.contrastResult.set(null);
+      }
+    } else {
+      this.contrastResult.set(null);
+    }
+
+    const p: ObjectProps = {
+      left: Math.round(obj.left ?? 0),
+      top: Math.round(obj.top ?? 0),
+      width: Math.round((obj.width ?? 0) * (obj.scaleX ?? 1)),
+      height: Math.round((obj.height ?? 0) * (obj.scaleY ?? 1)),
+      angle: Math.round(obj.angle ?? 0),
+      opacity: obj.opacity ?? 1,
+      fill: (typeof obj.fill === 'string' ? obj.fill : '#000000'),
+      stroke: (typeof obj.stroke === 'string' ? obj.stroke : ''),
+      strokeWidth: obj.strokeWidth ?? 0,
+    };
+
+    if (isText) {
+      const textObj = obj as fabric.IText;
+      p.fontSize = textObj.fontSize ?? 48;
+      p.fontFamily = textObj.fontFamily ?? 'Roboto';
+      this.fontSearchText.set(p.fontFamily);
+      p.fontWeight = (textObj.fontWeight ?? 'normal') as string;
+      p.fontStyle = (textObj.fontStyle ?? 'normal') as string;
+      p.textAlign = textObj.textAlign ?? 'left';
+      p.text = textObj.text ?? '';
+      p.underline = textObj.underline ?? false;
+      p.linethrough = textObj.linethrough ?? false;
+      p.charSpacing = textObj.charSpacing ?? 0;
+      p.lineHeight = textObj.lineHeight ?? 1.16;
+    }
+
+    this.props.set(p);
+  }
+}

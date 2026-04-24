@@ -1,0 +1,40 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DB_NAME=pixelforge
+    volumes:
+      - model-cache:/root/.u2net
+      - uploads-data:/app/uploads
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "4400:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  model-cache:
+  mongo-data:
+  uploads-data:

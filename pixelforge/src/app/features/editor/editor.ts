@@ -1,0 +1,2193 @@
+import {
+  Component,
+  inject,
+  AfterViewInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+  signal,
+  computed,
+  HostListener,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { CanvasService, ShapeType } from '../../core/services/canvas.service';
+import { ProjectService } from '../../core/services/project.service';
+import { ExportService } from '../../core/services/export.service';
+import { ApiService } from '../../core/services/api.service';
+import { HistoryService } from '../../core/services/history.service';
+import { KeyboardService } from '../../core/services/keyboard.service';
+import { ClipboardService } from '../../core/services/clipboard.service';
+import { BackgroundRemovalService } from '../../core/services/background-removal.service';
+import { LayerPanelComponent } from './components/layer-panel';
+import { PropertyPanelComponent } from './components/property-panel';
+import { SidebarDrawerComponent } from './components/sidebar-drawer';
+import { ExportDialog } from './components/export-dialog';
+import { ShortcutsDialog } from './components/shortcuts-dialog';
+import { ResizeDialog } from './components/resize-dialog';
+import { ShareDialog } from './components/share-dialog';
+import { VersionsDialog } from './components/versions-dialog';
+import { CommandPalette } from './components/command-palette';
+import { AuditDialog } from './components/audit-dialog';
+import { PresentationMode } from './components/presentation-mode';
+import { CommentsOverlay } from './components/comments-overlay';
+import { CommentsService } from '../../core/services/comments.service';
+import { CollabOverlay } from './components/collab-overlay';
+import { CollaborationService } from '../../core/services/collaboration.service';
+import { AiDesignService } from '../../core/services/ai-design.service';
+import { QualityScoreService, QualityBreakdown } from '../../core/services/quality-score.service';
+import { OnboardingTour } from './components/onboarding-tour';
+import { AnimationTimeline } from './components/animation-timeline';
+import { QuickActionBar } from './components/quick-action-bar';
+import { ImageFiltersPanelComponent } from './components/image-filters-panel';
+import { ContextMenuComponent } from './components/context-menu';
+import { TextToolbarComponent } from './components/text-toolbar';
+import { CanvasRulersComponent } from './components/canvas-rulers';
+import { FontService } from '../../core/services/font.service';
+import { TemplateService } from '../../core/services/template.service';
+import * as fabric from 'fabric';
+
+@Component({
+  selector: 'app-editor',
+  imports: [
+    FormsModule,
+    MatToolbarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatSnackBarModule,
+    MatProgressBarModule,
+    MatBadgeModule,
+    MatMenuModule,
+    MatDividerModule,
+    MatSliderModule,
+    MatDialogModule,
+    LayerPanelComponent,
+    PropertyPanelComponent,
+    CanvasRulersComponent,
+    CommandPalette,
+    PresentationMode,
+    CommentsOverlay,
+    CollabOverlay,
+    OnboardingTour,
+    AnimationTimeline,
+    QuickActionBar,
+    ImageFiltersPanelComponent,
+    ContextMenuComponent,
+    TextToolbarComponent,
+    SidebarDrawerComponent,
+  ],
+  template: `
+    <div class="editor-layout">
+      <!-- Top Bar -->
+      <header class="editor-topbar">
+        <div class="topbar-left">
+          <button mat-icon-button matTooltip="Home" (click)="goBack()" class="home-btn">
+            <mat-icon>home</mat-icon>
+          </button>
+
+          <!-- File menu (Canva-style) -->
+          <button mat-button class="file-btn" [matMenuTriggerFor]="fileMenu">
+            <mat-icon>description</mat-icon>
+            File
+          </button>
+          <mat-menu #fileMenu="matMenu">
+            <button mat-menu-item (click)="fileNew()">
+              <mat-icon>add</mat-icon>
+              <span>New design</span>
+              <span class="file-shortcut">Ctrl+N</span>
+            </button>
+            <button mat-menu-item (click)="goBack()">
+              <mat-icon>folder_open</mat-icon>
+              <span>Open...</span>
+            </button>
+            <mat-divider />
+            <button mat-menu-item (click)="saveProject()">
+              <mat-icon>save</mat-icon>
+              <span>Save</span>
+              <span class="file-shortcut">Ctrl+S</span>
+            </button>
+            <button mat-menu-item (click)="fileMakeCopy()">
+              <mat-icon>file_copy</mat-icon>
+              <span>Make a copy</span>
+            </button>
+            <mat-divider />
+            <button mat-menu-item (click)="openExportDialog()">
+              <mat-icon>download</mat-icon>
+              <span>Download...</span>
+            </button>
+            <button mat-menu-item (click)="openShareDialog()">
+              <mat-icon>share</mat-icon>
+              <span>Share</span>
+            </button>
+            <button mat-menu-item (click)="publishAsTemplate()">
+              <mat-icon>publish</mat-icon>
+              <span>Publish as template</span>
+            </button>
+            <mat-divider />
+            <button mat-menu-item (click)="openVersionsDialog()">
+              <mat-icon>history</mat-icon>
+              <span>Version history</span>
+            </button>
+            <button mat-menu-item (click)="openResizeDialog()">
+              <mat-icon>aspect_ratio</mat-icon>
+              <span>Resize canvas</span>
+            </button>
+            <mat-divider />
+            <button mat-menu-item (click)="openShortcutsDialog()">
+              <mat-icon>keyboard</mat-icon>
+              <span>Keyboard shortcuts</span>
+              <span class="file-shortcut">?</span>
+            </button>
+          </mat-menu>
+
+          <div class="project-info">
+            @if (isEditingName()) {
+              <input
+                class="name-input"
+                [ngModel]="editableName()"
+                (ngModelChange)="editableName.set($event)"
+                (blur)="finishNameEdit()"
+                (keydown.enter)="finishNameEdit()"
+                (keydown.escape)="cancelNameEdit()"
+                #nameInput
+              />
+            } @else {
+              <span class="project-name" (click)="startNameEdit()" matTooltip="Click to rename">
+                {{ projectService.currentProject()?.name ?? 'Untitled' }}
+                <mat-icon class="edit-icon">edit</mat-icon>
+              </span>
+            }
+            <span class="project-size" matTooltip="Click to resize canvas" (click)="openResizeDialog()">
+              {{ canvasService.canvasWidth() }} × {{ canvasService.canvasHeight() }} · Page {{ activePage() + 1 }}/{{ pages().length }}
+              <mat-icon class="resize-icon">open_in_full</mat-icon>
+            </span>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <button mat-icon-button matTooltip="Undo (Ctrl+Z)" (click)="undo()" [disabled]="!historyService.canUndo()">
+            <mat-icon>undo</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Redo (Ctrl+Y)" (click)="redo()" [disabled]="!historyService.canRedo()">
+            <mat-icon>redo</mat-icon>
+          </button>
+
+          <span class="topbar-sep"></span>
+
+          <button mat-icon-button [matTooltip]="canvasService.showGrid() ? 'Hide Grid' : 'Show Grid'" (click)="canvasService.toggleGrid()" [class.active-toggle]="canvasService.showGrid()">
+            <mat-icon>grid_on</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="canvasService.snapToGrid() ? 'Disable Snap' : 'Enable Snap'" (click)="canvasService.toggleSnapToGrid()" [class.active-toggle]="canvasService.snapToGrid()">
+            <mat-icon>grid_4x4</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="canvasService.showThirds() ? 'Hide Rule of Thirds' : 'Show Rule of Thirds'" (click)="toggleThirds()" [class.active-toggle]="canvasService.showThirds() || canvasService.snapToThirds()">
+            <mat-icon>view_quilt</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="canvasService.printMode() ? 'Exit Print Mode' : 'Print Mode (bleed + safe zone)'" (click)="canvasService.togglePrintMode()" [class.active-toggle]="canvasService.printMode()">
+            <mat-icon>print</mat-icon>
+          </button>
+        </div>
+
+        <div class="topbar-right">
+          <button mat-icon-button matTooltip="Delete Selected (Del)" (click)="deleteSelected()">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+
+          <span class="topbar-sep"></span>
+
+          <button
+            mat-stroked-button
+            class="save-btn"
+            [class.saving]="projectService.isSaving()"
+            [class.saved]="!projectService.isSaving() && projectService.lastSaved()"
+            (click)="saveProject()"
+            [matTooltip]="saveTooltip()"
+          >
+            <mat-icon>{{ saveIcon() }}</mat-icon>
+            <span class="save-label">{{ saveLabel() }}</span>
+          </button>
+
+          <button
+            mat-icon-button
+            [matTooltip]="commentsService.commentMode() ? 'Exit comment mode' : 'Add comment'"
+            [class.active-toggle]="commentsService.commentMode()"
+            (click)="commentsService.toggleCommentMode()"
+          >
+            <mat-icon
+              [matBadge]="commentsService.unresolvedCount() || null"
+              matBadgeColor="warn"
+              matBadgeSize="small"
+              aria-hidden="false"
+              [attr.aria-label]="commentsService.unresolvedCount() ? commentsService.unresolvedCount() + ' unresolved comments' : 'Comments'"
+            >comment</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Version History" (click)="openVersionsDialog()">
+            <mat-icon>history</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Share" (click)="openShareDialog()">
+            <mat-icon>share</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Publish as public template" (click)="publishAsTemplate()">
+            <mat-icon>publish</mat-icon>
+          </button>
+
+          @if (qualityScore(); as q) {
+            <button
+              class="quality-badge"
+              [class.grade-a]="q.grade === 'A+' || q.grade === 'A'"
+              [class.grade-b]="q.grade === 'B'"
+              [class.grade-c]="q.grade === 'C'"
+              [class.grade-d]="q.grade === 'D' || q.grade === 'F'"
+              [matTooltip]="qualityTooltip()"
+              matTooltipPosition="below"
+              (click)="openAuditDialog()"
+            >
+              <span class="q-grade">{{ q.grade }}</span>
+              <span class="q-num">{{ q.total }}</span>
+            </button>
+          }
+
+          <button mat-icon-button matTooltip="Audit design" (click)="openAuditDialog()">
+            <mat-icon>verified_user</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Keyboard Shortcuts (?)" (click)="openShortcutsDialog()">
+            <mat-icon>keyboard</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Present" (click)="startPresentation()">
+            <mat-icon>play_circle</mat-icon>
+          </button>
+
+          <button mat-flat-button class="export-btn" (click)="openExportDialog()">
+            <mat-icon>download</mat-icon>
+            Export
+          </button>
+        </div>
+      </header>
+
+      @if (isProcessing()) {
+        <mat-progress-bar mode="indeterminate" class="processing-bar" />
+      }
+
+      <!-- Floating text toolbar (shows only when text is selected) -->
+      <app-text-toolbar />
+
+      <div class="editor-body">
+        <!-- Left Sidebar (Canva-style) -->
+        <app-sidebar-drawer
+          (addShape)="addShape($event)"
+          (addText)="addTextWithOptions($event)"
+          (uploadImage)="triggerImageUpload()"
+          (removeBg)="removeBackground()"
+        />
+
+        <!-- Canvas Area with Rulers -->
+        <app-canvas-rulers>
+          <div
+            class="canvas-area"
+            #canvasContainer
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+            (contextmenu)="onContextMenu($event)"
+            (mousedown)="onCanvasAreaMouseDown($event)"
+            [class.drag-over]="isDragOver()"
+          >
+            <div class="canvas-stack">
+              <div class="canvas-wrapper">
+                <canvas
+                  #editorCanvas
+                  role="img"
+                  aria-label="Design canvas. Use the toolbar to add elements. Press question mark for keyboard shortcuts."
+                  tabindex="0"
+                ></canvas>
+                <app-comments-overlay class="canvas-comments-overlay" />
+
+                <!-- Canvas-level quick actions (top-right of canvas) -->
+                <div class="canvas-actions">
+                  <button mat-icon-button [matTooltip]="pageLocked() ? 'Unlock page' : 'Lock page'" (click)="togglePageLock()">
+                    <mat-icon>{{ pageLocked() ? 'lock' : 'lock_open' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button matTooltip="Duplicate this page" (click)="duplicateCurrentPage()">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                  <button mat-icon-button matTooltip="Download this page" (click)="openExportDialog()">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Canva-style "Add page" button directly below canvas -->
+              <button class="inline-add-page" (click)="addPage()">
+                <mat-icon>add</mat-icon> Add page
+              </button>
+            </div>
+
+            @if (isDragOver()) {
+              <div class="drop-overlay">
+                <mat-icon>cloud_upload</mat-icon>
+                <p>Drop image here</p>
+              </div>
+            }
+          </div>
+        </app-canvas-rulers>
+
+        <!-- Right Panel: collapses when nothing is selected (Canva-style) -->
+        <div class="right-panel" [class.collapsed]="!hasSelection() && !layersPinned()">
+          @if (hasSelection()) {
+            <app-property-panel />
+            <app-image-filters-panel />
+          }
+          @if (hasSelection() || layersPinned()) {
+            <app-layer-panel />
+          }
+        </div>
+
+        <!-- Layers toggle (always visible, lets user pin layers panel open) -->
+        <button
+          mat-icon-button
+          class="layers-toggle"
+          [class.active-toggle]="layersPinned()"
+          [matTooltip]="layersPinned() ? 'Hide Layers' : 'Show Layers'"
+          (click)="layersPinned.update(v => !v)"
+        >
+          <mat-icon>layers</mat-icon>
+        </button>
+      </div>
+
+      <!-- Page Bar (bottom) -->
+      <div class="page-bar">
+        <!-- Left: Notes + Timer (Canva-style) -->
+        <div class="page-bar-left">
+          <button mat-button class="pb-btn" [matMenuTriggerFor]="notesMenu">
+            <mat-icon>sticky_note_2</mat-icon>
+            Notes
+            @if (currentPageNotes()) {
+              <span class="notes-dot"></span>
+            }
+          </button>
+          <mat-menu #notesMenu="matMenu" class="notes-menu">
+            <div class="notes-panel" (click)="$event.stopPropagation()">
+              <div class="notes-header">Speaker notes for page {{ activePage() + 1 }}</div>
+              <textarea
+                class="notes-textarea"
+                rows="5"
+                placeholder="Add notes for this page..."
+                [ngModel]="currentPageNotes()"
+                (ngModelChange)="updatePageNotes($event)"
+              ></textarea>
+            </div>
+          </mat-menu>
+
+          <button mat-button class="pb-btn" (click)="toggleTimer()">
+            <mat-icon>{{ timerRunning() ? 'pause_circle' : 'timer' }}</mat-icon>
+            @if (timerSeconds() > 0) {
+              {{ formatTimer(timerSeconds()) }}
+            } @else {
+              Timer
+            }
+          </button>
+        </div>
+
+        <div class="page-list">
+          @for (page of pages(); track page.id; let i = $index) {
+            <div
+              class="page-thumb"
+              [class.active]="activePage() === i"
+              (click)="switchToPage(i)"
+            >
+              @if (page.thumbnail) {
+                <img [src]="page.thumbnail" alt="Page {{ i + 1 }}" />
+              } @else {
+                <div class="page-empty">
+                  <span>{{ i + 1 }}</span>
+                </div>
+              }
+
+              <div class="page-actions">
+                <button matTooltip="Duplicate page" (click)="duplicatePageAt($event, i)">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+                @if (pages().length > 1) {
+                  <button matTooltip="Delete page" (click)="deletePageAt($event, i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
+
+              <span class="page-label">{{ i + 1 }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Right side: Zoom controls (Canva-style) -->
+        <div class="page-bar-right">
+          <button mat-icon-button matTooltip="Zoom out" (click)="zoomOut()" class="zoom-btn">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <mat-slider class="zoom-slider" min="10" max="500" step="5">
+            <input
+              matSliderThumb
+              [ngModel]="zoomPercent()"
+              (ngModelChange)="setZoomPct($event)"
+            />
+          </mat-slider>
+          <button mat-icon-button matTooltip="Zoom in" (click)="zoomIn()" class="zoom-btn">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-button class="zoom-pct" [matMenuTriggerFor]="zoomMenu">
+            {{ (canvasService.zoom() * 100).toFixed(0) }}%
+          </button>
+          <mat-menu #zoomMenu="matMenu">
+            <button mat-menu-item (click)="setZoomPct(25)">25%</button>
+            <button mat-menu-item (click)="setZoomPct(50)">50%</button>
+            <button mat-menu-item (click)="setZoomPct(75)">75%</button>
+            <button mat-menu-item (click)="setZoomPct(100)">100%</button>
+            <button mat-menu-item (click)="setZoomPct(150)">150%</button>
+            <button mat-menu-item (click)="setZoomPct(200)">200%</button>
+            <mat-divider />
+            <button mat-menu-item (click)="fitToScreen()">
+              <mat-icon>fit_screen</mat-icon> Fit to screen
+            </button>
+            <button mat-menu-item (click)="setZoomPct(100)">
+              <mat-icon>zoom_in</mat-icon> Zoom to 100%
+            </button>
+          </mat-menu>
+          <button mat-icon-button matTooltip="Fit to screen" (click)="fitToScreen()" class="zoom-btn">
+            <mat-icon>fit_screen</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <app-context-menu #contextMenu />
+    <app-command-palette />
+    <app-collab-overlay />
+    <app-onboarding-tour />
+    <app-animation-timeline />
+    <app-quick-action-bar />
+    <app-presentation-mode #presentation [pages]="presentationPages()" />
+
+    <!-- Processing Overlay -->
+    @if (isProcessing()) {
+      <div class="processing-overlay">
+        <div class="processing-card">
+          <div class="spinner"></div>
+          <h3>Removing Background</h3>
+          <p>AI is processing your image...</p>
+        </div>
+      </div>
+    }
+
+    <input
+      type="file"
+      #fileInput
+      accept="image/*,.svg"
+      (change)="onImageUpload($event)"
+      style="display: none"
+    />
+  `,
+  styles: [`
+    .editor-layout {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--mat-sys-surface);
+    }
+
+    /* === Top Bar (Canva-style) === */
+    .editor-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 16px;
+      background: #18181b;
+      border-bottom: 1px solid #27272a;
+      z-index: 10;
+    }
+
+    .file-btn {
+      font-size: 0.88rem !important;
+      padding: 0 12px !important;
+      min-width: auto !important;
+
+      mat-icon {
+        margin-right: 4px !important;
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+      }
+    }
+
+    ::ng-deep .file-shortcut {
+      margin-left: auto;
+      padding-left: 16px;
+      font-size: 0.72rem;
+      opacity: 0.5;
+      font-family: monospace;
+    }
+
+    .topbar-left, .topbar-center, .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .home-btn {
+      color: #a1a1aa;
+      &:hover { color: white; }
+    }
+
+    .project-info {
+      display: flex;
+      flex-direction: column;
+      margin-left: 6px;
+      border-left: 1px solid #27272a;
+      padding-left: 12px;
+
+      .project-name {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.2;
+        color: #fafafa;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin: -2px -6px;
+        transition: background 0.15s;
+
+        &:hover {
+          background: #27272a;
+        }
+
+        .edit-icon {
+          font-size: 14px;
+          height: 14px;
+          width: 14px;
+          opacity: 0;
+          transition: opacity 0.15s;
+        }
+
+        &:hover .edit-icon {
+          opacity: 0.5;
+        }
+      }
+
+      .name-input {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fafafa;
+        background: #27272a;
+        border: 1px solid var(--mat-sys-primary);
+        border-radius: 4px;
+        padding: 2px 6px;
+        outline: none;
+        width: 180px;
+      }
+
+      .project-size {
+        font-size: 0.72rem;
+        color: #71717a;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: background 0.15s;
+
+        &:hover {
+          background: rgba(255,255,255,0.05);
+          color: #a1a1aa;
+        }
+
+        .resize-icon {
+          font-size: 12px;
+          height: 12px;
+          width: 12px;
+          opacity: 0.5;
+        }
+      }
+    }
+
+    .topbar-sep {
+      width: 1px;
+      height: 22px;
+      background: #27272a;
+      margin: 0 8px;
+    }
+
+    .active-toggle {
+      color: var(--mat-sys-primary) !important;
+      background: rgba(124, 58, 237, 0.15);
+      border-radius: 8px;
+    }
+
+    .zoom-value {
+      font-size: 0.82rem;
+      min-width: 44px;
+      text-align: center;
+      color: #a1a1aa;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .quality-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 14px;
+      background: var(--mat-sys-surface-container-high);
+      border: 1px solid var(--mat-sys-outline-variant);
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.78rem;
+      margin-right: 6px;
+
+      &:hover {
+        border-color: var(--mat-sys-primary);
+      }
+
+      .q-grade {
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+
+      .q-num {
+        opacity: 0.6;
+        font-variant-numeric: tabular-nums;
+      }
+
+      &.grade-a { color: #10b981; border-color: rgba(16,185,129,0.4); }
+      &.grade-b { color: #3b82f6; border-color: rgba(59,130,246,0.4); }
+      &.grade-c { color: #f59e0b; border-color: rgba(245,158,11,0.4); }
+      &.grade-d { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+    }
+
+    .save-btn {
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+
+      mat-icon {
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+      }
+
+      .save-label {
+        font-variant-numeric: tabular-nums;
+      }
+
+      &.saving {
+        color: #f59e0b !important;
+        border-color: #f59e0b !important;
+
+        mat-icon {
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      &.saved {
+        color: #10b981 !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .export-btn {
+      margin-left: 8px;
+      border-radius: 8px;
+    }
+
+    .processing-bar {
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      z-index: 20;
+    }
+
+    /* === Editor Body === */
+    .editor-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+    }
+
+    .canvas-actions {
+      position: absolute;
+      top: -44px;
+      right: 0;
+      display: flex;
+      gap: 2px;
+      padding: 2px 4px;
+      background: var(--mat-sys-surface-container-high);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+
+      button {
+        transform: scale(0.8);
+      }
+    }
+
+    .layers-toggle {
+      position: fixed;
+      bottom: 140px;
+      right: 16px;
+      z-index: 90;
+      background: var(--mat-sys-surface-container-high) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+      &.active-toggle {
+        background: var(--mat-sys-primary) !important;
+        color: var(--mat-sys-on-primary) !important;
+      }
+    }
+
+    .canvas-comments-overlay {
+      position: absolute !important;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* Mobile / tablet responsive */
+    @media (max-width: 768px) {
+      .topbar-center {
+        display: none;
+      }
+      .topbar-right .save-btn {
+        display: none;
+      }
+      .right-panel {
+        display: none !important;
+      }
+      .page-bar {
+        padding: 4px 8px !important;
+      }
+      .editor-topbar {
+        padding: 0 8px !important;
+      }
+      .project-name {
+        font-size: 0.9rem !important;
+      }
+      .project-size {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .home-btn {
+        display: none;
+      }
+    }
+
+    /* === Canvas Area (Canva-style gray workspace) === */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: auto;
+      padding: 40px;
+      background-color: #09090b;
+
+      &.drag-over {
+        &::after {
+          content: '';
+          position: absolute;
+          inset: 8px;
+          border: 3px dashed var(--mat-sys-primary);
+          border-radius: 16px;
+          pointer-events: none;
+          z-index: 4;
+        }
+      }
+    }
+
+    .canvas-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .canvas-wrapper {
+      /* Shrink to fit the Fabric canvas inside — otherwise the wrapper's
+         shadow/border would stretch to the full flex width and appear
+         rectangular even when the design is square. */
+      display: inline-block;
+      width: fit-content;
+      height: fit-content;
+      position: relative;
+      background: #ffffff;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 4px 16px rgba(0,0,0,0.4),
+        0 12px 48px rgba(0,0,0,0.3);
+      border-radius: 4px;
+      line-height: 0;
+      /* Fabric wraps our <canvas> in a .canvas-container div — make sure
+         it's a block and sizes exactly to the backing canvas. */
+      ::ng-deep .canvas-container {
+        display: block !important;
+      }
+
+      canvas {
+        display: block;
+      }
+    }
+
+    .inline-add-page {
+      /* Matches canvas width (stretched in column flex) — Canva-style */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      align-self: stretch;
+      padding: 12px 18px;
+      background: transparent;
+      border: 1px dashed var(--mat-sys-outline-variant);
+      border-radius: 8px;
+      color: var(--mat-sys-on-surface);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.15s;
+
+      mat-icon {
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+      }
+
+      &:hover {
+        background: var(--mat-sys-surface-container-high);
+        border-color: var(--mat-sys-primary);
+        color: var(--mat-sys-primary);
+        opacity: 1;
+      }
+    }
+
+    .drop-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 5;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+
+      mat-icon {
+        font-size: 72px;
+        height: 72px;
+        width: 72px;
+        margin-bottom: 16px;
+        opacity: 0.9;
+      }
+
+      p {
+        font-size: 1.3rem;
+        font-weight: 500;
+      }
+    }
+
+    /* === Right Panel (Canva-style) === */
+    .right-panel {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      background: #18181b;
+      border-left: 1px solid #27272a;
+      overflow-y: auto;
+      transition: width 0.25s ease, border-color 0.25s ease;
+
+      &.collapsed {
+        width: 0;
+        border-left: none;
+        overflow: hidden;
+      }
+
+      app-property-panel {
+        flex-shrink: 0;
+      }
+
+      app-layer-panel {
+        flex: 1;
+        min-height: 180px;
+      }
+    }
+
+    /* === Page Bar === */
+    .page-bar {
+      background: #18181b;
+      border-top: 1px solid #27272a;
+      padding: 10px 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .page-bar-left {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .page-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .zoom-btn {
+      transform: scale(0.85);
+    }
+
+    .zoom-slider {
+      width: 140px;
+      margin: 0 4px;
+
+      ::ng-deep .mdc-slider__track {
+        height: 3px !important;
+      }
+    }
+
+    .zoom-pct {
+      font-size: 0.82rem !important;
+      font-variant-numeric: tabular-nums;
+      min-width: 52px !important;
+      padding: 0 8px !important;
+      opacity: 0.85;
+
+      &:hover { opacity: 1; }
+    }
+
+    .pb-btn {
+      font-size: 0.82rem !important;
+      position: relative;
+
+      mat-icon {
+        margin-right: 4px !important;
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+      }
+
+      .notes-dot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ef4444;
+      }
+    }
+
+    ::ng-deep .notes-menu .mat-mdc-menu-content {
+      padding: 0 !important;
+    }
+
+    ::ng-deep .notes-panel {
+      width: 320px;
+      padding: 12px;
+
+      .notes-header {
+        font-size: 0.78rem;
+        font-weight: 600;
+        opacity: 0.7;
+        margin-bottom: 8px;
+      }
+
+      .notes-textarea {
+        width: 100%;
+        min-height: 100px;
+        background: var(--mat-sys-surface-container-highest);
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 6px;
+        padding: 8px;
+        color: inherit;
+        font: inherit;
+        font-size: 0.85rem;
+        outline: none;
+        resize: vertical;
+
+        &:focus { border-color: var(--mat-sys-primary); }
+      }
+    }
+
+    .page-list {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .page-thumb {
+      position: relative;
+      width: 80px;
+      height: 52px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid #3f3f46;
+      background: #27272a;
+      flex-shrink: 0;
+      transition: border-color 0.15s;
+
+      &:hover {
+        border-color: #71717a;
+        .page-actions { opacity: 1; }
+      }
+
+      &.active {
+        border-color: var(--mat-sys-primary);
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .page-empty {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #52525b;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .page-actions {
+        position: absolute;
+        top: 0;
+        right: 0;
+        display: flex;
+        gap: 2px;
+        padding: 2px;
+        opacity: 0;
+        transition: opacity 0.15s;
+
+        button {
+          width: 20px;
+          height: 20px;
+          border: none;
+          border-radius: 3px;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+
+          mat-icon {
+            font-size: 12px;
+            height: 12px;
+            width: 12px;
+          }
+        }
+      }
+
+      .page-label {
+        position: absolute;
+        bottom: 2px;
+        left: 4px;
+        font-size: 0.6rem;
+        color: #a1a1aa;
+        font-weight: 600;
+      }
+    }
+
+    .add-page-btn {
+      width: 80px;
+      height: 52px;
+      border-radius: 6px;
+      border: 2px dashed #3f3f46;
+      background: none;
+      color: #71717a;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+
+      &:hover {
+        border-color: var(--mat-sys-primary);
+        color: var(--mat-sys-primary);
+      }
+
+      mat-icon {
+        font-size: 24px;
+        height: 24px;
+        width: 24px;
+      }
+    }
+
+    /* === Processing Overlay === */
+    .processing-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .processing-card {
+      background: var(--mat-sys-surface-container-highest);
+      border-radius: 20px;
+      padding: 40px 56px;
+      text-align: center;
+      box-shadow: 0 16px 64px rgba(0,0,0,0.4);
+
+      h3 {
+        margin: 20px 0 8px;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        opacity: 0.6;
+      }
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--mat-sys-outline-variant);
+      border-top-color: var(--mat-sys-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  `],
+})
+export class Editor implements AfterViewInit, OnDestroy {
+  @ViewChild('editorCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('canvasContainer') containerRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('contextMenu') contextMenu!: ContextMenuComponent;
+  @ViewChild('presentation') presentationRef!: PresentationMode;
+
+  readonly isOnline = signal(navigator.onLine);
+  readonly hasSelection = signal(false);
+  readonly layersPinned = signal(false);
+  readonly pageLocked = signal(false);
+
+  // Per-page notes (ephemeral; persisted in the `pages` array below)
+  readonly currentPageNotes = computed(() => this.pages()[this.activePage()]?.notes ?? '');
+
+  /**
+   * Replace the notes field on the currently-active page.
+   *
+   * @param notes - Arbitrary string, shown in the per-page sidebar.
+   */
+  updatePageNotes(notes: string): void {
+    this.pages.update(pages => pages.map((p, i) =>
+      i === this.activePage() ? { ...p, notes } : p,
+    ));
+  }
+
+  // Design timer
+  readonly timerRunning = signal(false);
+  readonly timerSeconds = signal(0);
+  private timerHandle: any = null;
+
+  /** Start/stop the 1Hz design-time timer shown in the sidebar. */
+  toggleTimer(): void {
+    if (this.timerRunning()) {
+      this.timerRunning.set(false);
+      if (this.timerHandle) clearInterval(this.timerHandle);
+    } else {
+      this.timerRunning.set(true);
+      this.timerHandle = setInterval(() => {
+        this.timerSeconds.update(s => s + 1);
+      }, 1000);
+    }
+  }
+
+  /**
+   * Pretty-print a duration for the on-screen timer.
+   *
+   * @param s - Seconds elapsed.
+   * @returns `mm:ss` or `h:mm:ss` for spans ≥ 1h.
+   */
+  formatTimer(s: number): string {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  }
+
+  /**
+   * Lock/unlock every object on the page for movement, rotation, scaling.
+   * Preserves individual layer-lock state when unlocking the page.
+   */
+  togglePageLock(): void {
+    const canvas = this.canvasService.getCanvas();
+    if (!canvas) return;
+    const locked = !this.pageLocked();
+    this.pageLocked.set(locked);
+    canvas.getObjects().forEach(o => {
+      if ((o as any)._isGuideline || (o as any)._isGrid) return;
+      if (locked) {
+        o.set({
+          selectable: false,
+          evented: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockRotation: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          hasControls: false,
+        });
+      } else {
+        // When unlocking the page, respect each object's own _locked state so
+        // individually-locked objects stay locked.
+        const objLocked = !!(o as any)._locked;
+        o.set({
+          selectable: true,
+          evented: true,
+          lockMovementX: objLocked,
+          lockMovementY: objLocked,
+          lockRotation: objLocked,
+          lockScalingX: objLocked,
+          lockScalingY: objLocked,
+          hasControls: !objLocked,
+        });
+      }
+    });
+    if (locked) canvas.discardActiveObject();
+    canvas.renderAll();
+  }
+
+  /** Alias for {@link duplicatePage} used by the page-list toolbar. */
+  duplicateCurrentPage(): void {
+    this.duplicatePage();
+  }
+
+  /** Navigate back to the dashboard with the "new design" action. */
+  fileNew(): void {
+    this.router.navigate(['/'], { queryParams: { action: 'new' } });
+  }
+
+  /** Duplicate the active project and route to the editor for the copy. */
+  fileMakeCopy(): void {
+    const current = this.projectService.currentProject();
+    if (!current) return;
+    const dup = this.projectService.duplicateProject(current.id);
+    if (dup) {
+      this.router.navigate(['/editor', dup.id]);
+    }
+  }
+
+  readonly saveLabel = computed(() => {
+    if (this.projectService.isSaving()) return 'Saving...';
+    if (!this.isOnline()) return 'Offline';
+    const last = this.projectService.lastSaved();
+    if (!last) return 'Save';
+    const secs = Math.floor((Date.now() - new Date(last).getTime()) / 1000);
+    if (secs < 5) return 'Saved';
+    if (secs < 60) return `Saved ${secs}s ago`;
+    if (secs < 3600) return `Saved ${Math.floor(secs / 60)}m ago`;
+    return `Saved ${Math.floor(secs / 3600)}h ago`;
+  });
+
+  readonly saveIcon = computed(() => {
+    if (this.projectService.isSaving()) return 'sync';
+    if (!this.isOnline()) return 'cloud_off';
+    if (this.projectService.lastSaved()) return 'cloud_done';
+    return 'save';
+  });
+
+  readonly saveTooltip = computed(() => {
+    if (!this.isOnline()) return 'Offline — saved locally, will sync when online';
+    if (this.projectService.isSaving()) return 'Syncing to cloud...';
+    const last = this.projectService.lastSaved();
+    if (last) return `All changes saved · ${new Date(last).toLocaleTimeString()}`;
+    return 'Click to save (Ctrl+S)';
+  });
+
+  readonly presentationPages = computed(() => {
+    return this.pages().map(p => ({
+      thumbnail: p.thumbnail,
+      canvasJson: p.canvasJson ?? '',
+    }));
+  });
+
+  readonly canvasService = inject(CanvasService);
+  readonly projectService = inject(ProjectService);
+  readonly commentsService = inject(CommentsService);
+  private readonly collabService = inject(CollaborationService);
+  private readonly aiDesignService = inject(AiDesignService);
+  private readonly qualityService = inject(QualityScoreService);
+  readonly qualityScore = signal<QualityBreakdown | null>(null);
+
+  readonly qualityTooltip = computed(() => {
+    const q = this.qualityScore();
+    if (!q) return '';
+    return q.factors.map(f => `${f.name}: ${f.score}/100 — ${f.detail}`).join('\n');
+  });
+  readonly historyService = inject(HistoryService);
+  private readonly exportService = inject(ExportService);
+  private readonly apiService = inject(ApiService);
+  private readonly keyboardService = inject(KeyboardService);
+  private readonly clipboardService = inject(ClipboardService);
+  private readonly bgRemovalService = inject(BackgroundRemovalService);
+  private readonly fontService = inject(FontService);
+  private readonly templateService = inject(TemplateService);
+  private readonly dialog = inject(MatDialog);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+
+  readonly isProcessing = signal(false);
+  readonly isDragOver = signal(false);
+  readonly isEditingName = signal(false);
+  readonly editableName = signal('');
+
+  // Multi-page
+  readonly pages = signal<{ id: string; canvasJson: string; thumbnail: string; notes?: string }[]>([]);
+  readonly activePage = signal(0);
+
+  private autoSaveTimer: any = null;
+  private debounceSaveTimer: any = null;
+  private qualityDebounce: any = null;
+  private rightClickSub: any = null;
+  private shortcutsListener: (() => void) | null = null;
+  private startCommentListener: (() => void) | null = null;
+  private pasteListener: ((e: ClipboardEvent) => void) | null = null;
+  private onlineHandler: (() => void) | null = null;
+  private offlineHandler: (() => void) | null = null;
+
+  /**
+   * Handle Ctrl/Cmd + wheel as canvas zoom. Plain scroll is ignored so
+   * the surrounding page can scroll normally.
+   *
+   * @param event - DOM `WheelEvent`.
+   */
+  @HostListener('window:wheel', ['$event'])
+  onMouseWheel(event: WheelEvent): void {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+
+    const currentZoom = this.canvasService.zoom();
+    // Smooth zoom steps that feel natural
+    const factor = event.deltaY > 0 ? 0.92 : 1.08;
+    const newZoom = Math.min(Math.max(currentZoom * factor, 0.1), 5);
+    this.canvasService.setZoom(newZoom);
+  }
+
+  /**
+   * Lifecycle: wire up the canvas, load any saved state, subscribe to
+   * collab/autosave timers, and prime first-run UX (tour, quality score).
+   */
+  ngAfterViewInit(): void {
+    const projectId = this.route.snapshot.paramMap.get('id');
+    if (projectId) {
+      this.projectService.openProject(projectId);
+      this.commentsService.setActiveProject(projectId);
+      // Connect to collab room after canvas init (delayed)
+      setTimeout(() => this.collabService.connect(projectId), 600);
+    }
+
+    const project = this.projectService.currentProject();
+    const width = project?.width ?? 1000;
+    const height = project?.height ?? 1000;
+
+    this.canvasService.initCanvas(this.canvasRef.nativeElement, width, height);
+
+    // Load saved canvas state or apply template
+    const templateId = this.route.snapshot.queryParamMap.get('template');
+
+    if (projectId) {
+      const savedJson = this.projectService.getCanvasState(projectId);
+      if (savedJson) {
+        this.canvasService.loadFromJSON(savedJson).then(() => {
+          this.historyService.init();
+          this.fitToScreen();
+        });
+      } else if (templateId) {
+        // New project from template
+        this.templateService.applyTemplate(templateId);
+        this.historyService.init();
+        this.fitToScreen();
+      } else {
+        // Project may be loading from backend — poll briefly for canvas state
+        this.historyService.init();
+        this.fitToScreen();
+        let attempts = 0;
+        const waitForProject = setInterval(() => {
+          attempts++;
+          const p = this.projectService.currentProject();
+          const json = p?.canvasJson;
+          if (json) {
+            clearInterval(waitForProject);
+            this.canvasService.setCanvasSize(p!.width, p!.height);
+            this.canvasService.loadFromJSON(json).then(() => this.fitToScreen());
+          } else if (attempts > 30) {
+            clearInterval(waitForProject);
+          }
+        }, 150);
+      }
+    } else {
+      this.historyService.init();
+      this.fitToScreen();
+    }
+
+    // Consume queued AI design prompt (set by dashboard before navigation)
+    const aiPrompt = sessionStorage.getItem('pf_ai_design_prompt');
+    if (aiPrompt) {
+      sessionStorage.removeItem('pf_ai_design_prompt');
+      // Wait for canvas to fully initialize, then generate
+      setTimeout(async () => {
+        await this.aiDesignService.generate(aiPrompt);
+        this.fitToScreen();
+        this.historyService.init();
+        this.snackBar.open('AI design generated! Edit any element to customize.', 'OK', { duration: 4000 });
+      }, 400);
+    }
+
+    this.keyboardService.init();
+    this.fontService.preloadPopularFonts();
+    this.initPages();
+
+    // Listen for ? shortcut
+    this.shortcutsListener = () => this.openShortcutsDialog();
+    window.addEventListener('show-shortcuts', this.shortcutsListener);
+
+    // Listen for "start comment mode" from context menu
+    this.startCommentListener = () => this.commentsService.setCommentMode(true);
+    window.addEventListener('pf:start-comment-mode', this.startCommentListener);
+
+    // System clipboard paste handler — drop screenshots/images directly onto canvas
+    this.pasteListener = (e: ClipboardEvent) => this.handleSystemPaste(e);
+    document.addEventListener('paste', this.pasteListener);
+
+    // Online/offline listeners for save indicator
+    this.onlineHandler = () => this.isOnline.set(true);
+    this.offlineHandler = () => this.isOnline.set(false);
+    window.addEventListener('online', this.onlineHandler);
+    window.addEventListener('offline', this.offlineHandler);
+
+    // Subscribe to Fabric right-click — more reliable than DOM contextmenu
+    // because Fabric captures pointer events on its own upperCanvasEl.
+    this.rightClickSub = this.canvasService.rightClick$.subscribe((e) => {
+      this.contextMenu.show(e);
+    });
+
+    // Track selection so we can collapse right panel when nothing is selected
+    const fcanvas = this.canvasService.getCanvas();
+    if (fcanvas) {
+      const onSel = () => this.hasSelection.set(!!fcanvas.getActiveObject());
+      fcanvas.on('selection:created', onSel);
+      fcanvas.on('selection:updated', onSel);
+      fcanvas.on('selection:cleared', () => this.hasSelection.set(false));
+    }
+
+    // Auto-save every 30 seconds
+    this.autoSaveTimer = setInterval(() => this.saveProject(), 30000);
+
+    // Debounced auto-save on canvas changes (5s after last change)
+    const canvas = this.canvasService.getCanvas();
+    if (canvas) {
+      const debounceSave = () => {
+        if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
+        this.debounceSaveTimer = setTimeout(() => this.saveProject(), 5000);
+      };
+      canvas.on('object:modified', debounceSave);
+      canvas.on('object:added', debounceSave);
+      canvas.on('object:removed', debounceSave);
+
+      // Refresh quality score on changes (debounced)
+      const refreshQuality = () => {
+        if (this.qualityDebounce) clearTimeout(this.qualityDebounce);
+        this.qualityDebounce = setTimeout(() => {
+          this.qualityScore.set(this.qualityService.calculate());
+        }, 400);
+      };
+      canvas.on('object:modified', refreshQuality);
+      canvas.on('object:added', refreshQuality);
+      canvas.on('object:removed', refreshQuality);
+      // Initial compute
+      refreshQuality();
+    }
+  }
+
+  /**
+   * Lifecycle: persist state, tear down every listener/timer registered
+   * in {@link ngAfterViewInit}, and release the fabric canvas.
+   */
+  ngOnDestroy(): void {
+    // Save before leaving
+    this.saveProject();
+
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
+    }
+    if (this.debounceSaveTimer) {
+      clearTimeout(this.debounceSaveTimer);
+    }
+    if (this.shortcutsListener) {
+      window.removeEventListener('show-shortcuts', this.shortcutsListener);
+    }
+    if (this.startCommentListener) {
+      window.removeEventListener('pf:start-comment-mode', this.startCommentListener);
+    }
+    if (this.pasteListener) {
+      document.removeEventListener('paste', this.pasteListener);
+    }
+    if (this.onlineHandler) window.removeEventListener('online', this.onlineHandler);
+    if (this.offlineHandler) window.removeEventListener('offline', this.offlineHandler);
+    this.rightClickSub?.unsubscribe();
+    if (this.timerHandle) clearInterval(this.timerHandle);
+    this.collabService.disconnect();
+    this.keyboardService.destroy();
+    this.historyService.clear();
+    this.canvasService.dispose();
+  }
+
+  /** Navigate to the dashboard root. */
+  goBack(): void {
+    this.router.navigate(['/']);
+  }
+
+  // --- Project Name ---
+
+  /** Begin inline-editing the project name in the top bar. */
+  startNameEdit(): void {
+    this.editableName.set(this.projectService.currentProject()?.name ?? 'Untitled');
+    this.isEditingName.set(true);
+    setTimeout(() => {
+      const input = document.querySelector('.name-input') as HTMLInputElement;
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
+
+  /** Commit the inline project-name edit (trimmed, non-empty only). */
+  finishNameEdit(): void {
+    const newName = this.editableName().trim();
+    if (newName && this.projectService.currentProject()) {
+      this.projectService.updateProject(this.projectService.currentProject()!.id, { name: newName });
+    }
+    this.isEditingName.set(false);
+  }
+
+  /** Abort the inline project-name edit without saving. */
+  cancelNameEdit(): void {
+    this.isEditingName.set(false);
+  }
+
+  // --- Multi-Page ---
+
+  /** Initialize the multi-page state with a single blank page. */
+  initPages(): void {
+    if (this.pages().length === 0) {
+      this.pages.set([{ id: crypto.randomUUID(), canvasJson: '', thumbnail: '' }]);
+      this.activePage.set(0);
+    }
+  }
+
+  /** Snapshot the active page's canvas JSON + thumbnail into {@link pages}. */
+  saveCurrentPageState(): void {
+    const json = this.canvasService.getCanvasJSON();
+    const thumb = this.canvasService.getThumbnail();
+    this.pages.update(p => p.map((page, i) =>
+      i === this.activePage() ? { ...page, canvasJson: json, thumbnail: thumb } : page
+    ));
+  }
+
+  /**
+   * Switch to another page; saves the current page first, then loads the
+   * target page into the canvas (or resets if the target is blank).
+   *
+   * @param index - 0-based page index.
+   */
+  switchToPage(index: number): void {
+    if (index === this.activePage() || index < 0 || index >= this.pages().length) return;
+
+    // Save current page
+    this.saveCurrentPageState();
+
+    // Load target page
+    this.activePage.set(index);
+    const page = this.pages()[index];
+
+    if (page.canvasJson) {
+      this.canvasService.loadFromJSON(page.canvasJson);
+    } else {
+      this.canvasService.clearCanvas();
+      this.canvasService.setBackgroundMode('white');
+    }
+  }
+
+  /** Append a fresh page and make it active. */
+  addPage(): void {
+    this.saveCurrentPageState();
+    const newPage = { id: crypto.randomUUID(), canvasJson: '', thumbnail: '' };
+    this.pages.update(p => [...p, newPage]);
+    this.activePage.set(this.pages().length - 1);
+    this.canvasService.clearCanvas();
+    this.canvasService.setBackgroundMode('white');
+  }
+
+  /** Insert a copy of the active page immediately after it. */
+  duplicatePage(): void {
+    this.saveCurrentPageState();
+    const currentJson = this.canvasService.getCanvasJSON();
+    const currentThumb = this.canvasService.getThumbnail();
+    const newPage = { id: crypto.randomUUID(), canvasJson: currentJson, thumbnail: currentThumb };
+    const idx = this.activePage();
+    this.pages.update(p => [...p.slice(0, idx + 1), newPage, ...p.slice(idx + 1)]);
+    this.activePage.set(idx + 1);
+    // Canvas already has the duplicated content
+  }
+
+  /**
+   * Delete the page at the given index and load whichever page becomes active.
+   *
+   * @param index - 0-based page index. Noop if this is the last remaining page.
+   */
+  deletePage(index: number): void {
+    if (this.pages().length <= 1) return; // Can't delete last page
+
+    this.pages.update(p => p.filter((_, i) => i !== index));
+
+    if (this.activePage() >= this.pages().length) {
+      this.activePage.set(this.pages().length - 1);
+    }
+
+    // Load the now-active page
+    const page = this.pages()[this.activePage()];
+    if (page.canvasJson) {
+      this.canvasService.loadFromJSON(page.canvasJson);
+    } else {
+      this.canvasService.clearCanvas();
+      this.canvasService.setBackgroundMode('white');
+    }
+  }
+
+  /**
+   * Duplicate the given page from a DOM event handler on the page-list.
+   *
+   * @param event - Originating DOM event; propagation is stopped so the
+   * page-list click handler doesn't also fire.
+   * @param index - 0-based index of the page to duplicate.
+   */
+  duplicatePageAt(event: Event, index: number): void {
+    event.stopPropagation();
+    if (index !== this.activePage()) this.switchToPage(index);
+    this.duplicatePage();
+  }
+
+  /**
+   * Delete the given page from a DOM event handler on the page-list.
+   *
+   * @param event - Originating DOM event; propagation is stopped.
+   * @param index - 0-based index of the page to remove.
+   */
+  deletePageAt(event: Event, index: number): void {
+    event.stopPropagation();
+    this.deletePage(index);
+  }
+
+  // --- Object Creation ---
+
+  /**
+   * Add a shape layer to the canvas (delegates to {@link CanvasService}).
+   *
+   * @param type - Shape kind.
+   */
+  addShape(type: ShapeType): void {
+    this.canvasService.addShape(type);
+  }
+
+  /**
+   * Add a text layer with custom typography options.
+   *
+   * @param opts - Text content + font overrides.
+   */
+  addTextWithOptions(opts: { text: string; fontSize: number; fontWeight: string; fontFamily?: string }): void {
+    this.canvasService.addText(opts.text, {
+      fontSize: opts.fontSize,
+      fontWeight: opts.fontWeight as any,
+      fontFamily: opts.fontFamily,
+    } as any);
+  }
+
+  /** Programmatically open the hidden file picker. */
+  triggerImageUpload(): void {
+    this.fileInputRef.nativeElement.click();
+  }
+
+  /**
+   * Handle a file-input change event from the hidden upload input.
+   *
+   * @param event - DOM `change` event.
+   */
+  onImageUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.loadImageFile(file);
+    input.value = '';
+  }
+
+  // --- Context Menu ---
+
+  /**
+   * Show the custom context menu at the pointer and suppress the native one.
+   *
+   * @param event - DOM `contextmenu` event.
+   */
+  onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    this.contextMenu.show(event);
+  }
+
+  /**
+   * When the user clicks the canvas background (outside of any Fabric object
+   * and outside of the <canvas> element itself), deselect the active object so
+   * floating toolbars (text-toolbar, quick-action-bar) hide.
+   */
+  /**
+   * When the user clicks the canvas background (outside any fabric object
+   * and outside the `<canvas>` element itself), deselect the active object
+   * so floating toolbars hide.
+   *
+   * @param event - DOM `mousedown` event.
+   */
+  onCanvasAreaMouseDown(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    // If the click is on the Fabric canvas or one of the overlays/controls,
+    // let Fabric handle it — it will fire selection:cleared itself if needed.
+    if (target.tagName === 'CANVAS') return;
+    if (target.closest('.canvas-wrapper')) return;
+    if (target.closest('.canvas-actions')) return;
+    if (target.closest('.inline-add-page')) return;
+
+    const canvas = this.canvasService.getCanvas();
+    if (!canvas) return;
+    if (canvas.getActiveObject()) {
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+    }
+  }
+
+  // --- Drag & Drop ---
+
+  /**
+   * React to file drag-over on the canvas area (enables drop affordance).
+   *
+   * @param event - DOM `dragover` event.
+   */
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(true);
+  }
+
+  /**
+   * Clear the drop affordance when the dragged files leave the canvas area.
+   *
+   * @param event - DOM `dragleave` event.
+   */
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(false);
+  }
+
+  /**
+   * Handle a file drop: each dropped image is loaded as an image layer.
+   *
+   * @param event - DOM `drop` event.
+   */
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type.startsWith('image/')) {
+        this.loadImageFile(files[i]);
+      }
+    }
+  }
+
+  // --- Background Removal ---
+
+  /**
+   * Run background removal on the currently-selected image.
+   *
+   * @returns A promise that resolves once the operation settles.
+   * @remarks Shows toasts on both success and failure paths.
+   */
+  async removeBackground(): Promise<void> {
+    const canvas = this.canvasService.getCanvas();
+    if (!canvas) return;
+
+    const activeObj = canvas.getActiveObject();
+    if (!activeObj || !(activeObj instanceof fabric.FabricImage)) {
+      this.snackBar.open('Please select an image on the canvas first', 'OK', { duration: 3000 });
+      return;
+    }
+
+    this.isProcessing.set(true);
+
+    const dataUrl = activeObj.toDataURL({ format: 'png' });
+    const resultUrl = await this.bgRemovalService.removeFromDataURL(dataUrl);
+
+    if (resultUrl) {
+      this.canvasService.addImage(resultUrl);
+      canvas.remove(activeObj);
+      canvas.renderAll();
+      this.snackBar.open('Background removed successfully!', 'OK', { duration: 3000 });
+    } else {
+      this.snackBar.open(this.bgRemovalService.errorMessage() || 'Background removal failed', 'OK', { duration: 5000 });
+    }
+
+    this.isProcessing.set(false);
+  }
+
+  /** Delete the currently-selected object. */
+  deleteSelected(): void {
+    this.canvasService.removeActiveObject();
+  }
+
+  // --- Zoom ---
+
+  /** Increase zoom by 10% up to the 5× cap. */
+  zoomIn(): void {
+    this.canvasService.setZoom(Math.min(this.canvasService.zoom() + 0.1, 5));
+  }
+
+  /** Decrease zoom by 10% down to the 10% floor. */
+  zoomOut(): void {
+    this.canvasService.setZoom(Math.max(this.canvasService.zoom() - 0.1, 0.1));
+  }
+
+  /**
+   * Set zoom as an integer percentage (clamped to [10, 500]).
+   *
+   * @param pct - Zoom percent, e.g. `100` for 100%.
+   */
+  setZoomPct(pct: number): void {
+    const z = Math.max(0.1, Math.min(5, pct / 100));
+    this.canvasService.setZoom(z);
+  }
+
+  readonly zoomPercent = computed(() => Math.round(this.canvasService.zoom() * 100));
+
+  /** Compute a zoom that fits the canvas within the container (≤ 1×). */
+  fitToScreen(): void {
+    const container = this.containerRef?.nativeElement;
+    if (!container) return;
+
+    const zoom = Math.min(
+      (container.clientWidth - 64) / this.canvasService.canvasWidth(),
+      (container.clientHeight - 64) / this.canvasService.canvasHeight(),
+      1,
+    );
+    this.canvasService.setZoom(zoom);
+  }
+
+  // --- Save ---
+
+  /**
+   * Global keydown handler — currently only Ctrl/Cmd+S hooks `saveProject`.
+   *
+   * @param event - DOM `keydown` event.
+   */
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      event.preventDefault();
+      this.saveProject();
+    }
+  }
+
+  /**
+   * Persist the active page's canvas JSON + thumbnail via
+   * {@link ProjectService.saveCanvasState}. Noop without an active project.
+   */
+  saveProject(): void {
+    const project = this.projectService.currentProject();
+    if (!project) return;
+
+    // Save current page state first
+    this.saveCurrentPageState();
+
+    // Use the active page's canvas state as the project's main canvas
+    const canvasJson = this.canvasService.getCanvasJSON();
+    const thumbnail = this.canvasService.getThumbnail();
+
+    // Silent save — the save-button pill in the topbar reflects sync state
+    // ("Saving..." / "Saved Xs ago" / "Offline"), so no snackbar needed.
+    this.projectService.saveCanvasState(project.id, canvasJson, thumbnail);
+  }
+
+  // --- History ---
+
+  /** Undo the last history step. */
+  undo(): void { this.historyService.undo(); }
+  /** Redo the last undone history step. */
+  redo(): void { this.historyService.redo(); }
+
+  // --- Export ---
+
+  /** Open the Export dialog, seeded with every page's canvas JSON. */
+  openExportDialog(): void {
+    // Save current page so it's up-to-date in pages array
+    this.saveCurrentPageState();
+
+    const ref = this.dialog.open(ExportDialog, {
+      width: '500px',
+      panelClass: 'export-dialog-container',
+    });
+
+    ref.afterOpened().subscribe(() => {
+      ref.componentInstance.setPagesData(
+        this.pages().map(p => ({ canvasJson: p.canvasJson ?? '' })),
+        this.canvasService.getCanvasJSON(),
+      );
+    });
+  }
+
+  /** Open the keyboard shortcuts help dialog. */
+  openShortcutsDialog(): void {
+    this.dialog.open(ShortcutsDialog, {
+      width: '600px',
+    });
+  }
+
+  /** Open the accessibility / design audit dialog. */
+  openAuditDialog(): void {
+    this.dialog.open(AuditDialog, {
+      width: '640px',
+    });
+  }
+
+  /**
+   * Prompt for metadata and publish the current project as a public template.
+   * Silent-fails without an active project (toast-only).
+   */
+  publishAsTemplate(): void {
+    const project = this.projectService.currentProject();
+    if (!project) {
+      this.snackBar.open('Save the project first', 'OK', { duration: 2000 });
+      return;
+    }
+    const name = prompt('Template name:', project.name);
+    if (!name) return;
+    const category = prompt('Category (Logo, Social, Marketing, Print, Other):', 'Other') || 'Other';
+    const description = prompt('Short description (optional):', '') || undefined;
+
+    this.saveCurrentPageState();
+    const json = this.canvasService.getCanvasJSON();
+    const thumb = this.canvasService.getThumbnail();
+
+    this.apiService.publishTemplate({
+      name,
+      category,
+      description,
+      canvas_json: json,
+      thumbnail: thumb,
+      width: this.canvasService.canvasWidth(),
+      height: this.canvasService.canvasHeight(),
+    }).subscribe({
+      next: () => this.snackBar.open('Template published to public gallery!', 'OK', { duration: 3000 }),
+      error: (err) => {
+        const msg = err?.error?.detail || 'Failed to publish — are you logged in?';
+        this.snackBar.open(msg, 'OK', { duration: 4000 });
+      },
+    });
+  }
+
+  /** Open the canvas-resize dialog. */
+  openResizeDialog(): void {
+    this.dialog.open(ResizeDialog, {
+      width: '560px',
+    });
+  }
+
+  /** Persist the active page and enter full-screen presentation mode. */
+  startPresentation(): void {
+    // Update current page thumbnail before presenting
+    this.saveCurrentPageState();
+    setTimeout(() => {
+      this.presentationRef?.start(this.activePage());
+    }, 50);
+  }
+
+  /** Toggle both the visual rule-of-thirds overlay and its snapping. */
+  toggleThirds(): void {
+    // Toggle both showing and snapping in one click
+    this.canvasService.toggleShowThirds();
+    this.canvasService.toggleSnapToThirds();
+  }
+
+  /** Open the project-sharing dialog (noop without an active project). */
+  openShareDialog(): void {
+    const projectId = this.projectService.currentProject()?.id;
+    if (!projectId) return;
+    this.dialog.open(ShareDialog, {
+      width: '520px',
+      data: { projectId },
+    });
+  }
+
+  /**
+   * Save the project, then open the version-history dialog so the newest
+   * snapshot is visible (noop without an active project).
+   */
+  openVersionsDialog(): void {
+    const projectId = this.projectService.currentProject()?.id;
+    if (!projectId) return;
+    // Save before opening so the current state can be snapshotted
+    this.saveProject();
+    this.dialog.open(VersionsDialog, {
+      width: '660px',
+      data: { projectId },
+    });
+  }
+
+  // --- Helpers ---
+
+  private handleSystemPaste(event: ClipboardEvent): void {
+    // Skip if user is typing in an input/textarea
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+
+    // Skip if a fabric text object is being edited
+    const activeObj = this.canvasService.getCanvas()?.getActiveObject();
+    if (activeObj && 'isEditing' in activeObj && (activeObj as any).isEditing) {
+      return;
+    }
+
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    let handled = false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // Image data (screenshots, copied images)
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          this.loadImageFile(file);
+          this.snackBar.open('Image pasted from clipboard', 'OK', { duration: 2000 });
+          handled = true;
+        }
+        break;
+      }
+    }
+
+    // Fall back to text paste only when nothing is selected on canvas
+    if (!handled) {
+      const text = event.clipboardData?.getData('text');
+      if (text && text.length < 2000 && !this.canvasService.getCanvas()?.getActiveObject()) {
+        event.preventDefault();
+        this.canvasService.addText(text);
+        this.snackBar.open('Text pasted from clipboard', 'OK', { duration: 2000 });
+      }
+    }
+  }
+
+  private loadImageFile(file: File): void {
+    const isSvg = file.type === 'image/svg+xml' || file.name.endsWith('.svg');
+
+    if (isSvg) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.canvasService.addSvg(e.target?.result as string);
+      };
+      reader.readAsText(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.canvasService.addImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  private dataURLToBlob(dataUrl: string): Blob {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const byteString = atob(parts[1]);
+    const uint8Array = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([uint8Array], { type: mime });
+  }
+}

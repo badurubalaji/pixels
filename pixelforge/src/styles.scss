@@ -1,0 +1,106 @@
+
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme((
+    color: (
+      primary: mat.$violet-palette,
+      tertiary: mat.$cyan-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+body {
+  color-scheme: dark;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+// Light theme overrides
+body.theme-light {
+  color-scheme: light;
+  --mat-sys-surface: #ffffff;
+  --mat-sys-surface-container: #f7f7f8;
+  --mat-sys-surface-container-high: #ededee;
+  --mat-sys-surface-container-highest: #e3e3e4;
+  --mat-sys-on-surface: #1a1a1f;
+  --mat-sys-outline-variant: #d4d4d8;
+  --mat-sys-outline: #a1a1aa;
+}
+
+body.theme-dark {
+  color-scheme: dark;
+}
+
+// Accessibility: visible focus indicators for keyboard users
+:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+// But hide focus rings on mouse-clicked elements
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+// Skip-to-canvas link for screen readers
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  padding: 8px 16px;
+  border-radius: 0 0 8px 0;
+  z-index: 9999;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:focus {
+    top: 0;
+  }
+}
+
+// Reduced motion preference
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.6);
+}
