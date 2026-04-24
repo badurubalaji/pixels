@@ -1,0 +1,98 @@
+{
+  "name": "Corporate LinkedIn Banner",
+  "platform": "linkedin-banner",
+  "tags": [
+    "Corporate",
+    "Minimal"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#0A66C2"
+    },
+    {
+      "role": "background",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1584,
+        "height": 396,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1584,
+        "height": 66,
+        "fill": "#0A66C2",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 1188,
+        "top": 264,
+        "width": 396,
+        "height": 132,
+        "fill": "#0A66C2",
+        "rx": 8,
+        "ry": 8,
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 20,
+        "width": 800,
+        "height": 47,
+        "text": "Product Strategy Lead",
+        "fontSize": 39,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 96,
+        "width": 800,
+        "height": 27,
+        "text": "Ex-BigCo | Speaker",
+        "fontSize": 19,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1584,
+    "height": 396
+  }
+}

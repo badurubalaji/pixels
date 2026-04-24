@@ -1,0 +1,108 @@
+{
+  "name": "Corporate Tutorial YT Thumb",
+  "platform": "yt-thumb",
+  "tags": [
+    "Corporate",
+    "Minimal"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#003366"
+    },
+    {
+      "role": "background",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "text",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "accent",
+      "default": "#FFD60A"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 120,
+        "fill": "#003366",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 1060,
+        "top": 500,
+        "radius": 90,
+        "fill": "#003366",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 24,
+        "width": 800,
+        "height": 80,
+        "text": "Full Tutorial",
+        "fontSize": 72,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 150,
+        "width": 800,
+        "height": 44,
+        "text": "Step by step",
+        "fontSize": 36,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "radius": 9,
+        "fill": "#FFD60A",
+        "selectable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1280,
+    "height": 720
+  }
+}

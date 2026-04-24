@@ -1,0 +1,95 @@
+{
+  "name": "Festive Holiday IG Post",
+  "platform": "ig-post",
+  "tags": [
+    "Festive",
+    "Playful"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#FF3B30"
+    },
+    {
+      "role": "secondary",
+      "default": "#34C759"
+    },
+    {
+      "role": "text",
+      "default": "#FFFFFF"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1080,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 180,
+        "fill": "#FF3B30",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 770,
+        "radius": 135,
+        "fill": "#34C759",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 42,
+        "width": 800,
+        "height": 104,
+        "text": "Happy Holidays",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "width": 800,
+        "height": 56,
+        "text": "From our team",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1080,
+    "height": 1080
+  }
+}

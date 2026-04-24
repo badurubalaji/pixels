@@ -253,3 +253,15 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Follow-up raised:** thumbnail 300×300 cap not enforced in pydantic (would pull Pillow into validation hot path) — left as PX-022b authoring-time contract. Noted; not a story-level issue.
 
 - **Next wave:** PX-022b (content authoring, 20 templates) — heavy L-sized, sequential since it writes into the infra PX-022a just created. Dispatching now.
+
+## 2026-04-24T04:50:00Z · Sprint-2 Wave-2 COMPLETE · PX-022b (20 templates authored)
+
+- **Result:** 20 templates (7 ig-post [5 content + 2 logo-tagged] + 4 ig-story + 4 linkedin-post + 3 linkedin-banner + 2 yt-thumb) on disk as fully-shaped JSON + ≤300×300 PNG pairs. 8 new integration tests covering AC-1..AC-5 + AC-7. **61/61 BE tests passing** (53 baseline + 8 new).
+- **Autonomous approvals on Amelia's behalf:**
+  1. **Repurpose-over-extend for Logo slots.** Amelia placed the 2 logo templates in the `ig-post` platform bucket tagged `["Logo", ...]` rather than extending `PlatformLiteral` to include `'logo'`. Rationale: keeps the diff backend-only, avoids rippling into `platform-presets.ts` + parity test + schema. **APPROVED**. Product can revisit via PX-022b-FUP-2 if a first-class Logo gallery tab is wanted.
+  2. **Programmatic authoring (Pillow + fabric JSON)** rather than hand-designed templates. Story explicitly pre-authorized this as acceptable ("functional but not visually polished"). Fonts: DejaVu (SIL OFL) + Pillow default, zero licensing risk. **APPROVED**. Sally's visual polish is queued as PX-022b-FUP-1.
+  3. **Metadata rolled into the canvas JSON** instead of sidecar `.meta.json` files. Loader accepts full-document form. Simpler. **APPROVED** — deviation from story File List, story file updated.
+  4. **Authoring helper** at `backend/app/seed/author_templates.py` — not imported at runtime, is an offline authoring utility. Shipped alongside templates so rebuilds are reproducible. **APPROVED**.
+- **Distribution note:** story brief said "5 ig-post + 4 + 4 + 3 + 2 + 2 = 20"; with the repurpose path the ig-post bucket holds 7 (5 content-post + 2 logo-tagged). Net still 20. Test pins the final distribution.
+- **Follow-ups raised:** PX-022b-FUP-1 (Sally visual polish pass), PX-022b-FUP-2 (first-class Logo gallery tab decision). Both in REVISIONS-TRACKER wave #9.
+- **Next wave:** PX-023 (gallery + Brand-Kit thumbnail pre-composition). Dispatching.

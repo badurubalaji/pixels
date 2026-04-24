@@ -1,0 +1,95 @@
+{
+  "name": "Wordmark Logo",
+  "platform": "ig-post",
+  "tags": [
+    "Logo",
+    "Bold"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#0A84FF"
+    },
+    {
+      "role": "background",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1080,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 180,
+        "fill": "#0A84FF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 770,
+        "radius": 135,
+        "fill": "#0A84FF",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 42,
+        "width": 800,
+        "height": 104,
+        "text": "BRAND",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "width": 800,
+        "height": 56,
+        "text": "studio",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1080,
+    "height": 1080
+  }
+}

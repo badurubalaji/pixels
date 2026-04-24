@@ -1,0 +1,104 @@
+{
+  "name": "Minimal Quote IG Post",
+  "platform": "ig-post",
+  "tags": [
+    "Minimal",
+    "Corporate"
+  ],
+  "palette_slots": [
+    {
+      "role": "background",
+      "default": "#F5F5F7"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    },
+    {
+      "role": "accent",
+      "default": "#007AFF"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1080,
+        "fill": "#F5F5F7",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 180,
+        "fill": "#F5F5F7",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 770,
+        "radius": 135,
+        "fill": "#F5F5F7",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 42,
+        "width": 800,
+        "height": 104,
+        "text": "Stay focused.",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "width": 800,
+        "height": 56,
+        "text": "— daily reminder",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 282,
+        "radius": 12,
+        "fill": "#007AFF",
+        "selectable": true
+      }
+    ],
+    "background": "#F5F5F7",
+    "width": 1080,
+    "height": 1080
+  }
+}

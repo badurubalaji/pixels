@@ -1,0 +1,104 @@
+{
+  "name": "Minimal Announcement IG Story",
+  "platform": "ig-story",
+  "tags": [
+    "Minimal",
+    "Corporate"
+  ],
+  "palette_slots": [
+    {
+      "role": "background",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    },
+    {
+      "role": "accent",
+      "default": "#8E8E93"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 320,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 1610,
+        "radius": 135,
+        "fill": "#FFFFFF",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 112,
+        "width": 800,
+        "height": 104,
+        "text": "Announcing",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 350,
+        "width": 800,
+        "height": 56,
+        "text": "Coming soon",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 422,
+        "radius": 12,
+        "fill": "#8E8E93",
+        "selectable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1080,
+    "height": 1920
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "Bold Sale IG Post",
+  "platform": "ig-post",
+  "tags": [
+    "Bold",
+    "Festive"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#FF3B30"
+    },
+    {
+      "role": "secondary",
+      "default": "#FFD60A"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1080,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 180,
+        "fill": "#FF3B30",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 770,
+        "radius": 135,
+        "fill": "#FFD60A",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 42,
+        "width": 800,
+        "height": 104,
+        "text": "MEGA SALE",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "width": 800,
+        "height": 56,
+        "text": "Up to 50% off",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1080,
+    "height": 1080
+  }
+}

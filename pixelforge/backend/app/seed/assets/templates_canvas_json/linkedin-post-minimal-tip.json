@@ -1,0 +1,103 @@
+{
+  "name": "Minimal Tip LinkedIn",
+  "platform": "linkedin-post",
+  "tags": [
+    "Minimal"
+  ],
+  "palette_slots": [
+    {
+      "role": "background",
+      "default": "#F5F5F7"
+    },
+    {
+      "role": "text",
+      "default": "#1C1C1E"
+    },
+    {
+      "role": "accent",
+      "default": "#0A66C2"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1200,
+        "height": 627,
+        "fill": "#F5F5F7",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1200,
+        "height": 104,
+        "fill": "#F5F5F7",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 1004,
+        "top": 431,
+        "radius": 78,
+        "fill": "#F5F5F7",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 21,
+        "width": 800,
+        "height": 70,
+        "text": "Tip of the day",
+        "fontSize": 62,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 134,
+        "width": 800,
+        "height": 39,
+        "text": "Keep it simple",
+        "fontSize": 31,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 189,
+        "radius": 8,
+        "fill": "#0A66C2",
+        "selectable": true
+      }
+    ],
+    "background": "#F5F5F7",
+    "width": 1200,
+    "height": 627
+  }
+}

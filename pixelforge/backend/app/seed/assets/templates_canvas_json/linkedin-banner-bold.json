@@ -1,0 +1,97 @@
+{
+  "name": "Bold LinkedIn Banner",
+  "platform": "linkedin-banner",
+  "tags": [
+    "Bold"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#1C1C1E"
+    },
+    {
+      "role": "secondary",
+      "default": "#FF3B30"
+    },
+    {
+      "role": "text",
+      "default": "#FFFFFF"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1584,
+        "height": 396,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1584,
+        "height": 66,
+        "fill": "#1C1C1E",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 1188,
+        "top": 264,
+        "width": 396,
+        "height": 132,
+        "fill": "#FF3B30",
+        "rx": 8,
+        "ry": 8,
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 20,
+        "width": 800,
+        "height": 47,
+        "text": "BUILDING IN PUBLIC",
+        "fontSize": 39,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 96,
+        "width": 800,
+        "height": 27,
+        "text": "Follow the journey",
+        "fontSize": 19,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#FFFFFF",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1584,
+    "height": 396
+  }
+}

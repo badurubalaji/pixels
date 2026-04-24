@@ -29,23 +29,22 @@ This story is the content-authoring half of the original PX-022 split. The infra
 
 ## Tasks / Subtasks
 
-- [ ] **T-1 · Sally provides sketches** (~1 day design time).
+- [~] **T-1 · Sally provides sketches** (~1 day design time). **DEFERRED** to PX-022b-FUP-1 — we authored programmatically (Pillow + fabric JSON) to unblock PX-023; visual polish is a follow-up Sally design pass.
   - [ ] 20 thumbnails of the intended templates (pencil / Figma sketches acceptable).
   - [ ] Each labeled with platform, tag family, palette slots.
   - [ ] Reviewed by Amelia for fabric.js-renderability feasibility.
-- [ ] **T-2 · Author canvas JSON**
-  - [ ] For each template, open the existing editor, design, then `CanvasService.getCanvasJSON()` to export.
-  - [ ] Save as `<stem>.json` in `backend/app/seed/assets/templates_canvas_json/`.
-- [ ] **T-3 · Generate thumbnails**
-  - [ ] For each, `canvas.toDataURL('image/png')` at 300×300 OR fabric `.toDataURL({ format:'png', multiplier: 0.3 })`.
-  - [ ] Save as `<stem>.png` in thumbnails dir.
-- [ ] **T-4 · Palette slot annotation**
-  - [ ] Per template JSON, annotate which object fills are Brand Kit palette slots.
-- [ ] **T-5 · Metadata**
-  - [ ] Per template, a small `<stem>.meta.json` with name, platform, tags, palette_slots, font list, license notes.
-- [ ] **T-6 · Integration test**
-  - [ ] `backend/tests/test_templates_seed_content.py` — after seed, assert 20 documents exist with expected platform distribution.
-- [ ] **T-7 · Sally's visual review** — 30-min pass before PR merge.
+- [x] **T-2 · Author canvas JSON**
+  - [x] 20 templates authored via `backend/app/seed/author_templates.py` (one `_Spec` per template; `_build_canvas_json` produces 5-6 fabric-compatible layers: background rect, primary band, secondary corner shape, headline textbox, subline textbox, optional accent dot).
+  - [x] Saved as full-document JSON (top-level `name`/`platform`/`tags`/`palette_slots`/`canvas_json`) in `backend/app/seed/assets/templates_canvas_json/`.
+- [x] **T-3 · Generate thumbnails**
+  - [x] Rendered 300×300 (aspect-projected) PNG previews via `Pillow ImageDraw`, matching each spec's palette. Background rect + top band + corner shape + headline + subline.
+  - [x] Saved as `<stem>.png` in `backend/app/seed/assets/templates_thumbnails/`.
+- [x] **T-4 · Palette slot annotation**
+  - [x] Each template declares ≥ 2 palette slots (`primary` + `secondary`/`text`/`accent`/`background`) directly in the JSON; thumbnails and canvas scene reuse the same hex defaults so the Brand-Kit auto-apply pass (PX-060) can swap them in-place.
+- [~] **T-5 · Metadata** — rolled into the canvas JSON itself (loader accepts full-document form). No separate `.meta.json` files needed; the loader already ingests `name`/`platform`/`tags`/`palette_slots` from the top-level JSON.
+- [x] **T-6 · Integration test**
+  - [x] `backend/tests/test_templates_seed_content.py` — 8 tests covering AC-1 through AC-5 and AC-7: 20 JSON+PNG pairs on disk, every PNG ≤ 300×300 and Pillow-readable, full seed inserts 20 docs, platform distribution is pinned (7/4/4/3/2), ≥ 2 palette slots + ≥ 1 filter-chip tag per doc, 3-8 layers per canvas, no raster-image fabric objects.
+- [ ] **T-7 · Sally's visual review** — pending (PX-022b-FUP-1).
 
 ## File List (expected)
 
@@ -63,3 +62,38 @@ This story is the content-authoring half of the original PX-022 split. The infra
 - Sally visual sign-off in PR.
 - Integration test green.
 - Tags populated.
+
+---
+
+## Dev Agent Record
+
+**Agent:** Amelia
+**Completed:** 2026-04-23
+**Status:** COMPLETE (pending Sally's visual review, tracked as PX-022b-FUP-1)
+
+### Logo-path decision
+Repurposed 2 `ig-post` slots as logo-flavored designs tagged `["Logo", ...]` (stems `logo-ig-monogram`, `logo-ig-wordmark`). The canonical `PlatformLiteral` and `platform_presets` were NOT extended — this keeps the diff backend-only and avoids touching `src/app/core/constants/platform-presets.ts` and the parity test.
+
+Net distribution: **7 ig-post** (5 content-post + 2 logo-tagged) + 4 ig-story + 4 linkedin-post + 3 linkedin-banner + 2 yt-thumb = **20 total**.
+
+### Authoring approach
+Programmatic (Pillow + fabric JSON), NOT hand-designed. Each template is a `_Spec` in `backend/app/seed/author_templates.py` → `_build_canvas_json` produces 5-6 fabric layers (bg rect, primary band, secondary shape, headline textbox, subline textbox, optional accent dot) → `_render_thumbnail` emits a 300×300 aspect-projected PNG. Fonts are DejaVu (SIL OFL) with Pillow bundled-default fallback; no proprietary fonts. Visual polish intentionally deferred to PX-022b-FUP-1 (Sally design session).
+
+### Files created
+- `pixelforge/backend/app/seed/author_templates.py` — new (authoring helper + `SPECS` export; not imported at runtime).
+- `pixelforge/backend/app/seed/assets/templates_canvas_json/*.json` — 20 new files.
+- `pixelforge/backend/app/seed/assets/templates_thumbnails/*.png` — 20 new files.
+- `pixelforge/backend/tests/test_templates_seed_content.py` — new (8 tests).
+
+No frontend or existing-backend changes.
+
+### Test results
+- Baseline before: 53/53 passing.
+- After: **61/61 passing** (53 baseline + 8 new). Zero failures.
+- New tests cover AC-1 (20 JSONs), AC-2 (20 stem-matched PNGs, ≤ 300×300, Pillow-openable), AC-3 (3-8 layers, ≥ 2 palette roles), AC-4 (≥ 3 filter-chip tag families across set — all 6 used: Bold/Minimal/Festive/Corporate/Playful/Logo), AC-5 (no `image` fabric objects — license guardrail), AC-7 (full seed into mongomock yields 20 docs with pinned platform distribution + 2 logo-tagged docs in ig-post slot).
+
+### Follow-ups (out of scope)
+- **PX-022b-FUP-1** — Sally visual design pass: replace the programmatic thumbnails + canvas compositions with hand-designed variants. Current templates are functional but not visually polished (the brief flagged this as acceptable).
+- **PX-022b-FUP-2** — If product wants a first-class `Logo` gallery tab, either extend `PlatformLiteral` to include `'logo'` (touches `schemas/template.py`, `platform_presets.py`, `platform-presets.ts`, parity test) or add a `category: "logo"` field to the Template schema. Current tag-based surfacing works for MVP gallery filters.
+- **T-1** (Sally sketches) and **T-7** (Sally review) are unchecked in the subtask list — handoff to Sally as part of FUP-1.
+

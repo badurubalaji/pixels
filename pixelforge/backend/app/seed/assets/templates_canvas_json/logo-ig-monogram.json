@@ -1,0 +1,104 @@
+{
+  "name": "Monogram Logo",
+  "platform": "ig-post",
+  "tags": [
+    "Logo",
+    "Minimal"
+  ],
+  "palette_slots": [
+    {
+      "role": "primary",
+      "default": "#1C1C1E"
+    },
+    {
+      "role": "background",
+      "default": "#FFFFFF"
+    },
+    {
+      "role": "accent",
+      "default": "#C69C6D"
+    }
+  ],
+  "canvas_json": {
+    "version": "7.0.0",
+    "objects": [
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 1080,
+        "fill": "#FFFFFF",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "rect",
+        "version": "7.0.0",
+        "left": 0,
+        "top": 0,
+        "width": 1080,
+        "height": 180,
+        "fill": "#1C1C1E",
+        "rx": 0,
+        "ry": 0,
+        "selectable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 770,
+        "top": 770,
+        "radius": 135,
+        "fill": "#1C1C1E",
+        "selectable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 42,
+        "width": 800,
+        "height": 104,
+        "text": "AB",
+        "fontSize": 96,
+        "fontWeight": "bold",
+        "fontFamily": "Helvetica",
+        "fill": "#1C1C1E",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "textbox",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 210,
+        "width": 800,
+        "height": 56,
+        "text": "est. 2026",
+        "fontSize": 48,
+        "fontWeight": "normal",
+        "fontFamily": "Helvetica",
+        "fill": "#C69C6D",
+        "textAlign": "left",
+        "selectable": true,
+        "editable": true
+      },
+      {
+        "type": "circle",
+        "version": "7.0.0",
+        "left": 40,
+        "top": 282,
+        "radius": 12,
+        "fill": "#C69C6D",
+        "selectable": true
+      }
+    ],
+    "background": "#FFFFFF",
+    "width": 1080,
+    "height": 1080
+  }
+}
