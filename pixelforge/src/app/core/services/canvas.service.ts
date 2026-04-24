@@ -304,58 +304,79 @@ export class CanvasService {
   /**
    * Parse an SVG string and add it as a single grouped layer.
    *
-   * @param svgString - Well-formed SVG source.
-   * @returns A promise that resolves when the group has been added.
+   * @param svgString - Well-formed SVG source. The caller is responsible for
+   *   sanitizing — {@link BrandKitService.addBrandLogo} already does this via
+   *   DOMPurify before persisting.
+   * @returns A promise that resolves with the grouped {@link fabric.Object}
+   *   added to the canvas.
+   * @throws Error when the canvas is not initialized or the SVG is empty /
+   *   unparseable.
+   *
+   * @remarks
+   * Wraps `fabric.loadSVGFromString` + `fabric.util.groupSVGElements` in
+   * Promise semantics and auto-scales the group to ~60% of the canvas.
+   * The returned object is the same reference set as the active selection,
+   * so callers can immediately apply additional transforms.
+   *
+   * @example
+   * ```ts
+   * const obj = await canvas.addSvg('<svg><circle r="10"/></svg>');
+   * obj.set({ left: 100 });
+   * ```
+   *
+   * @see PX-003 AC-8
    */
-  async addSvg(svgString: string): Promise<void> {
-    if (!this.canvas) return;
-
-    try {
-      const objects = await fabric.loadSVGFromString(svgString);
-      if (!objects || !objects.objects || objects.objects.length === 0) return;
-
-      const group = fabric.util.groupSVGElements(
-        objects.objects.filter((o): o is fabric.FabricObject => o !== null),
-        objects.options
-      );
-
-      const cw = this._canvasWidth();
-      const ch = this._canvasHeight();
-      const scale = Math.min(
-        (cw * 0.6) / (group.width ?? cw),
-        (ch * 0.6) / (group.height ?? ch),
-        1
-      );
-
-      group.set({
-        scaleX: scale,
-        scaleY: scale,
-        left: cw / 2,
-        top: ch / 2,
-        originX: 'center',
-        originY: 'center',
-      });
-
-      const layerId = uuidv4();
-      (group as any).layerId = layerId;
-
-      this.canvas.add(group);
-      this.canvas.setActiveObject(group);
-      this.canvas.renderAll();
-
-      this.addLayer({
-        id: layerId,
-        name: 'SVG',
-        type: LayerType.Shape,
-        visible: true,
-        locked: false,
-        opacity: 1,
-        order: this._layers().length,
-        data: {},
-      });
-    } catch (e) {
-      console.error('Failed to load SVG:', e);
+  async addSvg(svgString: string): Promise<fabric.FabricObject> {
+    if (!this.canvas) {
+      throw new Error('CanvasService: canvas not initialized — call initCanvas() first');
     }
+
+    const parsed = await fabric.loadSVGFromString(svgString);
+    if (!parsed || !parsed.objects || parsed.objects.length === 0) {
+      throw new Error('CanvasService: SVG parse returned no objects');
+    }
+
+    const group = fabric.util.groupSVGElements(
+      parsed.objects.filter((o): o is fabric.FabricObject => o !== null),
+      parsed.options
+    );
+
+    const cw = this._canvasWidth();
+    const ch = this._canvasHeight();
+    const scale = Math.min(
+      (cw * 0.6) / (group.width ?? cw),
+      (ch * 0.6) / (group.height ?? ch),
+      1
+    );
+
+    group.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: cw / 2,
+      top: ch / 2,
+      originX: 'center',
+      originY: 'center',
+    });
+
+    const layerId = uuidv4();
+    (group as any).layerId = layerId;
+
+    this.canvas.add(group);
+    this.canvas.setActiveObject(group);
+    this.canvas.renderAll();
+
+    this.addLayer({
+      id: layerId,
+      name: 'SVG',
+      type: LayerType.Shape,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      order: this._layers().length,
+      data: {},
+    });
+
+    return group;
   }
 
   /**

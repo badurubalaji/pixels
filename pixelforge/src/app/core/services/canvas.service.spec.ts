@@ -831,6 +831,45 @@ describe('CanvasService', () => {
       await service.addSvg('<svg/>');
       expect(service.layers().length).toBeGreaterThanOrEqual(1);
     });
+
+    it('addSvg resolves to a fabric object (PX-003 AC-8)', async () => {
+      const { service } = makeService(500, 500);
+      const obj = await service.addSvg('<svg/>');
+      expect(obj).toBeTruthy();
+      expect((obj as any).type).toBe('group');
+    });
+
+    it('addSvg rejects when called before initCanvas', async () => {
+      TestBed.configureTestingModule({ providers: [CanvasService] });
+      const uninit = TestBed.inject(CanvasService);
+      await expect(uninit.addSvg('<svg/>')).rejects.toThrow(/canvas not initialized/i);
+    });
+
+    it('addSvg rejects when loadSVGFromString returns no objects', async () => {
+      const fabric = await import('fabric');
+      const spy = vi.spyOn(fabric, 'loadSVGFromString').mockResolvedValueOnce({
+        objects: [],
+        options: {},
+      } as any);
+      const { service } = makeService(500, 500);
+      await expect(service.addSvg('<svg/>')).rejects.toThrow(/no objects/i);
+      spy.mockRestore();
+    });
+
+    it('addSvg places the object on the canvas and returns it as active', async () => {
+      const { service } = makeService(500, 500);
+      const obj = await service.addSvg('<svg/>');
+      expect(service.getCanvas()!.getActiveObject()).toBe(obj);
+    });
+
+    it('integration: SVG on canvas → toDataURL returns a non-empty PNG data URL (PX-003 AC-4/AC-5)', async () => {
+      const { service } = makeService(500, 500);
+      await service.addSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+      const dataUrl = service.toDataURL('png');
+      expect(dataUrl.startsWith('data:image/')).toBe(true);
+      // The mock returns a fixed non-empty data URL; real impl returns encoded PNG bytes.
+      expect(dataUrl.length).toBeGreaterThan('data:image/png;base64,'.length);
+    });
   });
 
   describe('setBackgroundImage', () => {

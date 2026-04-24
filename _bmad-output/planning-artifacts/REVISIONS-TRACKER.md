@@ -101,3 +101,9 @@ Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non
 
 - [ ] **PX-010-FUP-1 — Hoist canvas-size dialog into `src/app/shared/` and wire to Hub's "Start from scratch" button.** Currently stubbed as no-op because the existing dialog lives inside `DashboardComponent`'s `new-project-dialog` and is tightly coupled. Extract → consume from Hub + Dashboard. Size: M. Priority: P2 (visible affordance, low value until Sprint 2 polish pass).
 - [ ] **PX-010-FUP-2 — Template-file resolver for Vitest.** Every component in `pixelforge/src/app/` uses inline template + styles because `vitest.config.ts` has no Angular-component-resource plugin. Teams that prefer external `.html`/`.scss` files are blocked. Add a resolver or document the convention. Size: S. Priority: P3.
+
+---
+
+## Wave #7 — follow-up from PX-003 (2026-04-24)
+
+- [ ] **PX-003-FUP-1 — Split `sidebar-drawer.ts` (19.94 kB SCSS) into a dedicated `BrandPanelComponent`.** Pre-existing Angular SCSS budget warning; PX-003's "Download SVG" addition made the file slightly heavier. Untouched here per scope discipline. Size: M. Priority: P2 (affects build-log noise + future maintenance).

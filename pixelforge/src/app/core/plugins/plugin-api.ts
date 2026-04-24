@@ -6,12 +6,18 @@
  * adds objects to the canvas via the provided helpers.
  */
 
+import * as fabric from 'fabric';
 import { CanvasService } from '../services/canvas.service';
 
 export interface PluginContext {
   canvas: CanvasService;
-  /** Add an SVG string to the canvas as an editable object. */
-  addSvg: (svg: string) => Promise<void>;
+  /**
+   * Add an SVG string to the canvas as an editable object.
+   *
+   * @remarks Resolves to the fabric group added to the canvas (PX-003 AC-8).
+   * Older plugin code can `await` the promise and ignore the return value.
+   */
+  addSvg: (svg: string) => Promise<fabric.FabricObject>;
   /** Add raw text to the canvas. */
   addText: (text: string, options?: any) => void;
   /** Add an image URL to the canvas. */

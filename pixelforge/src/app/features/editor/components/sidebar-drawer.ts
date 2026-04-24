@@ -19,7 +19,7 @@ import { BackgroundRemovalService } from '../../../core/services/background-remo
 import { ProjectService } from '../../../core/services/project.service';
 import { STOCK_ICONS, ICON_CATEGORIES } from '../../../core/data/stock-icons';
 import { AiBackgroundService } from '../../../core/services/ai-background.service';
-import { BrandKitService } from '../../../core/services/brand-kit.service';
+import { BrandKitService, BrandLogo } from '../../../core/services/brand-kit.service';
 import { FontService } from '../../../core/services/font.service';
 import { DesignHelperService, ColorPalette, FontPairing } from '../../../core/services/design-helper.service';
 import { StyleVariationsService, StylePreset, StyleVariant } from '../../../core/services/style-variations.service';
@@ -674,6 +674,15 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   @for (logo of brandKit.brandLogos(); track logo.id) {
                     <div class="brand-logo-card">
                       <img [src]="logo.dataUrl" [alt]="logo.name" (click)="useBrandLogo(logo.dataUrl)" />
+                      @if (logo.mimeType === 'image/svg+xml') {
+                        <button
+                          class="download-mini"
+                          matTooltip="Download SVG"
+                          (click)="downloadLogoSvg(logo); $event.stopPropagation()"
+                        >
+                          <mat-icon>download</mat-icon>
+                        </button>
+                      }
                       <button class="remove-mini" (click)="brandKit.removeBrandLogo(logo.id)">
                         <mat-icon>close</mat-icon>
                       </button>
@@ -1562,6 +1571,32 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       }
 
       &:hover .remove-mini { opacity: 1; }
+      &:hover .download-mini { opacity: 1; }
+    }
+
+    .download-mini {
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+
+      mat-icon {
+        font-size: 12px;
+        height: 12px;
+        width: 12px;
+      }
     }
 
     .add-logo-btn {
@@ -2673,6 +2708,19 @@ export class SidebarDrawerComponent {
     } else {
       this.canvasService.addImage(dataUrl);
     }
+  }
+
+  /**
+   * Download the given logo's SVG source as a `.svg` file.
+   *
+   * @param logo - Must be an SVG-typed {@link BrandLogo}; the UI template
+   *   only renders the trigger button when `logo.mimeType === 'image/svg+xml'`
+   *   so this method can assume that invariant.
+   *
+   * @see PX-003 AC-3
+   */
+  downloadLogoSvg(logo: BrandLogo): void {
+    this.brandKit.downloadBrandLogoSvg(logo);
   }
 
   generateAiImage(): void {

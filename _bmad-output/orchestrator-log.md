@@ -174,3 +174,19 @@ This is the authoritative record of every autonomous decision Orion has taken on
   2. Run graphify `--update` (Task #18 — deferred during wave-2; now due since PX-002/PX-020/PX-010/PX-003 all add genuinely new symbols)
   3. **Boot frontend (`npm start`) + backend (`python run.py`)** in background, verify both compile/boot, report
   4. Sprint-1 close summary (completion %, velocity, open follow-ups for Sprint-2 planning)
+
+## 2026-04-24T03:00:00Z · PX-003 COMPLETE · Sprint-1 P0 closure
+
+- **Action:** Amelia executed PX-003 in one pass.
+- **Result:**
+  - **291/291 frontend tests** (+15 new on brand-kit.spec + 5 on canvas.spec for `addSvg`) · **38/38 backend tests** (+7 SVG-upload sanitize cases).
+  - `BrandKitService.addBrandLogo` now decodes → DOMPurify-sanitizes → re-encodes SVG data-URLs before persistence; raster logos pass through.
+  - Backend `validate_svg_bytes()` in `asset_routes.py` uses `defusedxml.ElementTree` to reject `<script>`, `<foreignObject>`, `on*` handlers, and any `href`/`xlink:href` with an RFC 3986 URL-scheme prefix (`http:`, `https:`, `data:`, `file:`, …). Relative `#id` / `./x` refs pass.
+  - `CanvasService.addSvg(svgString): Promise<fabric.FabricObject>` — AC-8 DEFINITE — live + tested. Auto-scales to 60% of canvas, throws on uninit/empty parse.
+  - "Download SVG" affordance wired into the existing `sidebar-drawer.ts` Brand Logos section (scope-discipline win: extended existing component instead of creating the speculative `logos-panel.ts` the story guessed at).
+- **Autonomous approvals on Amelia's behalf:**
+  1. **3 new deps installed:** `dompurify@3.4.1` + `@types/dompurify@3.0.5` + `defusedxml==0.7.1` — all pre-authorized in orchestrator-log 00:03Z + ARD §7 + PX-003 AC-7.
+  2. **Story said `defusedxml.lxml`, Amelia used `defusedxml.ElementTree`** — lxml not in requirements and not needed for a whitelist walk. Security invariant unchanged. **APPROVED**.
+  3. **Signature change `Promise<void>` → `Promise<fabric.FabricObject>` on `CanvasService.addSvg`** forced a ripple update in `plugin-api.ts` (`PluginContext.addSvg` return type). Not in original File List; necessary to make AC-8 definite. **APPROVED** — within-story atomic change.
+  4. **Extended `sidebar-drawer.ts` instead of creating `logos-panel.ts`** — no such file existed. Scope-discipline-preserving resolution. **APPROVED**.
+- **Follow-up raised:** sidebar-drawer.ts SCSS budget (19.94 kB > 16 kB, pre-existing) — candidate for a future split-into-brand-panel story. Captured as PX-003-FUP-1.
