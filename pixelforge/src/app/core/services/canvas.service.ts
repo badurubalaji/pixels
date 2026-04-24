@@ -1221,6 +1221,34 @@ export class CanvasService {
   }
 
   /**
+   * Resize the canvas to a new logical size without rescaling content.
+   *
+   * @param width - New canvas width (design px). Expected > 0.
+   * @param height - New canvas height (design px). Expected > 0.
+   *
+   * @remarks
+   * Thin wrapper around {@link setCanvasSize} plus a `requestRenderAll()`.
+   * Added in Story PX-020 (AC-1c) so `Editor` can honor `?platform=<type>`
+   * query params by calling `canvasService.resize(preset.width, preset.height)`.
+   * Equivalent to `setCanvasSize` on the internal signal side, but exposes an
+   * explicit `resize` verb so callers don't have to know about the "Size"
+   * naming legacy.
+   *
+   * Does nothing if the fabric canvas hasn't been initialized yet. No-op for
+   * non-positive dimensions (the `'custom'` platform preset sentinel is
+   * handled by the caller, so `resize` should never be called with 0×0).
+   *
+   * @see Story PX-020 AC-1c
+   * @see setCanvasSize
+   */
+  resize(width: number, height: number): void {
+    if (!this.canvas) return;
+    if (width <= 0 || height <= 0) return;
+    this.setCanvasSize(width, height);
+    this.canvas.requestRenderAll();
+  }
+
+  /**
    * Resize the logical canvas (does not rescale existing content).
    *
    * @param width - New canvas width (design px).

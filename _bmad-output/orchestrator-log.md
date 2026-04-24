@@ -126,3 +126,25 @@ This is the authoritative record of every autonomous decision Orion has taken on
   - `list_comments` test uses `projectId + text` matching instead of `id` round-trip (handler quirk under mongomock; handler untouched per Rule 1).
   - 5 follow-up stories raised (PX-002-FUP-1 through FUP-5) — captured in REVISIONS-TRACKER wave #4 below.
 - **Per new user-set autonomy rule** (`feedback_orion_full_autonomy.md` — captured this turn): Orion will commit + push this story now, then dispatch PX-020 immediately, without waiting for confirmation.
+
+## 2026-04-24T02:30:00Z · PX-020 COMPLETE · platform presets locked, CanvasService.resize live, FE/BE parity guarded
+
+- **Action:** Amelia executed PX-020 in one pass.
+- **Result:**
+  - **5 MVP platform presets + custom sentinel** centralized at `src/app/core/constants/platform-presets.ts` and mirrored at `backend/app/core/platform_presets.py`.
+  - **4 new pytest parity tests** (`test_platform_preset_parity.py`) — pure regex, no new dep — fail CI if FE and BE diverge on (id, label, width, height, aspect, custom-sentinel).
+  - **CanvasService.resize(w, h)** added (AC-1c definite) as a thin wrapper over existing `setCanvasSize` + `requestRenderAll`, fully unit-tested.
+  - **Editor `?platform=…` query-param handler** wired through `ngAfterViewInit`, skipping the `custom` 0×0 sentinel (5 test cases: ig-post / yt-thumb / custom / unknown / missing).
+  - **ExportDialog `BATCH_SIZE_PRESETS`** now derives from canonical `PLATFORM_PRESETS` instead of an 8-entry inline list.
+  - **255/255 frontend tests green** (`npm test`); **31/31 backend tests green** (`pytest`); 11 new symbols documented.
+- **Autonomous decisions logged on Amelia's behalf:**
+  1. **Story claimed `ExportService.applyPlatformPreset()` already existed** — graphify hint was stale; method did not exist. Amelia correctly resolved by making it ADDITIVE (returns `PlatformPreset | undefined`, leaves canvas mutation to the Editor) rather than refactoring nothing. Within scope.
+  2. **`BATCH_SIZE_PRESETS` lost Facebook Cover / Twitter Header / Pinterest Pin / Square HD** when migrated to the canonical list. These were not in MVP preset spec (AC-2). I confirm: scope discipline holds, those four platforms remain out of MVP. If user wants them back, they need to be added to canonical FE+BE list first → captured as PX-020-FUP-1 in REVISIONS-TRACKER wave #4.
+  3. **Parity test is regex-based**, no TS-parser dep — honored "no new runtime deps" constraint.
+
+## 2026-04-24T02:31:00Z · Sprint-1 next-wave dispatch — PX-010 then PX-003 (sequenced)
+
+- **Action:** dispatching PX-010 (hub component + tile routing) now; PX-003 (Brand Kit SVG export + DOMPurify wiring) immediately after PX-010 lands.
+- **Rationale:** PX-010 unblocked by PX-020's `platform-presets.ts`. PX-003 is independent of PX-010 but BOTH would race on `vitest` runs and `npm install` if dispatched concurrently to the same working tree. Sequencing is the safer call. PX-020-style ~10-min cycle each — total ~20-30 min.
+- **Per autonomy rule:** no further "X / Y / both?" prompts to user. Sequence chosen, executing.
+- **Kill-switch:** user can say "halt PX-003" mid-stream to stop after PX-010.

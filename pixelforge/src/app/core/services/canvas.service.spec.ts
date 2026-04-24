@@ -866,4 +866,49 @@ describe('CanvasService', () => {
       service.toggleDrawingMode();
     });
   });
+
+  describe('resize (PX-020 AC-1c)', () => {
+    it('updates the width/height signals and calls fabric setDimensions + requestRenderAll', () => {
+      const { service } = makeService(200, 200);
+      const canvas = (service as any).canvas as {
+        setDimensions: (d: { width: number; height: number }) => void;
+        requestRenderAll: () => void;
+      };
+      const setDimsSpy = vi.spyOn(canvas, 'setDimensions');
+      const renderSpy = vi.spyOn(canvas, 'requestRenderAll');
+
+      service.resize(1080, 1080);
+
+      expect(service.canvasWidth()).toBe(1080);
+      expect(service.canvasHeight()).toBe(1080);
+      expect(setDimsSpy).toHaveBeenCalled();
+      expect(renderSpy).toHaveBeenCalled();
+    });
+
+    it('is a no-op when width or height is not positive', () => {
+      const { service } = makeService(300, 300);
+      service.resize(0, 0);
+      expect(service.canvasWidth()).toBe(300);
+      expect(service.canvasHeight()).toBe(300);
+      service.resize(-5, 100);
+      expect(service.canvasWidth()).toBe(300);
+    });
+
+    it('handles each MVP platform preset dimension', () => {
+      const cases: [number, number][] = [
+        [1080, 1080], // ig-post
+        [1080, 1920], // ig-story
+        [1200, 627],  // linkedin-post
+        [1584, 396],  // linkedin-banner
+        [1280, 720],  // yt-thumb
+      ];
+      for (const [w, h] of cases) {
+        TestBed.resetTestingModule();
+        const { service } = makeService(100, 100);
+        service.resize(w, h);
+        expect(service.canvasWidth()).toBe(w);
+        expect(service.canvasHeight()).toBe(h);
+      }
+    });
+  });
 });

@@ -87,3 +87,10 @@ Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non
 - [ ] **PX-002-FUP-3 — `get_db()` return type annotation in `database.py`.** Folds into FUP-1 ideally. Size: XS. Priority: P3.
 - [ ] **PX-002-FUP-4 — `app/routes.py` deprecated `Query(regex=...)`.** Pydantic v2 wants `pattern=`. Size: XS. Priority: P2.
 - [ ] **PX-002-FUP-5 — passlib imports deprecated `crypt` (Python 3.13 EoL).** Upstream concern; consider migration to `argon2-cffi` or `pwdhash`. Size: M. Priority: P2.
+
+---
+
+## Wave #5 — follow-ups Amelia raised during PX-020 execution (2026-04-24)
+
+- [ ] **PX-020-FUP-1 — Re-add Facebook Cover / Twitter Header / Pinterest Pin / Square HD to canonical preset list?** PRD/MVP spec only includes the 5 IG/LinkedIn/YouTube presets. PM (John) decision needed if extra platforms become MVP. Size: S (FE+BE+test data). Priority: P3 unless PM upgrades.
+- [ ] **PX-020-FUP-2 — `ExportDialog` still has its own "platformPresets" list for export-format selection** (Instagram, Twitter, Facebook, LinkedIn, Email, Print HD, Web Transparent). Different concept from canvas-size presets — left untouched. Audit later for whether these should consolidate. Size: S. Priority: P3.

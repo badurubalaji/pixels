@@ -12,6 +12,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { CanvasService } from '../../../core/services/canvas.service';
 import { ExportService } from '../../../core/services/export.service';
 import { ProjectService } from '../../../core/services/project.service';
+import { PLATFORM_PRESETS } from '../../../core/constants/platform-presets';
 
 export interface ExportDialogData {
   getPages?: () => { canvasJson: string }[];
@@ -26,16 +27,16 @@ interface BatchSize {
   height: number;
 }
 
-const BATCH_SIZE_PRESETS: BatchSize[] = [
-  { name: 'Instagram Post', width: 1080, height: 1080 },
-  { name: 'Instagram Story', width: 1080, height: 1920 },
-  { name: 'Facebook Cover', width: 820, height: 312 },
-  { name: 'Twitter Header', width: 1500, height: 500 },
-  { name: 'YouTube Thumbnail', width: 1280, height: 720 },
-  { name: 'LinkedIn Post', width: 1200, height: 627 },
-  { name: 'Pinterest Pin', width: 1000, height: 1500 },
-  { name: 'Square HD', width: 2000, height: 2000 },
-];
+/**
+ * Batch-export size list, sourced from the canonical platform-preset
+ * constants (Story PX-020 AC-1, AC-4). The `custom` sentinel preset is
+ * filtered out — 0x0 is not a valid batch target. Any future size additions
+ * must happen in `core/constants/platform-presets.ts` (and its BE mirror),
+ * **not** re-added inline here.
+ */
+const BATCH_SIZE_PRESETS: BatchSize[] = PLATFORM_PRESETS
+  .filter((p) => p.id !== 'custom' && p.width > 0 && p.height > 0)
+  .map((p) => ({ name: p.label, width: p.width, height: p.height }));
 
 @Component({
   selector: 'app-export-dialog',
@@ -528,7 +529,7 @@ export class ExportDialog {
     if (match) this.selectedRes.set(match);
     this.activePlatformPreset.set(preset.name);
   }
-  readonly selectedBatchSizes = signal<Set<string>>(new Set(['Instagram Post', 'Facebook Cover', 'Twitter Header']));
+  readonly selectedBatchSizes = signal<Set<string>>(new Set(['Instagram Post', 'LinkedIn Post', 'YouTube Thumbnail']));
 
   readonly resolutions = [
     { label: '1x', multiplier: 1, tag: '' },

@@ -23,6 +23,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CanvasService, ShapeType } from '../../core/services/canvas.service';
+import { getPlatformPreset } from '../../core/constants/platform-presets';
 import { ProjectService } from '../../core/services/project.service';
 import { ExportService } from '../../core/services/export.service';
 import { ApiService } from '../../core/services/api.service';
@@ -1453,6 +1454,17 @@ export class Editor implements AfterViewInit, OnDestroy {
     const height = project?.height ?? 1000;
 
     this.canvasService.initCanvas(this.canvasRef.nativeElement, width, height);
+
+    // Apply ?platform=<type> query param (Story PX-020 AC-5). The `custom`
+    // preset has 0x0 sentinel dimensions — it means "user-defined, no
+    // auto-resize", so we skip the resize call in that branch.
+    const platformParam = this.route.snapshot.queryParamMap.get('platform');
+    if (platformParam) {
+      const preset = getPlatformPreset(platformParam);
+      if (preset && preset.id !== 'custom' && preset.width > 0 && preset.height > 0) {
+        this.canvasService.resize(preset.width, preset.height);
+      }
+    }
 
     // Load saved canvas state or apply template
     const templateId = this.route.snapshot.queryParamMap.get('template');

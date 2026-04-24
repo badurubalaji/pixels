@@ -147,6 +147,7 @@ function makeCanvasStub() {
     clearCanvas: vi.fn(),
     setZoom: vi.fn(),
     setCanvasSize: vi.fn(),
+    resize: vi.fn(),
     setBackgroundMode: vi.fn(),
     removeActiveObject: vi.fn(),
     getCanvasJSON: vi.fn(() => '{"version":"7","objects":[]}'),
@@ -867,5 +868,127 @@ describe('Editor', () => {
     expect(pp.length).toBe(1);
     expect(pp[0]).toHaveProperty('thumbnail');
     expect(pp[0]).toHaveProperty('canvasJson');
+  });
+});
+
+/**
+ * Story PX-020 AC-5: the Editor must honor a `?platform=<type>` query
+ * parameter by resolving the preset and calling `CanvasService.resize` with
+ * the preset dimensions. The `custom` preset is a sentinel (0x0) — no
+ * resize should fire.
+ *
+ * These cases live in a separate describe-block so they can inject an
+ * `ActivatedRoute` mock whose `queryParamMap.get('platform')` returns a
+ * preset id, whereas the parent describe-block returns `null` for every
+ * query param.
+ */
+describe('Editor — ?platform= query param (PX-020 AC-5)', () => {
+  /** Bootstrap TestBed with a platform-aware ActivatedRoute + run ngAfterViewInit. */
+  async function bootstrap(platform: string | null): Promise<{
+    canvasStub: ReturnType<typeof makeCanvasStub>;
+    instance: any;
+  }> {
+    TestBed.resetTestingModule();
+    const canvasStub = makeCanvasStub();
+    const projectStub = makeProjectStub();
+    const apiStub = makeApiStub();
+    const templateStub = makeTemplateStub();
+
+    const route = {
+      snapshot: {
+        paramMap: { get: vi.fn(() => null) },
+        queryParamMap: {
+          get: vi.fn((name: string) => (name === 'platform' ? platform : null)),
+        },
+      },
+    };
+
+    TestBed.overrideComponent(Editor, { set: { template: '<div></div>', imports: [] } });
+
+    await TestBed.configureTestingModule({
+      imports: [Editor, NoopAnimationsModule],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CanvasService, useValue: canvasStub },
+        { provide: ProjectService, useValue: projectStub },
+        { provide: ApiService, useValue: apiStub },
+        { provide: TemplateService, useValue: templateStub },
+        { provide: BrandKitService, useValue: makeBrandKitStub() },
+        { provide: ExportService, useValue: { export: vi.fn() } },
+        { provide: HistoryService, useValue: {
+            init: vi.fn(), clear: vi.fn(), undo: vi.fn(), redo: vi.fn(),
+            canUndo: signal(false), canRedo: signal(false),
+        } },
+        { provide: KeyboardService, useValue: { init: vi.fn(), destroy: vi.fn() } },
+        { provide: ClipboardService, useValue: { copy: vi.fn(), paste: vi.fn() } },
+        { provide: BackgroundRemovalService, useValue: {
+            removeFromDataURL: vi.fn(async () => 'data:image/png;base64,NN'),
+            errorMessage: signal(''),
+        } },
+        { provide: CommentsService, useValue: {
+            setActiveProject: vi.fn(),
+            commentMode: signal(false),
+            toggleCommentMode: vi.fn(),
+            setCommentMode: vi.fn(),
+            unresolvedCount: signal(0),
+            comments: signal([]),
+        } },
+        { provide: CollaborationService, useValue: {
+            connect: vi.fn(), disconnect: vi.fn(),
+            collaborators: signal([]), cursors: signal([]),
+        } },
+        { provide: AiDesignService, useValue: { generate: vi.fn(async () => {}) } },
+        { provide: QualityScoreService, useValue: {
+            calculate: vi.fn(() => ({ total: 80, grade: 'A', factors: [] })),
+        } },
+        { provide: FontService, useValue: {
+            preloadPopularFonts: vi.fn(),
+            availableFonts: signal([]),
+            recentFonts: signal([]),
+        } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: vi.fn(() => ({
+            afterOpened: () => of({}),
+            afterClosed: () => of(undefined),
+            componentInstance: { setPagesData: vi.fn() },
+        })) } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    // Supply a canvas host so initCanvas doesn't crash when we invoke
+    // ngAfterViewInit directly (the TestBed template override is <div>).
+    instance.canvasRef = { nativeElement: document.createElement('canvas') };
+    instance.ngAfterViewInit();
+    return { canvasStub, instance };
+  }
+
+  it('applies ig-post preset → resize(1080, 1080)', async () => {
+    const { canvasStub } = await bootstrap('ig-post');
+    expect(canvasStub.resize).toHaveBeenCalledWith(1080, 1080);
+  });
+
+  it('applies yt-thumb preset → resize(1280, 720)', async () => {
+    const { canvasStub } = await bootstrap('yt-thumb');
+    expect(canvasStub.resize).toHaveBeenCalledWith(1280, 720);
+  });
+
+  it('does not call resize for the `custom` sentinel (0x0)', async () => {
+    const { canvasStub } = await bootstrap('custom');
+    expect(canvasStub.resize).not.toHaveBeenCalled();
+  });
+
+  it('does not call resize for an unknown platform id', async () => {
+    const { canvasStub } = await bootstrap('not-a-real-platform');
+    expect(canvasStub.resize).not.toHaveBeenCalled();
+  });
+
+  it('does not call resize when no ?platform= is present', async () => {
+    const { canvasStub } = await bootstrap(null);
+    expect(canvasStub.resize).not.toHaveBeenCalled();
   });
 });

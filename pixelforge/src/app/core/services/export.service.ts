@@ -5,11 +5,56 @@ import { ExportOptions } from '../models/project.model';
 import { saveAs } from 'file-saver';
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, degrees } from 'pdf-lib';
 import * as fabric from 'fabric';
+import {
+  PLATFORM_PRESETS,
+  PlatformPreset,
+  PlatformType,
+  getPlatformPreset,
+} from '../constants/platform-presets';
 
 @Injectable({ providedIn: 'root' })
 export class ExportService {
   private readonly canvasService = inject(CanvasService);
   private readonly animationService = inject(AnimationService);
+
+  /**
+   * The canonical, ordered list of platform-size presets exposed by
+   * `ExportService`. Re-exported here for consumers that already depend on
+   * the service (e.g. `ExportDialog`) so they do not need a separate import
+   * path. Sourced from `core/constants/platform-presets.ts`, which is the
+   * single source of truth paired with the backend
+   * `app/core/platform_presets.py`.
+   *
+   * @see core/constants/platform-presets.ts
+   * @see Story PX-020 AC-1, AC-3
+   */
+  readonly platformPresets: readonly PlatformPreset[] = PLATFORM_PRESETS;
+
+  /**
+   * Resolve a platform preset id to its full {@link PlatformPreset} record.
+   *
+   * @param type - A {@link PlatformType} id (e.g. `'ig-post'`, `'yt-thumb'`).
+   *   The `'custom'` sentinel returns its own 0×0 record — callers are
+   *   responsible for treating it as "user-defined, no auto-resize".
+   * @returns The matching preset, or `undefined` when `type` is unknown.
+   *
+   * @remarks
+   * This replaces any previous inline switch in `ExportService` (there was
+   * none committed, but PX-020 makes the lookup canonical and story-owned).
+   * The public signature matches Story PX-020 AC-3.
+   *
+   * @example
+   * ```ts
+   * const preset = exportService.applyPlatformPreset('ig-post');
+   * if (preset) canvasService.resize(preset.width, preset.height);
+   * ```
+   *
+   * @see core/constants/platform-presets.ts
+   * @see Story PX-020 AC-3
+   */
+  applyPlatformPreset(type: PlatformType): PlatformPreset | undefined {
+    return getPlatformPreset(type);
+  }
 
   /**
    * Run an export callback with the canvas restored to its full design
