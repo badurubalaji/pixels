@@ -107,3 +107,10 @@ Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non
 ## Wave #7 — follow-up from PX-003 (2026-04-24)
 
 - [ ] **PX-003-FUP-1 — Split `sidebar-drawer.ts` (19.94 kB SCSS) into a dedicated `BrandPanelComponent`.** Pre-existing Angular SCSS budget warning; PX-003's "Download SVG" addition made the file slightly heavier. Untouched here per scope discipline. Size: M. Priority: P2 (affects build-log noise + future maintenance).
+
+---
+
+## Wave #8 — tooling follow-ups from sprint-close smoke (2026-04-24)
+
+- [ ] **GRAPHIFY-FUP-1 — Graphify should honor `.gitignore` on incremental detect.** Today's `--update` re-detects `backend/uploads/*.svg` (user artifacts, gitignored) and `graphify-out/graph.html` + `GRAPH_REPORT.md` (graphify's own outputs) on every run, forcing manual filtering. Upstream `graphify` improvement OR local shim. Size: S. Priority: P3 (won't block; forces occasional hand-carved merges).
+- [ ] **NG8011-FUP-1 — Four `@if`/`@else` + `<mat-icon>` content-projection warnings** on `dashboard.ts:380/382` and `sidebar-drawer.ts:729/731`. Pre-existing, not introduced by Sprint 1 but surfaced by the sprint-close boot smoke. Fix by wrapping each branch's content in `<ng-container>` OR splitting the `@if`/`@else` to one node per branch. Size: XS. Priority: P3.
