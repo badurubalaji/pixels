@@ -1967,6 +1967,221 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
       h3 { margin: 0 0 6px; font-size: 0.95rem; font-weight: 600; color: #e4e4e7; }
       p { margin: 0; font-size: 0.82rem; color: #71717a; line-height: 1.5; }
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PX-069 — body theming overrides
+       Final selector wins. Retones the pre-existing dark-zinc styles
+       above to the light/violet palette used across /auth, /hub,
+       /gallery, /profile. Kept as an override block rather than
+       rewriting the original CSS so future diffs stay small.
+       ═══════════════════════════════════════════════════════════════ */
+
+    .page-content { max-width: 1240px; margin: 0 auto; padding: 32px 28px 64px; }
+
+    /* Hero */
+    .hero { padding: 48px 0 40px; }
+    .hero h1 {
+      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--px-ink);
+    }
+    .hero .gradient-text {
+      background: linear-gradient(135deg, var(--px-violet) 0%, var(--px-pink) 55%, var(--px-cyan) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+    .hero .hero-sub { color: var(--px-muted); }
+
+    /* Section headings */
+    .section-header h2,
+    .section h2 { color: var(--px-ink); letter-spacing: -0.01em; }
+    .section-desc { color: var(--px-muted); }
+
+    .see-all {
+      color: var(--px-violet);
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+    .see-all:hover { background: rgba(124, 58, 237, 0.10); }
+
+    /* Category circles (home tab hero) */
+    .cat-shortcut span { color: var(--px-ink-soft); font-weight: 500; }
+    .cat-shortcut .cat-circle {
+      box-shadow: 0 6px 16px -6px rgba(124, 58, 237, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+    }
+    .cat-shortcut .cat-custom {
+      background: var(--px-surface);
+      border: 2px dashed rgba(124, 58, 237, 0.5);
+      color: var(--px-violet);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .cat-shortcut .cat-upload {
+      background: var(--px-surface);
+      color: var(--px-violet);
+      border: 1px solid var(--px-line);
+    }
+    .cat-shortcut:hover .cat-circle {
+      box-shadow: 0 10px 22px -8px rgba(124, 58, 237, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    }
+
+    /* Recent cards (Continue where you left off) */
+    .recent-card {
+      background: var(--px-surface);
+      border: 1px solid var(--px-line);
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 220ms ease, border-color 220ms ease;
+    }
+    .recent-card:hover {
+      transform: translateY(-4px);
+      border-color: transparent;
+      box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.25),
+        0 0 0 1px rgba(124, 58, 237, 0.28);
+    }
+    .recent-thumb { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); }
+    .recent-overlay { background: linear-gradient(180deg, rgba(15, 23, 42, 0) 40%, rgba(15, 23, 42, 0.55) 100%); }
+    .recent-overlay .open-cta {
+      background: #ffffff !important;
+      color: var(--px-violet) !important;
+      border-radius: 999px !important;
+      font-weight: 600;
+    }
+    .recent-meta .recent-name { color: var(--px-ink); }
+    .recent-meta .recent-time { color: var(--px-muted); opacity: 1; }
+
+    /* Quick-start carousel cards */
+    .qs-card {
+      background: var(--px-surface);
+      border: 1px solid var(--px-line);
+      border-radius: 14px;
+      color: var(--px-ink);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    }
+    .qs-card:hover {
+      border-color: transparent;
+      box-shadow: 0 12px 30px -14px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(124, 58, 237, 0.28);
+    }
+    .qs-card mat-icon { color: var(--px-violet); opacity: 0.9; }
+    .qs-card span { color: var(--px-ink); font-weight: 600; font-size: 0.82rem; }
+    .qs-card small { color: var(--px-muted); }
+    .qs-card.qs-blank { border-style: dashed; }
+
+    /* Preset grid */
+    .preset-card {
+      background: var(--px-surface);
+      border: 1px solid var(--px-line);
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    }
+    .preset-card:hover {
+      border-color: transparent;
+      box-shadow: 0 12px 30px -14px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(124, 58, 237, 0.28);
+    }
+    .preset-card .preset-preview {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    }
+    .preset-card .preset-preview mat-icon {
+      color: var(--px-violet);
+      opacity: 0.7;
+    }
+    .preset-card.custom-card .custom-preview {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(6, 182, 212, 0.10));
+    }
+    .preset-card.custom-card .custom-preview mat-icon {
+      opacity: 0.9;
+      color: var(--px-violet);
+    }
+    .preset-card .preset-info .preset-name { color: var(--px-ink); }
+    .preset-card .preset-info .preset-dims { color: var(--px-muted); }
+
+    /* Project grid (recent designs + projects tab) */
+    .project-card {
+      background: var(--px-surface);
+      border: 1px solid var(--px-line);
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    }
+    .project-card:hover {
+      transform: translateY(-3px);
+      border-color: transparent;
+      box-shadow: 0 14px 34px -14px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(124, 58, 237, 0.28);
+    }
+    .project-card .project-thumb {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    }
+    .project-card .project-meta .project-name { color: var(--px-ink); }
+    .project-card .project-meta .project-dims { color: var(--px-muted); }
+    .project-card .project-overlay {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0) 40%, rgba(15, 23, 42, 0.55) 100%);
+    }
+    .project-card .project-overlay .delete-btn {
+      background: rgba(255, 255, 255, 0.92) !important;
+      color: #b91c1c !important;
+    }
+
+    /* Thumb placeholders */
+    .thumb-placeholder mat-icon { color: var(--px-muted); opacity: 0.7; }
+
+    /* Category chips — light theme */
+    .category-chips ::ng-deep .mat-mdc-chip {
+      background-color: #f1f5f9 !important;
+      border: 1px solid transparent !important;
+      border-radius: 999px !important;
+    }
+    .category-chips ::ng-deep .mat-mdc-chip.mdc-evolution-chip--selected {
+      background: linear-gradient(135deg, var(--px-violet) 0%, #a855f7 100%) !important;
+    }
+    .category-chips ::ng-deep .mat-mdc-chip.mdc-evolution-chip--selected
+      .mdc-evolution-chip__text-label { color: #ffffff; }
+
+    /* Features section */
+    .feature-card {
+      background: var(--px-surface);
+      border: 1px solid var(--px-line);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .feature-card h3 { color: var(--px-ink); }
+    .feature-card p { color: var(--px-ink-soft); }
+
+    /* Drag-drop overlay (home tab) */
+    .drag-overlay {
+      background: rgba(248, 250, 252, 0.92) !important;
+      border-color: var(--px-violet) !important;
+    }
+    .drag-overlay mat-icon { color: var(--px-violet); }
+    .drag-overlay h2 { color: var(--px-ink); }
+    .drag-overlay p { color: var(--px-ink-soft); }
+
+    /* Global heading color fallback (catches any leftover h2) */
+    .page-content h2 { color: var(--px-ink); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .recent-card, .qs-card, .preset-card, .project-card, .feature-card,
+      .cat-shortcut, .cat-circle {
+        transition: none !important;
+      }
+      .recent-card:hover, .qs-card:hover, .preset-card:hover,
+      .project-card:hover, .cat-shortcut:hover {
+        transform: none !important;
+      }
+    }
   `],
 })
 export class Dashboard {
