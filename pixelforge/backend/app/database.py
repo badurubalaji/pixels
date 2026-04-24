@@ -28,7 +28,7 @@ async def connect_db():
         await client.admin.command("ping")
 
         # Create indexes
-        await db.projects.create_index("updated_at", expireAfterSeconds=None)
+        await db.projects.create_index("updated_at")
         await db.projects.create_index("created_at")
         await db.assets.create_index("project_id")
 
