@@ -378,6 +378,12 @@ describe('ApiService', () => {
     expect(req.request.body.height).toBe(1080);
     expect(req.request.body.thumbnail).toBe('data:image/png;base64,AAA');
     expect(JSON.parse(req.request.body.canvas_json)).toEqual(canvas);
+    // PX-060 T-0 — wire now carries source_template_id, platform, and a
+    // brand_kit_applied_at ISO-8601 timestamp set at request time.
+    expect(req.request.body.source_template_id).toBe('t1');
+    expect(req.request.body.platform).toBe('ig-post');
+    expect(typeof req.request.body.brand_kit_applied_at).toBe('string');
+    expect(req.request.body.brand_kit_applied_at).toMatch(/T\d{2}:\d{2}:\d{2}/);
     req.flush({
       id: 'p1',
       name: 'My Tpl',
@@ -401,6 +407,8 @@ describe('ApiService', () => {
     expect(req.request.body.width).toBe(1280);
     expect(req.request.body.height).toBe(720);
     expect(req.request.body.name).toBe('Untitled');
+    expect(req.request.body.platform).toBe('yt-thumb');
+    expect(req.request.body.source_template_id).toBe('t2');
     req.flush({
       id: 'p2',
       name: 'Untitled',
@@ -408,6 +416,24 @@ describe('ApiService', () => {
       height: 720,
       created_at: '',
       updated_at: '',
+    });
+  });
+
+  // --- PX-060 T-0 — updateProject null-clear path ---
+
+  it('updateProject accepts a null brand_kit_applied_at (editor Undo clear)', () => {
+    service.updateProject('px-60', { brand_kit_applied_at: null }).subscribe();
+    const req = httpMock.expectOne(`${base}/api/projects/px-60`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ brand_kit_applied_at: null });
+    req.flush({
+      id: 'px-60',
+      name: 'x',
+      width: 1,
+      height: 1,
+      created_at: '',
+      updated_at: '',
+      brand_kit_applied_at: null,
     });
   });
 });

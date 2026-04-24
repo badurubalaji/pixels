@@ -8,7 +8,9 @@ import {
   signal,
   computed,
   HostListener,
+  DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -57,7 +59,37 @@ import { TextToolbarComponent } from './components/text-toolbar';
 import { CanvasRulersComponent } from './components/canvas-rulers';
 import { FontService } from '../../core/services/font.service';
 import { TemplateService } from '../../core/services/template.service';
+import { BrandKitService } from '../../core/services/brand-kit.service';
+import { BrandKitApplyService } from '../../core/services/brand-kit-apply.service';
+import type { PlatformType } from '../../core/constants/platform-presets';
 import * as fabric from 'fabric';
+
+/**
+ * Project-ids whose Brand-Kit auto-apply toast has already been shown (or
+ * dismissed / undone) in the current browser session. Module-level so it
+ * survives `Editor` component re-creations within the same tab — the
+ * guarantee is "at most one toast per project-open" (PX-060 AC-4).
+ *
+ * @see Story PX-060
+ */
+export const TOAST_SHOWN_PROJECT_IDS = new Set<string>();
+
+/**
+ * Maximum age (in milliseconds) of a project's ``brand_kit_applied_at``
+ * timestamp for the editor load-hook to count it as "just applied" and
+ * fire the toast.
+ *
+ * @remarks
+ * 30 minutes accommodates realistic gallery → editor navigation delays
+ * (slow backend, user switches tabs, modal interstitials) while still
+ * expiring stale markers from prior sessions where the server-clear leg
+ * failed. The server-side marker is cleared on any toast dismissal
+ * (action, swipe, or 7s timeout) via `BrandKitApplyService.clearMarker`,
+ * so this freshness window is only ever a fallback safety net.
+ *
+ * @see Story PX-060 — AC-1, AC-4, Orion decision D1 (2026-04-24T17:50Z).
+ */
+const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
 
 @Component({
   selector: 'app-editor',
@@ -1394,10 +1426,13 @@ export class Editor implements AfterViewInit, OnDestroy {
   private readonly bgRemovalService = inject(BackgroundRemovalService);
   private readonly fontService = inject(FontService);
   private readonly templateService = inject(TemplateService);
+  private readonly brandKitService = inject(BrandKitService);
+  private readonly brandKitApplyService = inject(BrandKitApplyService);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly isProcessing = signal(false);
   readonly isDragOver = signal(false);
@@ -1515,6 +1550,12 @@ export class Editor implements AfterViewInit, OnDestroy {
         this.historyService.init();
         this.snackBar.open('AI design generated! Edit any element to customize.', 'OK', { duration: 4000 });
       }, 400);
+    }
+
+    // PX-060 T-1 — after canvas-load, inspect the project's server-side
+    // Brand-Kit auto-apply markers and conditionally show the Undo toast.
+    if (projectId) {
+      this.maybeShowBrandKitToast(projectId);
     }
 
     this.keyboardService.init();
@@ -2201,5 +2242,96 @@ export class Editor implements AfterViewInit, OnDestroy {
       uint8Array[i] = byteString.charCodeAt(i);
     }
     return new Blob([uint8Array], { type: mime });
+  }
+
+  /**
+   * Show the Brand-Kit auto-apply "Undo" toast when all preconditions pass.
+   *
+   * @param projectId - The project being opened.
+   * @returns Nothing — the toast fires asynchronously after the backend
+   *   `getProject` response. Silent no-op in every miss branch.
+   *
+   * @remarks
+   * Preconditions (ALL must hold, per PX-060 AC-1 / AC-4 / AC-5):
+   *   1. Backend returns a project whose `source_template_id` is non-null.
+   *   2. The user's Brand Kit has at least one color.
+   *   3. `brand_kit_applied_at` is within {@link BRAND_KIT_APPLIED_FRESHNESS_MS}
+   *      (fresh load — 30 minutes).
+   *   4. The toast has NOT already been shown for this project in this
+   *      session ({@link TOAST_SHOWN_PROJECT_IDS}).
+   *
+   * The toast uses {@link MatSnackBar} with a 7-second duration, an "Undo"
+   * action, and `aria-live="polite"` semantics (the default MatSnackBar
+   * announces as `role="status"` which maps to `polite`). Clicking Undo
+   * delegates to {@link BrandKitApplyService.revertToTemplateDefaults}.
+   *
+   * All long-lived observables (`getProject`, `onAction`, `afterDismissed`)
+   * are piped through {@link takeUntilDestroyed} so they tear down cleanly
+   * when the `Editor` component is destroyed (Angular 21 zoneless-safe).
+   *
+   * Regardless of how the toast dismisses (user Undo, swipe, or 7s
+   * timeout) the `brand_kit_applied_at` marker is cleared server-side via
+   * {@link BrandKitApplyService.clearMarker} — this makes AC-4
+   * (at-most-once-per-project-open) self-enforcing even across sessions.
+   *
+   * @see Story PX-060 — Orion decisions D1/D2/D3 (2026-04-24T17:50Z).
+   */
+  private maybeShowBrandKitToast(projectId: string): void {
+    // WHY: guard against re-firing in the same session even before the
+    // server round-trip begins.
+    if (TOAST_SHOWN_PROJECT_IDS.has(projectId)) return;
+
+    this.apiService
+      .getProject(projectId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (project) => {
+          const sourceTemplateId = project.source_template_id;
+          const appliedAt = project.brand_kit_applied_at;
+          const platform = project.platform as PlatformType | null | undefined;
+          if (!sourceTemplateId || !appliedAt) return;
+          if (this.brandKitService.brandColors().length === 0) return;
+
+          const appliedMs = new Date(appliedAt).getTime();
+          if (Number.isNaN(appliedMs)) return;
+          if (Date.now() - appliedMs > BRAND_KIT_APPLIED_FRESHNESS_MS) return;
+
+          TOAST_SHOWN_PROJECT_IDS.add(projectId);
+
+          const ref = this.snackBar.open(
+            'Applied your Brand Kit colors to this template',
+            'Undo',
+            {
+              duration: 7000,
+              politeness: 'polite',
+            },
+          );
+          ref
+            .onAction()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+              if (platform) {
+                void this.brandKitApplyService.revertToTemplateDefaults(
+                  projectId,
+                  sourceTemplateId,
+                  platform,
+                );
+              }
+            });
+          // AC-4 self-enforcement: clear the server-side marker on ANY
+          // dismissal path (action, swipe, 7s timeout). Undo also clears
+          // via revertToTemplateDefaults, so the double-clear is a no-op.
+          ref
+            .afterDismissed()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+              void this.brandKitApplyService.clearMarker(projectId);
+            });
+        },
+        error: () => {
+          // WHY: network failure should not break the editor — the toast is
+          // a courtesy UX.
+        },
+      });
   }
 }

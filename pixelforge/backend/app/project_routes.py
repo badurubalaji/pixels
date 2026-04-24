@@ -44,6 +44,12 @@ def _doc_to_response(doc: dict, detail: bool = False) -> dict:
         "thumbnail": doc.get("thumbnail"),
         "created_at": doc.get("created_at", datetime.now(timezone.utc)),
         "updated_at": doc.get("updated_at", datetime.now(timezone.utc)),
+        # PX-060 T-0 — Brand-Kit auto-apply traceability fields. All optional;
+        # legacy rows (pre-migration) will return None for platform until the
+        # 0001_projects_platform_backfill migration has run.
+        "source_template_id": doc.get("source_template_id"),
+        "brand_kit_applied_at": doc.get("brand_kit_applied_at"),
+        "platform": doc.get("platform"),
     }
     if detail:
         data["canvas_json"] = doc.get("canvas_json")
@@ -77,6 +83,10 @@ async def create_project(
         "created_at": now,
         "updated_at": now,
         "user_id": current_user["id"] if current_user else None,
+        # PX-060 T-0 — persist template-origin + Brand-Kit auto-apply marker.
+        "source_template_id": body.source_template_id,
+        "brand_kit_applied_at": body.brand_kit_applied_at,
+        "platform": body.platform,
     }
 
     result = await db.projects.insert_one(doc)
@@ -190,6 +200,12 @@ async def update_project(
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = body.model_dump(exclude_none=True)
+    # PX-060 T-0 — allow clients to *explicitly* clear ``brand_kit_applied_at``
+    # by sending it as null in the PUT body (editor Undo uses this to mark the
+    # project as reverted). ``exclude_none=True`` drops such nulls, so we
+    # re-introduce the field when it was explicitly set to None by the caller.
+    if "brand_kit_applied_at" in body.model_fields_set and body.brand_kit_applied_at is None:
+        update_data["brand_kit_applied_at"] = None
     update_data["updated_at"] = datetime.now(timezone.utc)
 
     result = await db.projects.find_one_and_update(

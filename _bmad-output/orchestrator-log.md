@@ -280,3 +280,21 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Action:** amending PX-060 to include a T-0 "Backend schema extension" precondition task. Rationale: PX-023 correctly deferred the `projects` schema additions (`source_template_id`, `brand_kit_applied_at`, `platform`) to maintain scope discipline; PX-060 can't function without them. Folding the ~20-line backend diff into PX-060 keeps the feature's acceptance criteria coherent.
 - **Why not a separate story:** the backend extension is ≤ 30 LOC (5 model fields, route body passthroughs, 3-4 tests). Creating PX-023a or PX-055 for it adds ceremony without clarity. PX-060's T-0 is the right home.
 - **Autonomous decision (per §R5):** Amelia will touch backend in PX-060 — crossing layers is authorized because the feature's correctness requires it, and the diff is small + well-bounded. Logged.
+
+## 2026-04-24T17:50:00Z · Sprint-2 Wave-4 · PX-060 pre-commit review — second pass required
+
+- **Verification gate.** Amelia's PX-060 diff lives in the working tree (8 modified + 4 new files on branch `main`). Tests green: **FE 339/339** (+5 new), **BE 67/67** (+6 new). Scope-diff vs story File List is a near match (only deviation: migration file named `migration_0001_projects_platform_backfill.py` vs story's `0001_projects_platform_backfill.py` — cosmetic, approved).
+- **Code-reviewer agent findings (`feature-dev:code-reviewer`, 2026-04-24T17:49Z):**
+  1. **CRITICAL — AC-10 gap.** `editor.spec.ts` untouched; zero tests for `maybeShowBrandKitToast`. All 5 load-hook branches (valid / null template-id / empty brand kit / auto-dismiss 7s / once-per-project dedupe) are untested. `brand-kit-apply.service.spec.ts` covers the revert path (T-3) but NOT the load-hook (T-1/T-2/T-4). Story-blocking.
+  2. **IMPORTANT — subscription leak in `maybeShowBrandKitToast`.** `this.apiService.getProject(id).subscribe(...)` never unsubscribed — callback fires against destroyed component on nav-away.
+  3. **IMPORTANT — `ref.onAction().subscribe(...)` leak.** Same class of leak, 7s window.
+  4. **IMPORTANT — client-side timestamp fragility.** 5-min freshness heuristic on client-stamped `brand_kit_applied_at` silently misfires AC-1 on slow gallery→editor navigation.
+- **Clean checks (no action):** §2 scope discipline, §6 docstrings (all new public symbols covered), migration idempotency + FE/BE platform-preset parity (backend `app/core/platform_presets.py` properly mirrors FE constants under PX-020's parity test — NOT a §2 Rule 4 violation), AC-4 race condition (flag is set synchronously before snackBar.open so no double-fire window), §5.3 security (Pydantic-typed optional fields, `$set`-based Mongo writes, safe log formatting).
+- **Orion autonomous fixes selected (per §R5 test/design choice within-AC):**
+  - **D1. Widen freshness window 5 min → 30 min** (reviewer option b). Accommodates realistic gallery→editor nav delays. Cheaper to revert than option a (server-returned timestamp) which would require new wire shape.
+  - **D2. Add `ref.afterDismissed().subscribe(() => clearMarkerServerSide(projectId))`** so the server-side marker clears on ANY dismissal path (Undo, swipe, timeout). Makes AC-4 self-enforcing even if the session restarts before user interaction.
+  - **D3. Use `takeUntilDestroyed(this.destroyRef)` on both subscriptions** — Angular 21 idiom (§4.1), zoneless-safe, minimal diff.
+  - **D4. Amelia adds editor.spec.ts** `describe('Editor — Brand-Kit toast (PX-060 AC-10)')` block with 5 branch tests. `TOAST_SHOWN_PROJECT_IDS.clear()` in `beforeEach` for session-dedupe isolation.
+- **Rationale (tie-breakers applied per §R4):** D1+D2 together fully resolve the timestamp-fragility issue without introducing a new wire-shape change (simpler-to-revert). D3 is the canonical Angular 21 pattern for this exact case. D4 is non-negotiable — AC-10 explicitly lists the 5 branches.
+- **Next:** dispatching Amelia for a bounded second pass — expected diff is ≤ 2 files (editor.ts + editor.spec.ts), ~80–120 LOC. Re-run tests, re-run review if needed, then commit.
+

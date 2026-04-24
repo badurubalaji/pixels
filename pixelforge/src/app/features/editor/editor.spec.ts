@@ -80,7 +80,8 @@ vi.mock('fabric', () => {
   return { Canvas, FabricObject, Rect, Circle, Triangle, Polygon, Line, FabricText, IText, FabricImage, Group, ActiveSelection, Path, Pattern, PencilBrush, Point, util, loadSVGFromString: vi.fn(async () => ({ objects: [new FabricObject()], options: {} })) };
 });
 
-import { Editor } from './editor';
+import { Editor, TOAST_SHOWN_PROJECT_IDS } from './editor';
+import { BrandKitApplyService } from '../../core/services/brand-kit-apply.service';
 import { Component } from '@angular/core';
 import { CanvasService } from '../../core/services/canvas.service';
 import { ProjectService } from '../../core/services/project.service';
@@ -990,5 +991,208 @@ describe('Editor — ?platform= query param (PX-020 AC-5)', () => {
   it('does not call resize when no ?platform= is present', async () => {
     const { canvasStub } = await bootstrap(null);
     expect(canvasStub.resize).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * PX-060 AC-10 coverage: Brand-Kit auto-apply toast load-hook.
+ *
+ * These tests isolate the `maybeShowBrandKitToast` private method by
+ * invoking it directly on an Editor instance (no route plumbing, no
+ * ngAfterViewInit). Each test stubs `ApiService.getProject` to return a
+ * specific {@link ApiProject} shape and asserts whether the mocked
+ * `MatSnackBar.open` fires.
+ *
+ * Branches covered (matches AC-10 one-to-one):
+ *   1. Toast fires with valid template + fresh timestamp + non-empty Brand Kit.
+ *   2. Toast does NOT fire when Brand Kit is empty.
+ *   3. Toast does NOT fire when `source_template_id` is null.
+ *   4. Toast opens with `duration: 7000` (auto-dismiss window).
+ *   5. Toast is shown at most once per project-open (TOAST_SHOWN_PROJECT_IDS dedupe).
+ *
+ * @see Story PX-060
+ */
+describe('Editor — Brand-Kit toast (PX-060 AC-10)', () => {
+  let canvasStub: ReturnType<typeof makeCanvasStub>;
+  let apiStub: { getProject: ReturnType<typeof vi.fn>; publishTemplate: ReturnType<typeof vi.fn> };
+  let snackBarStub: { open: ReturnType<typeof vi.fn> };
+  let brandKitApplyStub: { clearMarker: ReturnType<typeof vi.fn>; revertToTemplateDefaults: ReturnType<typeof vi.fn> };
+  let brandKitStub: { brandColors: ReturnType<typeof signal<string[]>>; colors: ReturnType<typeof signal<string[]>>; fonts: ReturnType<typeof signal<string[]>>; logos: ReturnType<typeof signal<any[]>>; load: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+
+  /** Build a fake MatSnackBarRef whose observable streams we control. */
+  function makeSnackRef() {
+    return {
+      onAction: vi.fn(() => of(undefined)),
+      afterDismissed: vi.fn(() => of({ dismissedByAction: false })),
+    };
+  }
+
+  /** Build a server-project shape with overrides for the branch under test. */
+  function makeProject(overrides: Partial<Record<string, any>> = {}) {
+    return {
+      id: 'p1',
+      name: 'Test',
+      width: 1080,
+      height: 1080,
+      canvas_json: '{"version":"7","objects":[]}',
+      thumbnail: 'data:image/png;base64,TT',
+      source_template_id: 'tpl-1',
+      brand_kit_applied_at: new Date().toISOString(),
+      platform: 'ig-post',
+      ...overrides,
+    };
+  }
+
+  beforeEach(async () => {
+    // AC-4: the in-session dedupe Set must be empty between tests so each
+    // case starts from a clean slate.
+    TOAST_SHOWN_PROJECT_IDS.clear();
+
+    canvasStub = makeCanvasStub();
+    apiStub = { getProject: vi.fn(() => of(makeProject())), publishTemplate: vi.fn() };
+    snackBarStub = { open: vi.fn(() => makeSnackRef()) };
+    brandKitApplyStub = {
+      clearMarker: vi.fn(async () => {}),
+      revertToTemplateDefaults: vi.fn(async () => {}),
+    };
+    brandKitStub = {
+      brandColors: signal<string[]>(['#AA0000', '#00BB00']),
+      // Legacy keys kept for parity with other makeBrandKitStub call-sites.
+      colors: signal<string[]>([]),
+      fonts: signal<string[]>([]),
+      logos: signal<any[]>([]),
+      load: vi.fn(),
+      save: vi.fn(),
+    };
+
+    const route = {
+      snapshot: {
+        paramMap: { get: vi.fn(() => null) },
+        queryParamMap: { get: vi.fn(() => null) },
+      },
+    };
+
+    TestBed.overrideComponent(Editor, { set: { template: '<div></div>', imports: [] } });
+
+    await TestBed.configureTestingModule({
+      imports: [Editor, NoopAnimationsModule],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CanvasService, useValue: canvasStub },
+        { provide: ProjectService, useValue: {
+            currentProject: signal<any>({ id: 'p1', name: 'Test', width: 1080, height: 1080 }),
+            isSaving: signal(false),
+            lastSaved: signal<Date | null>(null),
+            openProject: vi.fn(), getCanvasState: vi.fn(() => null),
+            saveCanvasState: vi.fn(), updateProject: vi.fn(),
+            duplicateProject: vi.fn(() => ({ id: 'p2' })),
+        } },
+        { provide: ApiService, useValue: apiStub },
+        { provide: TemplateService, useValue: { applyTemplate: vi.fn() } },
+        { provide: BrandKitService, useValue: brandKitStub },
+        { provide: BrandKitApplyService, useValue: brandKitApplyStub },
+        { provide: ExportService, useValue: { export: vi.fn() } },
+        { provide: HistoryService, useValue: {
+            init: vi.fn(), clear: vi.fn(), undo: vi.fn(), redo: vi.fn(),
+            canUndo: signal(false), canRedo: signal(false),
+        } },
+        { provide: KeyboardService, useValue: { init: vi.fn(), destroy: vi.fn() } },
+        { provide: ClipboardService, useValue: { copy: vi.fn(), paste: vi.fn() } },
+        { provide: BackgroundRemovalService, useValue: {
+            removeFromDataURL: vi.fn(async () => 'data:image/png;base64,NN'),
+            errorMessage: signal(''),
+        } },
+        { provide: CommentsService, useValue: {
+            setActiveProject: vi.fn(),
+            commentMode: signal(false),
+            toggleCommentMode: vi.fn(),
+            setCommentMode: vi.fn(),
+            unresolvedCount: signal(0),
+            comments: signal([]),
+        } },
+        { provide: CollaborationService, useValue: {
+            connect: vi.fn(), disconnect: vi.fn(),
+            collaborators: signal([]), cursors: signal([]),
+        } },
+        { provide: AiDesignService, useValue: { generate: vi.fn(async () => {}) } },
+        { provide: QualityScoreService, useValue: {
+            calculate: vi.fn(() => ({ total: 80, grade: 'A', factors: [] })),
+        } },
+        { provide: FontService, useValue: {
+            preloadPopularFonts: vi.fn(),
+            availableFonts: signal([]),
+            recentFonts: signal([]),
+        } },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: vi.fn(() => ({
+            afterOpened: () => of({}),
+            afterClosed: () => of(undefined),
+            componentInstance: { setPagesData: vi.fn() },
+        })) } },
+        { provide: MatSnackBar, useValue: snackBarStub },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.clearAllMocks();
+    TOAST_SHOWN_PROJECT_IDS.clear();
+  });
+
+  it('AC-10.1: toast SHOWS for valid template + fresh timestamp + non-empty Brand Kit', () => {
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    expect(snackBarStub.open).toHaveBeenCalledTimes(1);
+    expect(snackBarStub.open).toHaveBeenCalledWith(
+      'Applied your Brand Kit colors to this template',
+      'Undo',
+      expect.objectContaining({ duration: 7000, politeness: 'polite' }),
+    );
+  });
+
+  it('AC-10.2: toast does NOT show when Brand Kit is empty', () => {
+    brandKitStub.brandColors.set([]);
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    expect(snackBarStub.open).not.toHaveBeenCalled();
+  });
+
+  it('AC-10.3: toast does NOT show when source_template_id is null', () => {
+    apiStub.getProject.mockReturnValue(of(makeProject({ source_template_id: null })));
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    expect(snackBarStub.open).not.toHaveBeenCalled();
+  });
+
+  it('AC-10.4: toast opens with duration: 7000 (auto-dismiss window)', () => {
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    const opts = snackBarStub.open.mock.calls[0][2];
+    expect(opts.duration).toBe(7000);
+  });
+
+  it('AC-10.5: once-per-project — second call in the same session does not re-fire the toast', () => {
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    instance.maybeShowBrandKitToast('p1');
+    expect(snackBarStub.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the server-side marker on ANY dismissal (AC-4 self-enforcement)', () => {
+    const fixture = TestBed.createComponent(Editor);
+    const instance: any = fixture.componentInstance;
+    instance.maybeShowBrandKitToast('p1');
+    // The stub snack-ref's afterDismissed() is `of({...})`, which fires
+    // synchronously on subscribe — so clearMarker must have been invoked
+    // by the time maybeShowBrandKitToast returns.
+    expect(brandKitApplyStub.clearMarker).toHaveBeenCalledWith('p1');
   });
 });

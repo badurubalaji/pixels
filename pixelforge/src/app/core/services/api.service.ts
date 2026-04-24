@@ -15,6 +15,22 @@ export interface ApiProject {
   canvas_json?: string;
   created_at: string;
   updated_at: string;
+  /**
+   * Originating seed-template `_id` if this project was created from a
+   * starter template, else `null`/absent (PX-060 T-0).
+   */
+  source_template_id?: string | null;
+  /**
+   * ISO 8601 UTC timestamp of the most recent Brand-Kit auto-apply pass.
+   * Cleared (set to `null`) by the editor Undo action so the toast does
+   * not re-fire on subsequent opens (PX-060 T-0).
+   */
+  brand_kit_applied_at?: string | null;
+  /**
+   * Platform preset id (`'ig-post'`, `'yt-thumb'`, …) or `'custom'`. May be
+   * absent on pre-migration rows (PX-060 T-0).
+   */
+  platform?: string | null;
 }
 
 /** Shape of an asset returned by `/api/assets`. */
@@ -118,6 +134,10 @@ export class ApiService {
     height: number;
     canvas_json: string;
     thumbnail: string;
+    /** PX-060 T-0 — clearing this (set to `null`) marks the project as reverted. */
+    brand_kit_applied_at: string | null;
+    platform: string | null;
+    source_template_id: string | null;
   }>): Observable<ApiProject> {
     return this.http.put<ApiProject>(`${this.baseUrl}/api/projects/${id}`, data);
   }
@@ -406,25 +426,28 @@ export class ApiService {
    * composed thumbnail.
    *
    * @param opts - Creation payload.
-   * @param opts.source_template_id - Originating template `_id`. Surfaced
-   *   only for traceability on the frontend — the existing backend schema
-   *   (`ProjectCreate`) does not persist it today (see Surprises / follow-ups).
+   * @param opts.source_template_id - Originating template `_id`. Persisted
+   *   on the project document (PX-060 T-0) so the editor can load the
+   *   original template for the Undo revert path.
    * @param opts.canvas_json - Serialized fabric scene (already composed with
    *   the user's Brand-Kit colors if any existed).
    * @param opts.platform - Target platform id — used to look up width/height
    *   from {@link PLATFORM_PRESETS} and to pass through `?platform=` on the
-   *   editor navigation (PX-020's query-param contract).
+   *   editor navigation (PX-020's query-param contract). Also persisted on
+   *   the project document (PX-060 T-0).
    * @param opts.thumbnail_data_url - Pre-rendered thumbnail data URL
    *   (≤ 300×300).
    * @returns Observable emitting the persisted {@link ApiProject}.
    *
    * @remarks
-   * This is a thin specialization over {@link createProject} — it maps
-   * (`platform`, `canvas_json`, `thumbnail_data_url`) to the existing
-   * `ProjectCreate` fields (`width`, `height`, `canvas_json`, `thumbnail`)
-   * so we do not need a backend change under PX-023 scope discipline.
+   * PX-060 T-0 extends the wire shape so `source_template_id`, `platform`,
+   * and `brand_kit_applied_at` are persisted server-side — replacing the
+   * PX-023 wire-level drop. The `brand_kit_applied_at` timestamp is set
+   * here (server-received time is good enough) so the editor's toast
+   * heuristic can detect "just-applied" projects within 5 minutes of load.
    *
    * @see Story PX-023
+   * @see Story PX-060
    */
   createProjectFromTemplate(opts: {
     source_template_id: string;
@@ -440,6 +463,10 @@ export class ApiService {
       height: preset?.height ?? 0,
       canvas_json: JSON.stringify(opts.canvas_json),
       thumbnail: opts.thumbnail_data_url,
+      // PX-060 T-0 — persist traceability + auto-apply marker server-side.
+      source_template_id: opts.source_template_id,
+      platform: opts.platform,
+      brand_kit_applied_at: new Date().toISOString(),
     };
     return this.http.post<ApiProject>(`${this.baseUrl}/api/projects`, body);
   }

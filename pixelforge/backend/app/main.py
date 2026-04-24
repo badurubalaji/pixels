@@ -14,6 +14,7 @@ from app.brand_routes import brand_router
 from app.comments_routes import comments_router
 from app.template_routes import template_router, seed_template_router
 from app.database import connect_db, close_db, is_connected
+from app.migrations import migrate_projects_platform_backfill
 from app.seed import seed_templates
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,26 @@ async def lifespan(app: FastAPI):
     startup — a missing seed should not take the API down.
     """
     await connect_db()
+    # PX-060 T-0 — opt-in schema migration pass. Gated on the
+    # ``PIXELS_RUN_MIGRATIONS`` env var so day-to-day restarts do not re-scan
+    # the projects collection. Failures are logged and the server continues
+    # booting — a bad migration must never take the API down.
+    if os.getenv("PIXELS_RUN_MIGRATIONS") == "1":
+        if is_connected():
+            from app.database import db as live_db
+
+            try:
+                result = await migrate_projects_platform_backfill(live_db)
+                logger.info(
+                    "PIXELS_RUN_MIGRATIONS: projects.platform backfill — %s",
+                    result,
+                )
+            except Exception as exc:  # noqa: BLE001 - log + continue is the contract
+                logger.exception("PIXELS_RUN_MIGRATIONS: migration failed — %s", exc)
+        else:
+            logger.warning(
+                "PIXELS_RUN_MIGRATIONS=1 but DB not connected — skipping migrations"
+            )
     if os.getenv("PIXELS_SEED_TEMPLATES") == "1":
         if is_connected():
             # Re-import to pick up the module-level ``db`` that ``connect_db``

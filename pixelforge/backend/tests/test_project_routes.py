@@ -110,3 +110,57 @@ async def test_get_shared_project(client: AsyncClient) -> None:
     resp = await client.get(f"/api/projects/shared/{share['share_token']}")
     assert resp.status_code == 200
     assert resp.json()["id"] == created["id"]
+
+
+# ---------------------------------------------------------------------------
+# PX-060 T-0 — Brand-Kit auto-apply schema extension round-trips
+# ---------------------------------------------------------------------------
+
+
+async def test_create_project_persists_source_template_id(client: AsyncClient) -> None:
+    """POST /api/projects round-trips ``source_template_id`` (PX-060 T-0)."""
+    created = (await client.post(
+        "/api/projects",
+        json={"name": "From-Tpl", "source_template_id": "tpl-abc-123"},
+    )).json()
+    assert created["source_template_id"] == "tpl-abc-123"
+
+    # Read-back via GET must preserve it.
+    got = (await client.get(f"/api/projects/{created['id']}")).json()
+    assert got["source_template_id"] == "tpl-abc-123"
+
+
+async def test_create_project_persists_platform(client: AsyncClient) -> None:
+    """POST /api/projects round-trips ``platform`` (PX-060 T-0)."""
+    created = (await client.post(
+        "/api/projects",
+        json={"name": "Plat", "platform": "ig-post"},
+    )).json()
+    assert created["platform"] == "ig-post"
+
+    got = (await client.get(f"/api/projects/{created['id']}")).json()
+    assert got["platform"] == "ig-post"
+
+
+async def test_update_project_clears_brand_kit_applied_at(client: AsyncClient) -> None:
+    """PUT /api/projects/{id} honors an explicit null ``brand_kit_applied_at``.
+
+    This is the editor-Undo path: after the user reverts the auto-applied
+    palette, the frontend sends ``brand_kit_applied_at: null`` so subsequent
+    page loads do not re-fire the toast.
+    """
+    created = (await client.post(
+        "/api/projects",
+        json={
+            "name": "BK",
+            "brand_kit_applied_at": "2026-04-23T12:00:00Z",
+        },
+    )).json()
+    assert created["brand_kit_applied_at"] is not None
+
+    # Undo — clear the marker.
+    cleared = (await client.put(
+        f"/api/projects/{created['id']}",
+        json={"brand_kit_applied_at": None},
+    )).json()
+    assert cleared["brand_kit_applied_at"] is None

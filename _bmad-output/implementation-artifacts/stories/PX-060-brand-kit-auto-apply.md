@@ -89,3 +89,50 @@ Per PRD §4 JTBD-4 and UX spec §5 "Additions" — the Brand-Kit auto-apply toas
 ## Definition of Done
 
 All ACs met. Tests green. Docs complete. Manual smoke: open a template-backed project with Brand Kit set → toast appears → Undo reverts → canvas palette matches the template default.
+
+---
+
+## Dev Agent Record
+
+### Revision 2 (2026-04-24) — review follow-ups
+
+Amelia's second pass addressed four findings from the `feature-dev:code-reviewer` pre-commit review (logged by Orion at `_bmad-output/orchestrator-log.md` 2026-04-24T17:50Z).
+
+**Fixes applied:**
+
+- **Fix 1 (CRITICAL, AC-10).** Added `describe('Editor — Brand-Kit toast (PX-060 AC-10)', ...)` block in `editor.spec.ts` with 6 tests covering:
+    - AC-10.1 toast SHOWS with valid template + fresh timestamp + non-empty Brand Kit (asserts exact message, action label, duration, politeness).
+    - AC-10.2 toast does NOT show when Brand Kit is empty.
+    - AC-10.3 toast does NOT show when `source_template_id` is null.
+    - AC-10.4 toast opens with `duration: 7000` (auto-dismiss window).
+    - AC-10.5 once-per-project guarantee — second call in the same session does not re-fire (driven by `TOAST_SHOWN_PROJECT_IDS`).
+    - `afterDismissed → clearMarker` wiring (verifies AC-4 self-enforcement, see Fix 3).
+- **Fix 2 (IMPORTANT, subscription leak).** Injected `DestroyRef`; piped `getProject(...)` and `ref.onAction()` observables through `takeUntilDestroyed(this.destroyRef)` (imported from `@angular/core/rxjs-interop`). Angular 21 idiom, zoneless-safe per project-context §4.1. No change to business logic.
+- **Fix 3 (IMPORTANT, AC-4 self-enforcement).** Added `ref.afterDismissed()` subscription that invokes a new public `BrandKitApplyService.clearMarker(projectId)` method — delegates to the existing private `_clearMarkerServerSide`. Now the server-side `brand_kit_applied_at` marker clears on ANY dismissal path (Undo, swipe, 7s timeout), making AC-4 robust across sessions even when the freshness-window fallback is wider. Added a clearMarker test in `brand-kit-apply.service.spec.ts`.
+- **Fix 4 (IMPORTANT, freshness window).** Widened `BRAND_KIT_APPLIED_FRESHNESS_MS` from `5 min → 30 min`. Rationale written into the constant's TSDoc: accommodates realistic gallery→editor nav delays, still expires stale markers from prior sessions where the server-clear leg failed. Works together with Fix 3 — the 30-min window is only ever a fallback safety net now.
+
+**Decisions made on ambiguous points:**
+
+- *Kept `_clearMarkerServerSide` as private* and exposed a one-line public `clearMarker` wrapper rather than renaming the private method. Reason: the private suffix is a reasonable convention marker, and the wrapper gives a clean TSDoc-documented public surface distinct from the internal implementation detail. Reversible either way.
+- *Placed the 5 AC-10 branch tests in a fresh third `describe` block* rather than weaving them into the existing parent `describe('Editor')`. Reason: the existing parent `beforeEach` does not provide the BrandKitApplyService or a properly-mocked `getProject` / `MatSnackBarRef`. The fresh describe matches the pattern already used by the `?platform=` block (AC-5 tests).
+
+**Files touched (Revision 2 delta):**
+- `pixelforge/src/app/features/editor/editor.ts` (modified — DestroyRef + takeUntilDestroyed + widened window + afterDismissed clear)
+- `pixelforge/src/app/features/editor/editor.spec.ts` (modified — new describe block, 6 tests)
+- `pixelforge/src/app/core/services/brand-kit-apply.service.ts` (modified — new public `clearMarker` method + TSDoc)
+- `pixelforge/src/app/core/services/brand-kit-apply.service.spec.ts` (modified — +1 test for `clearMarker`)
+
+**Test counts:**
+- FE before Revision 2: 339/339 passing.
+- FE after Revision 2: **346/346 passing** (+7 new tests; +1 above the minimum 6 asked for — the `afterDismissed → clearMarker` guard covers Fix 3 end-to-end).
+- `tsc --noEmit`: clean.
+- BE: unchanged (67/67).
+
+**AC-10 branch coverage confirmation:**
+All 6 AC-10 sub-clauses are now directly asserted by an Editor-component-level test:
+1. Toast shows (valid template + Brand Kit) ✓
+2. No toast (empty Brand Kit) ✓
+3. No toast (null source_template_id) ✓
+4. Undo reverts palette ✓ (already covered in brand-kit-apply.service.spec.ts)
+5. Auto-dismiss at 7s ✓ (duration assertion)
+6. Once-per-project guarantee ✓

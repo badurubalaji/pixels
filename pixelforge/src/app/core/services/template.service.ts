@@ -1,5 +1,9 @@
 import { Injectable, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { CanvasService } from './canvas.service';
+import { ApiService } from './api.service';
+import type { PlatformType } from '../constants/platform-presets';
+import type { Template } from '../models/template.model';
 import * as fabric from 'fabric';
 
 export interface LogoTemplate {
@@ -31,8 +35,39 @@ export const LOGO_TEMPLATES: LogoTemplate[] = [
 @Injectable({ providedIn: 'root' })
 export class TemplateService {
   private readonly canvasService = inject(CanvasService);
+  private readonly apiService = inject(ApiService);
 
   readonly templates = LOGO_TEMPLATES;
+
+  /**
+   * Fetch a seed starter {@link Template} by its `_id`.
+   *
+   * @param id - MongoDB `_id` of the seed template (stringified).
+   * @param platform - Platform bucket to scope the backend list query. We
+   *   rely on `ApiService.listTemplates(platform)` + a client-side filter
+   *   rather than adding a new `GET /api/v1/templates/{id}` endpoint —
+   *   PX-060 keeps the backend diff minimal.
+   * @returns The matching {@link Template}, or `null` if not found (network
+   *   errors surface as `null` via `listTemplates`'s `catchError`).
+   *
+   * @remarks
+   * Added for PX-060 T-3 (Brand-Kit Undo). The BrandKitApplyService needs
+   * the template's `palette_slots` to restore role-default colors on the
+   * canvas after the user clicks "Undo".
+   *
+   * @example
+   * ```ts
+   * const tpl = await templateService.getById('tpl-abc', 'ig-post');
+   * if (tpl) console.log(tpl.palette_slots);
+   * ```
+   *
+   * @see Story PX-060
+   */
+  async getById(id: string, platform: PlatformType): Promise<Template | null> {
+    if (!id || !platform) return null;
+    const list = await firstValueFrom(this.apiService.listTemplates(platform));
+    return list.find(t => t._id === id) ?? null;
+  }
 
   applyTemplate(templateId: string): void {
     const canvas = this.canvasService.getCanvas();
