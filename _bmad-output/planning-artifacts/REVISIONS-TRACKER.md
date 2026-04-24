@@ -94,3 +94,10 @@ Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non
 
 - [ ] **PX-020-FUP-1 — Re-add Facebook Cover / Twitter Header / Pinterest Pin / Square HD to canonical preset list?** PRD/MVP spec only includes the 5 IG/LinkedIn/YouTube presets. PM (John) decision needed if extra platforms become MVP. Size: S (FE+BE+test data). Priority: P3 unless PM upgrades.
 - [ ] **PX-020-FUP-2 — `ExportDialog` still has its own "platformPresets" list for export-format selection** (Instagram, Twitter, Facebook, LinkedIn, Email, Print HD, Web Transparent). Different concept from canvas-size presets — left untouched. Audit later for whether these should consolidate. Size: S. Priority: P3.
+
+---
+
+## Wave #6 — follow-ups from PX-010 (2026-04-24)
+
+- [ ] **PX-010-FUP-1 — Hoist canvas-size dialog into `src/app/shared/` and wire to Hub's "Start from scratch" button.** Currently stubbed as no-op because the existing dialog lives inside `DashboardComponent`'s `new-project-dialog` and is tightly coupled. Extract → consume from Hub + Dashboard. Size: M. Priority: P2 (visible affordance, low value until Sprint 2 polish pass).
+- [ ] **PX-010-FUP-2 — Template-file resolver for Vitest.** Every component in `pixelforge/src/app/` uses inline template + styles because `vitest.config.ts` has no Angular-component-resource plugin. Teams that prefer external `.html`/`.scss` files are blocked. Add a resolver or document the convention. Size: S. Priority: P3.

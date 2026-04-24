@@ -148,3 +148,29 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Rationale:** PX-010 unblocked by PX-020's `platform-presets.ts`. PX-003 is independent of PX-010 but BOTH would race on `vitest` runs and `npm install` if dispatched concurrently to the same working tree. Sequencing is the safer call. PX-020-style ~10-min cycle each — total ~20-30 min.
 - **Per autonomy rule:** no further "X / Y / both?" prompts to user. Sequence chosen, executing.
 - **Kill-switch:** user can say "halt PX-003" mid-stream to stop after PX-010.
+
+## 2026-04-24T02:45:00Z · PX-010 COMPLETE · hub shipped
+
+- **Action:** Amelia executed PX-010.
+- **Result:**
+  - `/hub` route live. `HubComponent` renders 6 tiles (5 MVP platforms from canonical `PLATFORM_PRESETS` + hard-coded Logo tile) in responsive 3×2 / 2×3 / 1×6 grid.
+  - Recent projects strip wired through `ProjectService.projects()` computed signal, capped at 8, with degraded-empty fallback at the boundary.
+  - WCAG AA: `<button>` semantics, aria-labels, focus-visible, ≥ 160px hit targets, `prefers-reduced-motion` honored.
+  - **276/276 frontend tests** passing (21 new in `hub.component.spec.ts`). `npm run build` clean (no new warnings).
+  - 12 symbols documented (TSDoc).
+- **Autonomous approvals on Amelia's behalf:**
+  1. **Inline template + styles** vs. separate `.html`/`.scss` files: File List deviation. **APPROVED** — Vitest JIT in this project can't resolve `templateUrl`/`styleUrl`; every other component in the codebase is inline for the same reason (auth, dashboard, editor components). Within scope (feature folder). Story File List line updated.
+  2. **AC-5 "Start from scratch" stubbed as no-op button**: the existing canvas-size dialog lives inside `DashboardComponent`'s `new-project-dialog` and is tightly coupled. Re-wiring it requires hoisting to `shared/` — out of this story's scope per §2 Rule 4. **APPROVED** stub + follow-up PX-010-FUP-1 captured in REVISIONS-TRACKER wave #6.
+  3. **`try/catch` at `ProjectService.projects()` read boundary** — §2 Rule 3 forbids speculative error handling, but this is a legitimate service-boundary where privacy-mode browsers can throw. **APPROVED** as boundary-layer, not speculative.
+- **Still OUTSIDE this story:** default-redirect change (belongs to PX-011, not yet written). `/hub` is direct-nav-only until PX-011 lands.
+- **User directive received mid-execution:** "please run frontend and backend once sprint is done." Captured as durable ritual (`feedback_sprint_end_smoke.md`) and will execute at the close of Sprint-1 P0s (after PX-003 lands).
+
+## 2026-04-24T02:46:00Z · Sprint-1 final P0 dispatch — PX-003
+
+- **Action:** dispatching Amelia on PX-003 (Brand Kit SVG logo export + DOMPurify + defusedxml + `CanvasService.addSvg`). Last P0 of Sprint 1.
+- **Per autonomy rule:** no pause, no approval prompt. DOMPurify and defusedxml deps already pre-authorized in orchestrator-log 00:03Z and in story AC-7 revision-wave-1.
+- **Sprint-close protocol** (auto-triggers after PX-003 lands, per `feedback_sprint_end_smoke.md`):
+  1. Commit + push PX-003
+  2. Run graphify `--update` (Task #18 — deferred during wave-2; now due since PX-002/PX-020/PX-010/PX-003 all add genuinely new symbols)
+  3. **Boot frontend (`npm start`) + backend (`python run.py`)** in background, verify both compile/boot, report
+  4. Sprint-1 close summary (completion %, velocity, open follow-ups for Sprint-2 planning)
