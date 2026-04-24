@@ -25,6 +25,7 @@ import { ApiService, ApiProject } from '../../core/services/api.service';
 import { BrandKitService } from '../../core/services/brand-kit.service';
 import { TemplateThumbnailService } from '../../core/services/template-thumbnail.service';
 import type { FabricJson, Template } from '../../core/models/template.model';
+import { UserMenuComponent } from '../../shared/components/user-menu.component';
 
 /**
  * Tile chip options exposed in the filter row.
@@ -89,6 +90,7 @@ interface GalleryTile {
     MatProgressBarModule,
     MatRippleModule,
     RouterLink,
+    UserMenuComponent,
   ],
   template: `
     <section class="gallery" aria-labelledby="gallery-heading">
@@ -105,11 +107,14 @@ interface GalleryTile {
             <mat-icon aria-hidden="true">arrow_back</mat-icon>
             <span>Back to hub</span>
           </a>
-          @if (preset(); as p) {
-            <span class="gallery__dims" aria-hidden="true">
-              {{ p.width }} × {{ p.height }}
-            </span>
-          }
+          <div class="gallery__header-top-right">
+            @if (preset(); as p) {
+              <span class="gallery__dims" aria-hidden="true">
+                {{ p.width }} × {{ p.height }}
+              </span>
+            }
+            <app-user-menu />
+          </div>
         </div>
 
         <div class="gallery__header-copy">
@@ -309,6 +314,11 @@ interface GalleryTile {
         justify-content: space-between;
         gap: 12px;
         flex-wrap: wrap;
+      }
+      .gallery__header-top-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
       }
       .gallery__header-copy { grid-area: copy; min-width: 0; }
       .gallery__scratch--primary { grid-area: scratch; }

@@ -1,11 +1,14 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { signal } from '@angular/core';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { HubComponent } from './hub.component';
 import { ProjectService } from '../../core/services/project.service';
 import { Project } from '../../core/models/project.model';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * PX-010 AC-8 coverage: render, tile-click navigation, recent-projects
@@ -27,18 +30,31 @@ describe('HubComponent', () => {
 
   const setupTestBed = async (initialProjects: Project[] = []): Promise<void> => {
     projectsSignalValue = initialProjects;
-    navigateByUrl = vi.fn().mockResolvedValue(true);
 
     TestBed.resetTestingModule();
 
     await TestBed.configureTestingModule({
-      imports: [HubComponent],
+      imports: [HubComponent, NoopAnimationsModule],
       providers: [
         provideRouter([]),
         { provide: ProjectService, useValue: projectServiceStub },
-        { provide: Router, useValue: { navigateByUrl } },
+        // PX-065: Hub renders <app-user-menu> which reads AuthService.
+        // Provide a benign guest stub so the hub tests stay scoped to hub
+        // behavior — user-menu has its own spec.
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal(null),
+            logout: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
+
+    const router = TestBed.inject(Router);
+    navigateByUrl = vi
+      .spyOn(router, 'navigateByUrl')
+      .mockResolvedValue(true) as ReturnType<typeof vi.fn>;
 
     fixture = TestBed.createComponent(HubComponent);
     component = fixture.componentInstance;
@@ -201,7 +217,6 @@ describe('HubComponent', () => {
 
   describe('degraded loading', () => {
     it('falls back to empty state if ProjectService throws', async () => {
-      navigateByUrl = vi.fn().mockResolvedValue(true);
       const throwingStub = {
         projects: () => {
           throw new Error('localStorage blocked');
@@ -209,13 +224,19 @@ describe('HubComponent', () => {
       };
       TestBed.resetTestingModule();
       await TestBed.configureTestingModule({
-        imports: [HubComponent],
+        imports: [HubComponent, NoopAnimationsModule],
         providers: [
           provideRouter([]),
           { provide: ProjectService, useValue: throwingStub },
-          { provide: Router, useValue: { navigateByUrl } },
+          {
+            provide: AuthService,
+            useValue: { currentUser: signal(null), logout: vi.fn() },
+          },
         ],
       }).compileComponents();
+
+      const router = TestBed.inject(Router);
+      vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
       const f = TestBed.createComponent(HubComponent);
       f.detectChanges();

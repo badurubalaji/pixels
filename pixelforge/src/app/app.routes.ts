@@ -33,7 +33,20 @@ export const routes: Routes = [
       import('./features/hub/gallery.component').then(m => m.GalleryComponent),
   },
   {
+    // PX-065 — signed-in user's account overview (name, email, member-since,
+    // prominent sign-out). Guarded with authGuard so unauth users bounce to
+    // /auth before the component mounts.
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/profile/profile.component').then(m => m.ProfileComponent),
+  },
+  {
+    // PX-065 — close the guard gap. /dashboard and /editor/:id were
+    // reachable without authentication; every authenticated surface now
+    // goes through authGuard.
     path: 'dashboard',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),
   },
@@ -44,6 +57,7 @@ export const routes: Routes = [
   },
   {
     path: 'editor/:id',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/editor/editor.routes').then(m => m.EDITOR_ROUTES),
   },

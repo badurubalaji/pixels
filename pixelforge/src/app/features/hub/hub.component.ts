@@ -19,6 +19,7 @@ import {
 } from '../../core/constants/platform-presets';
 import { ProjectService } from '../../core/services/project.service';
 import { Project } from '../../core/models/project.model';
+import { UserMenuComponent } from '../../shared/components/user-menu.component';
 
 /**
  * One renderable tile on the `/hub` grid.
@@ -85,10 +86,24 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
   selector: 'app-hub',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatRippleModule, MatTooltipModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatRippleModule,
+    MatTooltipModule,
+    UserMenuComponent,
+  ],
   template: `
     <section class="hub" aria-labelledby="hub-heading">
       <div class="hub__bg" aria-hidden="true"></div>
+
+      <div class="hub__top">
+        <div class="hub__brand" aria-hidden="true">
+          <span class="hub__brand-glyph"><mat-icon>palette</mat-icon></span>
+          <span class="hub__brand-text">Pixelforge</span>
+        </div>
+        <app-user-menu />
+      </div>
 
       <header class="hub__header">
         <div class="hub__header-copy">
@@ -267,6 +282,44 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
       }
 
       /* ── Header ──────────────────────────────────────────────────── */
+
+      /* ── Top row (brand + user menu) ─────────────────────────── */
+
+      .hub__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .hub__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        color: var(--px-ink);
+      }
+      .hub__brand-glyph {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--px-violet) 0%, var(--px-cyan) 100%);
+        color: #ffffff;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+          0 4px 12px -4px rgba(124, 58, 237, 0.45);
+      }
+      .hub__brand-glyph mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+      @media (max-width: 560px) {
+        .hub__brand-text { display: none; }
+      }
 
       .hub__header {
         display: flex;

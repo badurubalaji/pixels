@@ -353,4 +353,26 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Follow-up.** The palette tokens (`--px-violet`, `--px-cyan`, etc.) are currently duplicated as `:host` CSS vars in all three route components. A later PX-067 refactor could hoist them into `src/styles.scss` under `:root` once a fourth consumer appears.
 - **Tests:** FE 357/357 passing. `tsc --noEmit` clean.
 
+## 2026-04-24T23:12:00Z · PX-065 logout + profile page + guard gap close
+
+- **Trigger.** User flagged mid-session: *"there is no logout and profile pages it seems"*. Then later: *"please continue and fix all"*. Shipped under blanket auto-approval.
+- **Surface added:**
+  1. **`UserMenuComponent`** (`src/app/shared/components/user-menu.component.ts`) — reusable right-aligned chip + MatMenu dropdown. Avatar with gradient initials (name-derived, email-local-part fallback), identity block (name + truncated email), chevron. Menu items: Profile (→ `/profile`), Hub (→ `/hub`), Sign out. Signed-out branch renders a Sign-in pill link to `/auth` — keeps the slot filled so header layout never shifts between auth states. `onSignOut()` calls `AuthService.logout()` first, then `router.navigate(['/auth'])`, in that strict order (verified by test).
+  2. **`ProfileComponent`** (`src/app/features/profile/profile.component.ts`) — new `/profile` route. Matches the app-wide visual language (gradient-orb fixed bg, eyebrow pill, gradient avatar, dashed-card guest fallback). Read-only account overview: email, display name, member-since (locale long date via `Intl.DateTimeFormat`), account id (mono). Prominent destructive-style "Sign out" button with red accent. Intentionally no edit flows for MVP (name change, password rotation, avatar upload) — they need backend endpoints that don't exist yet. Defensive guest branch (shows Sign-in CTA) in case `AuthService.currentUser()` clears mid-session.
+- **Wired into existing surfaces:**
+  - `/hub` gets a new `.hub__top` row above the header: brand mark (gradient glyph + "Pixelforge" text) on the left, user-menu on the right. Brand text hides below 560px.
+  - `/gallery/:type` back-row now packs a right-side group: dimensions pill + user-menu side-by-side.
+- **Guard-gap close.** PX-011 guarded `/hub` and `/gallery/:type` but left `/dashboard` and `/editor/:id` reachable without authentication. Added `canActivate: [authGuard]` to both. **Authenticated-only invariant** is now enforced uniformly: `/hub`, `/gallery/:type`, `/profile`, `/dashboard`, `/editor/:id` all route through `authGuard`. `/auth` stays public.
+- **Test-harness regression caught in iteration.** Both new specs (user-menu + profile) and the hub spec failed initially with `TypeError: Cannot read properties of undefined (reading 'root')` at `provide_router.ts:119`. Cause: `provideRouter([])` + `{ provide: Router, useValue: { …thin… } }` combo — the thin mock was missing methods `RouterLink` / `MatMenuTrigger` need (`createUrlTree`, `parseUrl`, …) once the user-menu's MatMenu panel + inner `routerLink` were added to the tree. **Fix** applied consistently across 3 specs: drop the Router override, rely on `provideRouter([])` to provide the real Router, spy on `.navigate` / `.navigateByUrl` via `vi.spyOn` after `TestBed.inject(Router)`. This is now the canonical pattern for any future spec that renders a component with internal routing directives.
+- **Tests shipped:**
+  - `user-menu.component.spec.ts`: 7 tests (initials derivation ×4, render branch ×2, signout order ×1).
+  - `profile.component.spec.ts`: 10 tests (signed-in card ×6, guest fallback ×2, initials + memberSince edge cases ×2).
+  - Updated hub spec to seed `AuthService` with `signal(null)` + spy-on-real-Router pattern; 21/21 hub still green.
+  - Updated gallery spec? — not needed; its `{ navigate, navigateByUrl }` override survived because the user-menu's RouterLink is only active when the menu *opens*, and the gallery tests don't open it.
+  - **Total: FE 357 → 374 passing** (+17). `tsc --noEmit` clean.
+- **Known follow-ups.**
+  - Name-edit flow requires a `PATCH /api/auth/me` endpoint (not shipped). Tracked informally.
+  - `/dashboard` view itself still uses old Material theming — redesign pass would be PX-068 when the user flags it.
+  - Palette tokens (`--px-*`) now duplicated in 4 components (auth, hub, gallery, profile, user-menu). Hoist to `src/styles.scss :root` when the fifth consumer lands (PX-067).
+
 
