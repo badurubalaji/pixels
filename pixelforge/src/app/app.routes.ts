@@ -27,6 +27,12 @@ export const routes: Routes = [
       import('./features/hub/hub.component').then(m => m.HubComponent),
   },
   {
+    path: 'gallery/:type',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/hub/gallery.component').then(m => m.GalleryComponent),
+  },
+  {
     path: 'dashboard',
     loadChildren: () =>
       import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),

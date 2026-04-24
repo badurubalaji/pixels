@@ -328,4 +328,86 @@ describe('ApiService', () => {
     expect(req.request.body.name).toBe('n');
     req.flush({});
   });
+
+  // --- Seed Templates (PX-022a / PX-023) ---
+
+  it('listTemplates GETs /api/v1/templates with platform', () => {
+    service.listTemplates('ig-post').subscribe();
+    const req = httpMock.expectOne(`${base}/api/v1/templates?platform=ig-post`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('listTemplates encodes comma-separated tags', () => {
+    service.listTemplates('ig-post', ['Bold', 'Festive']).subscribe();
+    const expected = `${base}/api/v1/templates?platform=ig-post&tags=${encodeURIComponent('Bold,Festive')}`;
+    const req = httpMock.expectOne(expected);
+    req.flush([]);
+  });
+
+  it('listTemplates omits tags when array is empty', () => {
+    service.listTemplates('yt-thumb', []).subscribe();
+    const req = httpMock.expectOne(`${base}/api/v1/templates?platform=yt-thumb`);
+    req.flush([]);
+  });
+
+  it('listTemplates returns [] on error (catchError fallback)', () => {
+    let result: any;
+    service.listTemplates('ig-story').subscribe(r => (result = r));
+    const req = httpMock.expectOne(`${base}/api/v1/templates?platform=ig-story`);
+    req.flush('', { status: 500, statusText: 'X' });
+    expect(result).toEqual([]);
+  });
+
+  it('createProjectFromTemplate POSTs to /api/projects with preset dims + stringified canvas', () => {
+    const canvas = { version: '7.0.0', objects: [{ type: 'rect' }] };
+    service
+      .createProjectFromTemplate({
+        source_template_id: 't1',
+        canvas_json: canvas,
+        platform: 'ig-post',
+        thumbnail_data_url: 'data:image/png;base64,AAA',
+        name: 'My Tpl',
+      })
+      .subscribe();
+
+    const req = httpMock.expectOne(`${base}/api/projects`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.name).toBe('My Tpl');
+    expect(req.request.body.width).toBe(1080);
+    expect(req.request.body.height).toBe(1080);
+    expect(req.request.body.thumbnail).toBe('data:image/png;base64,AAA');
+    expect(JSON.parse(req.request.body.canvas_json)).toEqual(canvas);
+    req.flush({
+      id: 'p1',
+      name: 'My Tpl',
+      width: 1080,
+      height: 1080,
+      created_at: '',
+      updated_at: '',
+    });
+  });
+
+  it('createProjectFromTemplate maps yt-thumb to 1280×720', () => {
+    service
+      .createProjectFromTemplate({
+        source_template_id: 't2',
+        canvas_json: {},
+        platform: 'yt-thumb',
+        thumbnail_data_url: 'data:image/png;base64,AAA',
+      })
+      .subscribe();
+    const req = httpMock.expectOne(`${base}/api/projects`);
+    expect(req.request.body.width).toBe(1280);
+    expect(req.request.body.height).toBe(720);
+    expect(req.request.body.name).toBe('Untitled');
+    req.flush({
+      id: 'p2',
+      name: 'Untitled',
+      width: 1280,
+      height: 720,
+      created_at: '',
+      updated_at: '',
+    });
+  });
 });

@@ -265,3 +265,18 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Distribution note:** story brief said "5 ig-post + 4 + 4 + 3 + 2 + 2 = 20"; with the repurpose path the ig-post bucket holds 7 (5 content-post + 2 logo-tagged). Net still 20. Test pins the final distribution.
 - **Follow-ups raised:** PX-022b-FUP-1 (Sally visual polish pass), PX-022b-FUP-2 (first-class Logo gallery tab decision). Both in REVISIONS-TRACKER wave #9.
 - **Next wave:** PX-023 (gallery + Brand-Kit thumbnail pre-composition). Dispatching.
+
+## 2026-04-24T05:10:00Z · Sprint-2 Wave-3 COMPLETE · PX-023 (gallery) landed
+
+- **Result:** `GalleryComponent` + `TemplateThumbnailService` + `Template` model + `ApiService.listTemplates/createProjectFromTemplate` + `/gallery/:type` route wired. **334/334 FE tests** (+30 new across 3 files), `tsc` clean, production build clean.
+- **Autonomous approvals on Amelia's behalf:**
+  1. **`source_template_id` dropped at the wire.** The existing `ProjectCreate` schema in `backend/app/models.py` only accepts `{name, width, height, canvas_json, thumbnail}`. Amelia stayed in-layer per §2 Rule 2 — mapped the story's proposed POST body to the existing shape, kept `source_template_id` only on the frontend for navigation. **APPROVED** — scope-discipline-correct, but **this blocks PX-060's editor-load Brand-Kit toast** which reads that field at load time. Adjusting PX-060 scope to include the backend schema extension (see 05:11Z below).
+  2. **Blank-canvas `canvas_json` not round-tripped** for same reason. Editor hydrates its own default. `emptyCanvasFor(preset)` exported for future use. **APPROVED**.
+  3. **"Show more" pagination deferred** — AC didn't mandate it; 20-template seed set doesn't need it. **APPROVED**.
+- **Test decoration:** 13 thumbnail-service tests + 6 new api.service tests + 11 gallery tests. All Vitest-clean under mocked fabric.
+
+## 2026-04-24T05:11:00Z · Sprint-2 PX-060 scope EXPANSION — backend schema extension folded in
+
+- **Action:** amending PX-060 to include a T-0 "Backend schema extension" precondition task. Rationale: PX-023 correctly deferred the `projects` schema additions (`source_template_id`, `brand_kit_applied_at`, `platform`) to maintain scope discipline; PX-060 can't function without them. Folding the ~20-line backend diff into PX-060 keeps the feature's acceptance criteria coherent.
+- **Why not a separate story:** the backend extension is ≤ 30 LOC (5 model fields, route body passthroughs, 3-4 tests). Creating PX-023a or PX-055 for it adds ceremony without clarity. PX-060's T-0 is the right home.
+- **Autonomous decision (per §R5):** Amelia will touch backend in PX-060 — crossing layers is authorized because the feature's correctness requires it, and the diff is small + well-bounded. Logged.

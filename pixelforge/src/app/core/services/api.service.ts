@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { getPlatformPreset, type PlatformType } from '../constants/platform-presets';
+import type { Template } from '../models/template.model';
 
 /** Shape of a project returned by the backend (`/api/projects`). */
 export interface ApiProject {
@@ -365,4 +367,91 @@ export class ApiService {
   publishTemplate(data: { name: string; category: string; description?: string; canvas_json: string; thumbnail?: string; width: number; height: number }): Observable<any> {
     return this.http.post(`${this.baseUrl}/api/public-templates`, data);
   }
+
+  // --- Seed Templates (PX-022a / PX-023) ---
+
+  /**
+   * List seed starter templates for a platform, optionally narrowed by tags.
+   *
+   * @param platform - Concrete platform id (never `'custom'`).
+   * @param tags - Optional filter tags. Empty / omitted = no filter. Multiple
+   *   tags join with OR semantics on the backend (see `seed_template_router`).
+   * @returns Observable emitting the list of {@link Template} documents for
+   *   the requested platform. Resolves to `[]` on any HTTP error so the gallery
+   *   can render an empty state without special-casing network failures.
+   *
+   * @remarks
+   * URL: `GET {baseUrl}/api/v1/templates?platform=<id>[&tags=<csv>]`.
+   * Shipped under PX-022a; consumed by the gallery in PX-023.
+   *
+   * @example
+   * ```ts
+   * api.listTemplates('ig-post', ['Bold', 'Festive']).subscribe(ts => ...)
+   * ```
+   *
+   * @see Story PX-022a
+   * @see Story PX-023
+   */
+  listTemplates(platform: PlatformType, tags?: string[]): Observable<Template[]> {
+    let url = `${this.baseUrl}/api/v1/templates?platform=${encodeURIComponent(platform)}`;
+    if (tags && tags.length > 0) {
+      // WHY: backend expects a comma-separated list, not repeated ?tags= keys.
+      url += `&tags=${encodeURIComponent(tags.join(','))}`;
+    }
+    return this.http.get<Template[]>(url).pipe(catchError(() => of([] as Template[])));
+  }
+
+  /**
+   * Create a new project pre-seeded from a template's canvas + Brand-Kit-
+   * composed thumbnail.
+   *
+   * @param opts - Creation payload.
+   * @param opts.source_template_id - Originating template `_id`. Surfaced
+   *   only for traceability on the frontend — the existing backend schema
+   *   (`ProjectCreate`) does not persist it today (see Surprises / follow-ups).
+   * @param opts.canvas_json - Serialized fabric scene (already composed with
+   *   the user's Brand-Kit colors if any existed).
+   * @param opts.platform - Target platform id — used to look up width/height
+   *   from {@link PLATFORM_PRESETS} and to pass through `?platform=` on the
+   *   editor navigation (PX-020's query-param contract).
+   * @param opts.thumbnail_data_url - Pre-rendered thumbnail data URL
+   *   (≤ 300×300).
+   * @returns Observable emitting the persisted {@link ApiProject}.
+   *
+   * @remarks
+   * This is a thin specialization over {@link createProject} — it maps
+   * (`platform`, `canvas_json`, `thumbnail_data_url`) to the existing
+   * `ProjectCreate` fields (`width`, `height`, `canvas_json`, `thumbnail`)
+   * so we do not need a backend change under PX-023 scope discipline.
+   *
+   * @see Story PX-023
+   */
+  createProjectFromTemplate(opts: {
+    source_template_id: string;
+    canvas_json: FabricJsonLike;
+    platform: PlatformType;
+    thumbnail_data_url: string;
+    name?: string;
+  }): Observable<ApiProject> {
+    const preset = getPlatformPreset(opts.platform);
+    const body = {
+      name: opts.name ?? 'Untitled',
+      width: preset?.width ?? 0,
+      height: preset?.height ?? 0,
+      canvas_json: JSON.stringify(opts.canvas_json),
+      thumbnail: opts.thumbnail_data_url,
+    };
+    return this.http.post<ApiProject>(`${this.baseUrl}/api/projects`, body);
+  }
 }
+
+/**
+ * Narrow structural alias so `createProjectFromTemplate`'s signature does not
+ * pull in the full {@link Template} graph.
+ *
+ * @remarks
+ * Structural equivalent of `FabricJson` from `template.model.ts`. Kept
+ * co-located with the caller to avoid an import cycle if the models module
+ * ever needs API types.
+ */
+type FabricJsonLike = { objects?: unknown[]; [key: string]: unknown };
