@@ -16,6 +16,7 @@ import { AiDesignService } from '../../core/services/ai-design.service';
 import { CANVAS_PRESETS, CanvasPreset } from '../../core/models/project.model';
 import { LOGO_TEMPLATES, LogoTemplate } from '../../core/services/template.service';
 import { NewProjectDialog } from './components/new-project-dialog';
+import { UserMenuComponent } from '../../shared/components/user-menu.component';
 
 type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
 
@@ -30,6 +31,7 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
     MatTabsModule,
     MatBadgeModule,
     MatMenuModule,
+    UserMenuComponent,
   ],
   template: `
     <div class="dashboard"
@@ -116,33 +118,15 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
         <div class="nav-right">
           <button mat-flat-button class="create-btn" (click)="openNewProjectDialog()">
             <mat-icon>add</mat-icon>
-            Create a design
+            <span>Create a design</span>
           </button>
 
           <button mat-icon-button matTooltip="Toggle theme" (click)="themeService.toggleTheme()">
             <mat-icon>{{ themeService.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
           </button>
 
-          @if (authService.isAuthenticated()) {
-            <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-btn" matTooltip="Account">
-              <div class="user-avatar">{{ userInitial() }}</div>
-            </button>
-            <mat-menu #userMenu="matMenu">
-              <div class="user-info" (click)="$event.stopPropagation()">
-                <strong>{{ authService.currentUser()?.name }}</strong>
-                <span>{{ authService.currentUser()?.email }}</span>
-              </div>
-              <button mat-menu-item (click)="logout()">
-                <mat-icon>logout</mat-icon>
-                Log out
-              </button>
-            </mat-menu>
-          } @else {
-            <button mat-stroked-button (click)="goToLogin()">
-              <mat-icon>login</mat-icon>
-              Log In
-            </button>
-          }
+          <!-- PX-068: unified user menu (replaces bespoke dashboard avatar) -->
+          <app-user-menu />
         </div>
       </nav>
 
@@ -795,14 +779,44 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      height: 100%;
+      background: var(--px-page, #f8fafc);
+      color: var(--px-ink, #0f172a);
+    }
+
     .dashboard {
-      height: 100vh;
+      position: relative;
+      height: 100%;
       overflow-y: auto;
       overflow-x: hidden;
-      background: var(--mat-sys-surface);
-      position: relative;
+      background: transparent;
+      color: var(--px-ink, #0f172a);
       -webkit-overflow-scrolling: touch;
     }
+    /* Ambient decorative layer — matches /hub, /gallery, /profile. */
+    .dashboard::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(
+          ellipse at 80% -10%,
+          rgba(124, 58, 237, 0.10) 0%,
+          transparent 45%
+        ),
+        radial-gradient(
+          ellipse at -10% 110%,
+          rgba(6, 182, 212, 0.08) 0%,
+          transparent 45%
+        ),
+        radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.05) 1px, transparent 0);
+      background-size: auto, auto, 24px 24px;
+    }
+    .dashboard > * { position: relative; z-index: 1; }
 
     .drag-overlay {
       position: fixed;
@@ -846,15 +860,16 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
       50% { border-color: rgba(124, 58, 237, 1); }
     }
 
-    /* === Top Nav === */
+    /* === Top Nav (PX-068 redesigned to match /hub, /gallery, /profile) === */
     .top-nav {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 32px;
-      height: 64px;
-      background: #18181b;
-      border-bottom: 1px solid #27272a;
+      padding: 0 28px;
+      height: 68px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: saturate(1.4) blur(10px);
+      border-bottom: 1px solid var(--px-line, #e2e8f0);
       position: sticky;
       top: 0;
       z-index: 100;
@@ -863,68 +878,78 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
     .nav-left {
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 28px;
     }
 
     .nav-brand {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 10px;
       cursor: pointer;
 
       .brand-icon {
-        color: var(--mat-sys-primary);
-        font-size: 28px;
-        height: 28px;
-        width: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, var(--px-cyan, #06b6d4) 100%);
+        color: #ffffff !important;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+          0 4px 12px -4px rgba(124, 58, 237, 0.45);
+        font-size: 20px !important;
       }
 
       .brand-name {
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
-        letter-spacing: -0.5px;
-        color: #fafafa;
+        letter-spacing: -0.01em;
+        color: var(--px-ink, #0f172a);
       }
     }
 
     .nav-links {
       display: flex;
-      gap: 4px;
+      gap: 2px;
     }
 
     .nav-link {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border: none;
       background: none;
-      color: #a1a1aa;
-      font-size: 0.9rem;
+      color: var(--px-ink-soft, #334155);
+      font-size: 0.88rem;
       font-weight: 500;
       cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.15s;
+      border-radius: 10px;
+      transition: background 160ms ease, color 160ms ease;
 
       mat-icon {
-        font-size: 20px;
-        height: 20px;
-        width: 20px;
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
       }
 
       &:hover {
-        color: #fafafa;
-        background: #27272a;
+        color: var(--px-ink, #0f172a);
+        background: #f1f5f9;
       }
 
       &.active {
-        color: #fafafa;
-        background: #3f3f46;
+        color: var(--px-violet, #7c3aed);
+        background: rgba(124, 58, 237, 0.10);
+      }
+      &.active .nav-badge {
+        background: var(--px-violet, #7c3aed);
       }
 
       .nav-badge {
-        background: var(--mat-sys-primary);
-        color: white;
+        background: var(--px-ink-soft, #334155);
+        color: #ffffff;
         font-size: 0.65rem;
         font-weight: 700;
         padding: 1px 6px;
@@ -935,36 +960,40 @@ type NavTab = 'home' | 'templates' | 'gallery' | 'projects' | 'stats' | 'trash';
     }
 
     .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .create-btn {
-      border-radius: 8px;
-    }
-
-    .nav-right {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 10px;
     }
 
-    .user-btn {
-      padding: 0 !important;
+    .create-btn {
+      height: 40px !important;
+      padding: 0 18px !important;
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
+      color: #ffffff !important;
+      border-radius: 10px !important;
+      font-weight: 600;
+      letter-spacing: 0.005em;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+      transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+    }
+    .create-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(124, 58, 237, 0.36);
+      filter: brightness(1.05);
+    }
+    .create-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+    @media (max-width: 820px) {
+      .create-btn span { display: none; }
+      .create-btn { padding: 0 12px !important; min-width: 0; }
     }
 
-    .user-avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      font-weight: 600;
+    @media (prefers-reduced-motion: reduce) {
+      .create-btn, .nav-link { transition: none !important; }
+      .create-btn:hover { transform: none !important; }
     }
 
     .user-info {

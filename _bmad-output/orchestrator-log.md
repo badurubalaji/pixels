@@ -383,4 +383,51 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Added `--px-violet-glow: rgba(124, 58, 237, 0.45)`** — the value was hand-typed identically in 5+ places (focus rings on buttons, links, primary CTAs); pulled it up alongside the rest for symmetry.
 - **Tests:** all 374 FE pass unchanged (CSS-var hoisting is visually equivalent — components still reference `var(--px-violet)` which resolves from `:root` instead of `:host`). `tsc --noEmit` clean.
 
+## 2026-04-25T02:30:00Z · PX-068 /dashboard shell redesign (consistency close)
+
+- **Trigger.** The broad *"continue all sprint"* directive. Dashboard was the last authenticated route still using the pre-PX-063 look — dark zinc nav bar, muted-purple theme, bespoke avatar dropdown — which stood out next to the newly-unified /auth /hub /gallery /profile aesthetic.
+- **Scope discipline.** Dashboard component is 2463 lines. Made surgical, chrome-only changes; did NOT rewrite the data table, project grid, stats panels, or trash flow. The feature surface stays 1:1; only the page shell was restyled.
+- **Changes:**
+  - **Top nav** flipped from `#18181b` dark bar to a light, semi-transparent white with `backdrop-filter: saturate(1.4) blur(10px)` and a subtle slate underline. Matches the app's new voice.
+  - **Brand mark** now renders as the gradient glyph (violet→cyan, 36×36 rounded square, inset white hairline) + "PixelForge" wordmark in dark ink — same treatment as `/hub`'s top-left.
+  - **Nav links** re-toned: slate-soft text on white, hover = slate-100 fill, active = violet text on violet-10% fill. Badges adopt the active state's violet when their tab is active.
+  - **Create CTA** promoted to the gradient primary style (violet→fuchsia) with hover-lift. Text collapses to icon-only below 820px.
+  - **User menu** — removed the dashboard's bespoke 18-line inline `@if authenticated { … }` / Material avatar button / log-out mat-menu in favor of `<app-user-menu />` (the shared component from PX-065). Now one codepath for logout + profile nav across the entire authenticated app. Dashboard's dead `userInitial`/`logout`/`goToLogin` methods + `.user-btn` / `.user-avatar` CSS were removed.
+  - **Host layer.** Added `:host { height: 100%; background: var(--px-page) }` + a `.dashboard::before` fixed decorative layer (same gradient-orbs + dotted-grid pattern as every other route). `z-index: 1` is applied to direct children so nav, content, and overlays sit above the decoration.
+- **Out of scope (intentional).** Tab-body styles (home hero, category circles, recent cards, template carousels, project table, stats panels, trash view) were NOT touched. Their internal look inherits the new background/color-scheme shift but specific component detail work belongs to a subsequent PX-069 pass when the user flags it.
+- **No new tests.** No dashboard spec exists in the repo; this change is chrome-only with zero behavior change. Existing 374 FE tests all pass unchanged, tsc clean.
+
+## 2026-04-25T02:35:00Z · Sprint-2 close — retrospective
+
+Marking sprint-2 closed. Eleven atomic commits landed since sprint-1 retro (7b4d196 post-PX-023):
+
+| Commit | Story | Scope |
+|---|---|---|
+| `6eeb663` | PX-060 | Brand-Kit auto-apply toast + Undo; projects schema extension; platform backfill migration |
+| `581318b` | PX-062 | Mongo 7 TTL kwarg fix + CORS :4201 (unblocks dev env) |
+| `a3eed71` | PX-061 | Password-visibility toggle + 422 validation-array error surfacing |
+| `3089d98` | chore | AST-only graphify refresh |
+| `3176687` | PX-063 | /auth split-pane redesign |
+| `7bc00d6` | PX-064 | /hub redesign (color-coded tiles + aspect previews) |
+| `9763f1c` | PX-066 | /gallery redesign + app-wide scroll fix |
+| `1fb39fd` | PX-065 | UserMenuComponent + /profile page + guard-gap close |
+| `d7da4ae` | PX-067 | Palette-token consolidation to styles.scss :root |
+| *(next)*  | PX-068 | /dashboard shell redesign |
+
+**What went well.**
+1. Cross-specialist dispatch pattern worked — the PX-060 review → Amelia-second-pass → merge loop caught a CRITICAL AC-10 gap before it shipped.
+2. Token hoist (PX-067) proved its own value immediately — one declaration change in `:root` would propagate instantly across all six consumers now.
+3. Sprint stayed honest — every code-touching decision has a matching orchestrator-log entry. Auditable.
+
+**What was hard.**
+1. Test-harness impedance mismatch. Three specs broke from "thin Router override" the moment MatMenu + inner RouterLink entered the tree. Canonical fix now adopted: `provideRouter([])` + `vi.spyOn(router, 'navigate')`. Worth a global sweep if more specs drift.
+2. Dev-env ceremony. User hit a cascaded failure (fresh Mongo 7 → TTL index bug → CORS confusion → reserved-TLD email) before they could get through the front door. Four root causes in one session; documented as the PX-062 + dev-env notes.
+3. Scope drift discipline. Every visual complaint pulled at the next adjacent surface ("fix hub" → "also gallery" → "dashboard too" → "consistency everywhere"). Held the line on chrome-only for PX-068 specifically; flagged PX-069 for deeper dashboard body work when it's actually requested.
+
+**Follow-ups queued for sprint-3 (not started).**
+- **PX-069** — dashboard body redesign (home hero, category circles, recent grid, template carousels, project table).
+- **Name-edit flow on /profile** — requires new `PATCH /api/auth/me` backend endpoint.
+- **Test-harness sweep** — migrate any remaining "thin Router override" specs to `vi.spyOn(router, …)` pattern.
+- **Manual QA pass** on Brand-Kit auto-apply (PX-060 DoD) — currently unverified in-browser because we've been iterating on routes the user hasn't navigated *through* yet.
+
 
