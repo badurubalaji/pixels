@@ -337,4 +337,20 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Accessibility.** `role="list"` on grid and recent strip preserved. `prefers-reduced-motion` disables transforms on tiles, the scratch CTA, and arrow glyph. Focus-visible rings meet 3px + 3px offset on every interactive element. Decorative background + aspect frames are `aria-hidden`.
 - **Out of scope (followups surfaced by user, now queued):** no logout action anywhere, no `/profile` route. Tracked as PX-065.
 
+## 2026-04-24T23:01:00Z · PX-066 /gallery redesign + app-wide scroll fix
+
+- **Trigger.** User landed on `/gallery/ig-post` and called it inconsistent with the newly-redesigned `/auth` and `/hub`: *"not looking good… please redesign it and make consistency across the app."* While redesigning, user also flagged *"unable to scroll /hub"* — a latent bug I introduced in PX-064.
+- **Scroll bug root cause.** `src/styles.scss` sets `body { height: 100%; overflow: hidden }` globally (line 27–28), so every route component owns its own scroll. PX-063 (auth) and PX-064 (hub) both set `:host { display: block; min-height: 100% }` but *not* `overflow-y: auto`. With content taller than the viewport, the content was clipped and the user couldn't reach it. **Fix** applied to all three route components (`auth.ts`, `hub.component.ts`, `gallery.component.ts`): `:host { height: 100%; overflow-y: auto }`. The decorative `.*__bg { position: fixed }` layers still anchor to the viewport across scroll — verified. This is why Canva-style fixed-gradient hubs feel cohesive.
+- **Gallery redesign direction** — keep the same palette + component patterns established in PX-063/064 so the three routes read as one product:
+  - Same fixed decorative layer (violet + cyan radial orbs + 24px dotted grid).
+  - Same eyebrow pill + gradient-accent display heading pattern; the platform label (e.g. "Instagram Post") gets the violet→pink→cyan gradient treatment, the word "templates" stays neutral.
+  - Same gradient primary CTA for "Start from scratch" (now in the header, promoted from a ghost outline button).
+  - New pill-style toolbar bar housing the filter chips (brand-painted via `::ng-deep` over MDC) and a live template count.
+  - Tile grid: auto-fill 240px; each tile has a framed thumbnail, hover overlay that fades in + "Use template" CTA pill that springs up from below the fold, and a tag badge + name row underneath. Hover lifts the tile and swaps the border for a violet outer ring.
+  - Empty state upgraded to a dashed-card pattern with a gradient-chip sparkle glyph (matches hub's empty state).
+- **One test regression caught in iteration.** Gallery spec hit "Cannot read properties of null (reading 'ngModule')" — Angular's surface error for a `strictTemplates` narrowing failure inside a test harness. Root cause: `@if (tile.template.tags?.length)` followed by `tile.template.tags[0]` — the optional chain confused narrowing. **Fix:** switched to `@if (tile.template.tags.length > 0)` (`Template.tags` is required `string[]`; optional chaining was unnecessary anyway). 11/11 gallery + 32/32 hub specs green after the fix.
+- **Consistency outcome.** `/auth`, `/hub`, `/gallery/:type` now share: (a) page background + gradient-orb decorative layer, (b) eyebrow-pill + display heading pattern, (c) violet→pink→cyan title-accent treatment, (d) gradient primary CTA with hover-lift, (e) slate-50 page base + white surface cards + violet accent color, (f) `prefers-reduced-motion` pass-through, (g) 3px violet focus rings, (h) overflow-y scroll on :host.
+- **Follow-up.** The palette tokens (`--px-violet`, `--px-cyan`, etc.) are currently duplicated as `:host` CSS vars in all three route components. A later PX-067 refactor could hoist them into `src/styles.scss` under `:root` once a fourth consumer appears.
+- **Tests:** FE 357/357 passing. `tsc --noEmit` clean.
+
 

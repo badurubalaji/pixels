@@ -202,6 +202,8 @@ import { AuthService } from '../../core/services/auth.service';
       --px-ink-soft: #1e293b;
       --px-line: rgba(255, 255, 255, 0.08);
       display: block;
+      height: 100%;
+      overflow-y: auto;
     }
 
     .auth-shell {

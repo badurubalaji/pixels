@@ -92,40 +92,79 @@ interface GalleryTile {
   ],
   template: `
     <section class="gallery" aria-labelledby="gallery-heading">
+      <div class="gallery__bg" aria-hidden="true"></div>
+
       <header class="gallery__header">
-        <a
-          class="gallery__back"
-          routerLink="/hub"
-          aria-label="Back to hub"
-          matRipple
-        >
-          <mat-icon aria-hidden="true">arrow_back</mat-icon>
-          <span>Back</span>
-        </a>
-        <h1 id="gallery-heading" class="gallery__title">
+        <div class="gallery__header-top">
+          <a
+            class="gallery__back"
+            routerLink="/hub"
+            aria-label="Back to hub"
+            matRipple
+          >
+            <mat-icon aria-hidden="true">arrow_back</mat-icon>
+            <span>Back to hub</span>
+          </a>
           @if (preset(); as p) {
-            {{ p.label }} templates
-          } @else {
-            Templates
+            <span class="gallery__dims" aria-hidden="true">
+              {{ p.width }} × {{ p.height }}
+            </span>
           }
-        </h1>
+        </div>
+
+        <div class="gallery__header-copy">
+          <p class="gallery__eyebrow">
+            <span class="gallery__eyebrow-dot"></span>
+            <span>Template gallery</span>
+          </p>
+          <h1 id="gallery-heading" class="gallery__title">
+            @if (preset(); as p) {
+              <span class="gallery__title-accent">{{ p.label }}</span> templates
+            } @else {
+              Templates
+            }
+          </h1>
+          <p class="gallery__subtitle">
+            Pick a starter — your Brand Kit colors apply automatically. Or skip
+            the gallery and open a blank canvas.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="gallery__scratch gallery__scratch--primary"
+          matRipple
+          (click)="onStartFromScratch()"
+          aria-label="Start from scratch with a blank canvas"
+        >
+          <mat-icon aria-hidden="true">add</mat-icon>
+          <span>Start from scratch</span>
+        </button>
       </header>
 
-      <mat-chip-listbox
-        class="gallery__filters"
-        aria-label="Filter by tag"
-        multiple
-        (change)="onChipChange($event)"
-      >
-        @for (chip of filterChips; track chip) {
-          <mat-chip-option
-            [value]="chip"
-            [attr.aria-label]="'Filter by ' + chip"
-          >
-            {{ chip }}
-          </mat-chip-option>
+      <div class="gallery__toolbar">
+        <mat-chip-listbox
+          class="gallery__filters"
+          aria-label="Filter by tag"
+          multiple
+          (change)="onChipChange($event)"
+        >
+          @for (chip of filterChips; track chip) {
+            <mat-chip-option
+              [value]="chip"
+              [attr.aria-label]="'Filter by ' + chip"
+            >
+              {{ chip }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
+
+        @if (!loading()) {
+          <span class="gallery__count" aria-live="polite">
+            {{ tiles().length }} {{ tiles().length === 1 ? 'template' : 'templates' }}
+          </span>
         }
-      </mat-chip-listbox>
+      </div>
 
       @if (loading()) {
         <mat-progress-bar mode="indeterminate" aria-label="Loading templates" />
@@ -133,18 +172,29 @@ interface GalleryTile {
 
       @if (!loading() && tiles().length === 0) {
         <div class="gallery__empty" role="status">
-          <p>No templates match your filters yet.</p>
-          <button
-            type="button"
-            class="gallery__scratch"
-            matRipple
-            (click)="onStartFromScratch()"
-            aria-label="Start from scratch"
-          >
-            <mat-icon aria-hidden="true">add</mat-icon>
-            Start from scratch
-          </button>
-          <a class="gallery__back-link" routerLink="/hub">Back to hub</a>
+          <span class="gallery__empty-glyph" aria-hidden="true">
+            <mat-icon>auto_awesome</mat-icon>
+          </span>
+          <div class="gallery__empty-body">
+            <h2 class="gallery__empty-title">No templates match yet</h2>
+            <p class="gallery__empty-copy">
+              Try removing a filter, or jump straight into a blank canvas and
+              design from scratch.
+            </p>
+            <div class="gallery__empty-actions">
+              <button
+                type="button"
+                class="gallery__scratch gallery__scratch--primary"
+                matRipple
+                (click)="onStartFromScratch()"
+                aria-label="Start from scratch"
+              >
+                <mat-icon aria-hidden="true">add</mat-icon>
+                <span>Start from scratch</span>
+              </button>
+              <a class="gallery__back-link" routerLink="/hub">Back to hub</a>
+            </div>
+          </div>
         </div>
       }
 
@@ -160,167 +210,484 @@ interface GalleryTile {
                 [attr.data-template-id]="tile.template._id"
                 (click)="onTileActivate(tile)"
               >
-                <img
-                  class="gallery__thumb"
-                  [src]="tile.thumbnailUrl"
-                  [alt]="tile.template.name + ' preview'"
-                  loading="lazy"
-                />
-                <span class="gallery__tile-name">{{ tile.template.name }}</span>
+                <span class="gallery__thumb-frame" aria-hidden="true">
+                  <img
+                    class="gallery__thumb"
+                    [src]="tile.thumbnailUrl"
+                    [alt]="tile.template.name + ' preview'"
+                    loading="lazy"
+                  />
+                  <span class="gallery__thumb-overlay" aria-hidden="true">
+                    <span class="gallery__thumb-cta">
+                      <mat-icon>add</mat-icon>
+                      <span>Use template</span>
+                    </span>
+                  </span>
+                </span>
+                <span class="gallery__tile-meta">
+                  <span class="gallery__tile-name">{{ tile.template.name }}</span>
+                  @if (tile.template.tags.length > 0) {
+                    <span class="gallery__tile-tag">{{ tile.template.tags[0] }}</span>
+                  }
+                </span>
               </button>
             </li>
           }
         </ul>
       }
-
-      <div class="gallery__footer">
-        <button
-          type="button"
-          class="gallery__scratch"
-          matRipple
-          (click)="onStartFromScratch()"
-          aria-label="Start from scratch with a blank canvas"
-        >
-          <mat-icon aria-hidden="true">add</mat-icon>
-          Start from scratch
-        </button>
-      </div>
     </section>
   `,
   styles: [
     `
       :host {
+        --px-violet: #7c3aed;
+        --px-violet-deep: #5b21b6;
+        --px-cyan: #06b6d4;
+        --px-pink: #ec4899;
+        --px-ink: #0f172a;
+        --px-ink-soft: #334155;
+        --px-muted: #64748b;
+        --px-line: #e2e8f0;
+        --px-surface: #ffffff;
+        --px-page: #f8fafc;
+
         display: block;
-        min-height: 100%;
-        background: var(--mat-sys-surface, #fafafa);
-        color: var(--mat-sys-on-surface, #1a1a1a);
+        height: 100%;
+        overflow-y: auto;
+        color: var(--px-ink);
+        background: var(--px-page);
       }
+
       .gallery {
+        position: relative;
         max-width: 1200px;
         margin: 0 auto;
-        padding: 32px 24px 64px;
+        padding: 48px 32px 80px;
       }
+
+      /* Same decorative layer as /hub for visual consistency */
+      .gallery__bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-image:
+          radial-gradient(
+            ellipse at 80% -10%,
+            rgba(124, 58, 237, 0.12) 0%,
+            transparent 45%
+          ),
+          radial-gradient(
+            ellipse at -10% 110%,
+            rgba(6, 182, 212, 0.10) 0%,
+            transparent 45%
+          ),
+          radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.06) 1px, transparent 0);
+        background-size: auto, auto, 24px 24px;
+      }
+      .gallery > *:not(.gallery__bg) {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── Header ─────────────────────────────────────────────── */
+
       .gallery__header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          'top top'
+          'copy scratch';
+        gap: 16px 24px;
+        align-items: end;
+        margin-bottom: 32px;
+      }
+      .gallery__header-top {
+        grid-area: top;
         display: flex;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 24px;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
       }
+      .gallery__header-copy { grid-area: copy; min-width: 0; }
+      .gallery__scratch--primary { grid-area: scratch; }
+
+      @media (max-width: 720px) {
+        .gallery__header {
+          grid-template-columns: 1fr;
+          grid-template-areas:
+            'top'
+            'copy'
+            'scratch';
+        }
+        .gallery__scratch--primary { width: 100%; justify-content: center; }
+      }
+
       .gallery__back {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 12px;
-        border-radius: 22px;
+        gap: 8px;
+        padding: 8px 14px 8px 10px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 999px;
+        color: var(--px-ink-soft);
         text-decoration: none;
-        color: var(--mat-sys-on-surface, #1a1a1a);
-        border: 1px solid var(--mat-sys-outline, #767676);
+        font-size: 0.88rem;
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+        transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+      }
+      .gallery__back:hover {
+        border-color: rgba(124, 58, 237, 0.4);
+        color: var(--px-ink);
+        background: #fafafa;
       }
       .gallery__back:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
       }
+      .gallery__back mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .gallery__dims {
+        font-size: 0.82rem;
+        color: var(--px-muted);
+        font-feature-settings: 'tnum' 1;
+        padding: 6px 12px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 999px;
+      }
+
+      .gallery__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 14px;
+        padding: 6px 14px 6px 10px;
+        background: #ffffff;
+        border: 1px solid var(--px-line);
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--px-ink-soft);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      }
+      .gallery__eyebrow-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--px-violet), var(--px-cyan));
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+      }
+
       .gallery__title {
-        font-size: 1.5rem;
-        font-weight: 600;
         margin: 0;
+        font-size: clamp(1.65rem, 3vw, 2.25rem);
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+        color: var(--px-ink);
+      }
+      .gallery__title-accent {
+        background: linear-gradient(135deg, var(--px-violet) 0%, var(--px-pink) 60%, var(--px-cyan) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .gallery__subtitle {
+        margin: 10px 0 0;
+        color: var(--px-muted);
+        font-size: 0.98rem;
+        line-height: 1.55;
+        max-width: 560px;
+      }
+
+      /* ── Scratch CTA (matches hub's gradient primary) ────────── */
+
+      .gallery__scratch {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 20px;
+        background: linear-gradient(135deg, var(--px-violet) 0%, #a855f7 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        box-shadow: 0 4px 14px rgba(124, 58, 237, 0.28);
+        transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+      }
+      .gallery__scratch:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 22px rgba(124, 58, 237, 0.36);
+        filter: brightness(1.05);
+      }
+      .gallery__scratch:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
+      }
+      .gallery__scratch mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ── Toolbar: filter chips + result count ────────────────── */
+
+      .gallery__toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 28px;
+        padding: 12px 16px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        flex-wrap: wrap;
       }
       .gallery__filters {
-        margin-bottom: 24px;
         display: block;
+        flex: 1 1 auto;
       }
+      .gallery__count {
+        font-size: 0.85rem;
+        color: var(--px-muted);
+        white-space: nowrap;
+        font-feature-settings: 'tnum' 1;
+      }
+
+      /* Brand-paint the Material chips for consistency */
+      .gallery__filters ::ng-deep .mat-mdc-chip {
+        border-radius: 999px !important;
+        background-color: #f1f5f9 !important;
+        border: 1px solid transparent !important;
+        transition: background-color 140ms ease, border-color 140ms ease,
+          color 140ms ease;
+      }
+      .gallery__filters ::ng-deep .mat-mdc-chip .mdc-evolution-chip__text-label {
+        color: var(--px-ink-soft);
+        font-weight: 500;
+      }
+      .gallery__filters ::ng-deep .mat-mdc-chip:hover {
+        background-color: #e2e8f0 !important;
+      }
+      .gallery__filters ::ng-deep .mat-mdc-chip.mdc-evolution-chip--selected {
+        background: linear-gradient(135deg, var(--px-violet) 0%, #a855f7 100%) !important;
+        border-color: transparent !important;
+      }
+      .gallery__filters ::ng-deep .mat-mdc-chip.mdc-evolution-chip--selected
+        .mdc-evolution-chip__text-label {
+        color: #ffffff;
+      }
+      .gallery__filters ::ng-deep .mat-mdc-chip.mdc-evolution-chip--selected
+        .mat-mdc-chip-graphic {
+        color: #ffffff !important;
+      }
+
+      /* ── Loading ─────────────────────────────────────────────── */
+
+      :host ::ng-deep mat-progress-bar.mat-mdc-progress-bar {
+        --mdc-linear-progress-active-indicator-color: var(--px-violet);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      /* ── Tile grid ──────────────────────────────────────────── */
+
       .gallery__grid {
         list-style: none;
         padding: 0;
-        margin: 0 0 24px;
+        margin: 0;
         display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       }
       .gallery__grid-item {
         display: block;
       }
+
       .gallery__tile {
+        position: relative;
         width: 100%;
-        padding: 10px;
+        padding: 10px 10px 14px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 16px;
+        cursor: pointer;
+        text-align: left;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+          box-shadow 220ms ease, border-color 220ms ease;
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        text-align: left;
-        cursor: pointer;
-        background: var(--mat-sys-surface-container, #fff);
-        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-        border-radius: 12px;
-        transition:
-          transform 200ms ease-out,
-          box-shadow 200ms ease-out,
-          border-color 200ms ease-out;
+        gap: 12px;
       }
       .gallery__tile:hover {
-        transform: translateY(-2px);
-        border-color: var(--mat-sys-primary, #1976d2);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+        border-color: transparent;
+        box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.25),
+          0 0 0 1px rgba(124, 58, 237, 0.28);
       }
       .gallery__tile:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
       }
       @media (prefers-reduced-motion: reduce) {
-        .gallery__tile {
-          transition: none;
+        .gallery__tile, .gallery__scratch, .gallery__thumb-overlay {
+          transition: none !important;
         }
-        .gallery__tile:hover {
-          transform: none;
-        }
+        .gallery__tile:hover, .gallery__scratch:hover { transform: none !important; }
+      }
+
+      .gallery__thumb-frame {
+        position: relative;
+        display: block;
+        overflow: hidden;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
       }
       .gallery__thumb {
         display: block;
         width: 100%;
         aspect-ratio: 1 / 1;
         object-fit: cover;
-        border-radius: 8px;
-        background: var(--mat-sys-surface-container-high, #f0f0f0);
+      }
+      .gallery__thumb-overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(
+          180deg,
+          rgba(15, 23, 42, 0) 40%,
+          rgba(15, 23, 42, 0.55) 100%
+        );
+        opacity: 0;
+        transition: opacity 220ms ease;
+      }
+      .gallery__tile:hover .gallery__thumb-overlay { opacity: 1; }
+      .gallery__thumb-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: #ffffff;
+        color: var(--px-violet);
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+        transform: translateY(6px);
+        transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .gallery__thumb-cta mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+      .gallery__tile:hover .gallery__thumb-cta { transform: translateY(0); }
+
+      .gallery__tile-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 4px;
+        min-width: 0;
       }
       .gallery__tile-name {
-        font-size: 0.9rem;
-        font-weight: 500;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--px-ink);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        min-width: 0;
+        flex: 1 1 auto;
       }
+      .gallery__tile-tag {
+        flex-shrink: 0;
+        padding: 3px 10px;
+        background: #f1f5f9;
+        color: var(--px-ink-soft);
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      /* ── Empty state (matches hub's dashed-card pattern) ────── */
+
       .gallery__empty {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
         padding: 32px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        border: 1px dashed var(--mat-sys-outline-variant, #ccc);
-        border-radius: 12px;
-        margin-bottom: 24px;
+        background: var(--px-surface);
+        border: 1px dashed var(--px-line);
+        border-radius: 18px;
       }
-      .gallery__footer {
-        display: flex;
-        justify-content: flex-end;
-      }
-      .gallery__scratch {
+      .gallery__empty-glyph {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        min-height: 44px;
-        padding: 8px 16px;
-        background: transparent;
-        border: 1px solid var(--mat-sys-outline, #767676);
-        border-radius: 22px;
-        cursor: pointer;
-        font-size: 0.9rem;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(6, 182, 212, 0.12));
+        color: var(--px-violet);
+        flex-shrink: 0;
       }
-      .gallery__scratch:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+      .gallery__empty-glyph mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+      .gallery__empty-body { flex: 1 1 auto; min-width: 0; }
+      .gallery__empty-title {
+        margin: 0 0 6px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--px-ink);
+        letter-spacing: -0.01em;
+      }
+      .gallery__empty-copy {
+        margin: 0 0 16px;
+        color: var(--px-ink-soft);
+        line-height: 1.55;
+        max-width: 560px;
+      }
+      .gallery__empty-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
       }
       .gallery__back-link {
-        color: var(--mat-sys-primary, #1976d2);
-        text-decoration: underline;
+        color: var(--px-violet);
+        font-weight: 500;
+        text-decoration: none;
+        padding: 10px 4px;
+      }
+      .gallery__back-link:hover { text-decoration: underline; }
+
+      @media (max-width: 580px) {
+        .gallery { padding: 32px 20px 64px; }
+        .gallery__empty { flex-direction: column; }
       }
     `,
   ],

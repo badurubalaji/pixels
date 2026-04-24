@@ -224,7 +224,8 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
         --px-page: #f8fafc;
 
         display: block;
-        min-height: 100%;
+        height: 100%;
+        overflow-y: auto;
         color: var(--px-ink);
         background: var(--px-page);
         font-family: var(--mat-sys-body-medium-font, 'Inter', -apple-system, BlinkMacSystemFont,
