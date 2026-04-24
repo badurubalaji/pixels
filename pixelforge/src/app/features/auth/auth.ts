@@ -58,7 +58,26 @@ import { AuthService } from '../../core/services/auth.service';
 
           <mat-form-field appearance="outline" class="auth-field">
             <mat-label>Password</mat-label>
-            <input matInput type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" required minlength="6" />
+            <input
+              matInput
+              [type]="passwordVisible() ? 'text' : 'password'"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+              name="password"
+              required
+              minlength="6"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              class="password-toggle"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="passwordVisible()"
+            >
+              <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             @if (mode() === 'signup') {
               <mat-hint>At least 6 characters</mat-hint>
             }
@@ -216,6 +235,33 @@ export class AuthComponent {
   readonly error = signal('');
 
   /**
+   * Controls whether the password input renders as plain text (`true`) or
+   * masked (`false`). Driven by the trailing eye-icon button on the password
+   * `mat-form-field`.
+   *
+   * @remarks
+   * Defaults to `false` (masked) so a shoulder-surfing attacker can't read a
+   * password that's already been typed when the page first paints. Toggled
+   * by {@link togglePasswordVisibility}.
+   */
+  readonly passwordVisible = signal(false);
+
+  /**
+   * Flip the password input between masked and plain-text rendering.
+   *
+   * @returns void. Mutates {@link passwordVisible} in place so the bound
+   *   `input[type]` and the trailing icon update immediately.
+   *
+   * @remarks
+   * Only affects the local DOM rendering — the `password` signal's value is
+   * untouched, so submit-flow semantics are unchanged. The toggle button is
+   * `type="button"` so a click does not submit the auth form.
+   */
+  togglePasswordVisibility(): void {
+    this.passwordVisible.update(v => !v);
+  }
+
+  /**
    * Submit the login/signup form.
    *
    * @param event - The form-submit DOM event; the default action is suppressed.
@@ -241,7 +287,7 @@ export class AuthComponent {
 
     const onError = (err: any) => {
       this.loading.set(false);
-      this.error.set(err.error?.detail || 'Something went wrong');
+      this.error.set(this.formatErrorDetail(err));
     };
 
     if (this.mode() === 'login') {
@@ -255,6 +301,45 @@ export class AuthComponent {
         error: onError,
       });
     }
+  }
+
+  /**
+   * Normalize a backend error payload into a single human-readable string
+   * suitable for rendering inside the form-level error banner.
+   *
+   * @param err - The HttpErrorResponse-like object surfaced by
+   *   `AuthService.login` / `AuthService.signup` subscribers. May contain:
+   *   - `err.error.detail` as a string (FastAPI HTTPException), OR
+   *   - `err.error.detail` as an array of Pydantic `ValidationError` records
+   *     (`{loc, msg, type, ...}`), OR
+   *   - nothing usable (network failure, upstream error).
+   * @returns A single sentence describing the first validation failure, or
+   *   the string `"Something went wrong"` when no detail can be recovered.
+   *
+   * @remarks
+   * Pydantic v2 returns 422 with `detail` as an **array**. Stringifying the
+   * array directly ("`[object Object]`") gave users zero signal when an
+   * email failed EmailStr checks. We now pull the first item's `.msg` and
+   * prefix it with the field name from `.loc[-1]` so the user sees
+   * something like `"email: value is not a valid email address: ..."`.
+   *
+   * Kept defensive — a malformed payload falls through to the generic
+   * "Something went wrong" fallback rather than surfacing stack traces.
+   *
+   * @see Story PX-061 (form error UX polish).
+   */
+  private formatErrorDetail(err: any): string {
+    const detail = err?.error?.detail;
+    if (typeof detail === 'string' && detail.trim().length > 0) return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0];
+      const msg = typeof first?.msg === 'string' ? first.msg : '';
+      const loc = Array.isArray(first?.loc) ? first.loc : [];
+      const field = loc.length > 0 ? String(loc[loc.length - 1]) : '';
+      if (msg && field) return `${field}: ${msg}`;
+      if (msg) return msg;
+    }
+    return 'Something went wrong';
   }
 
   /**
