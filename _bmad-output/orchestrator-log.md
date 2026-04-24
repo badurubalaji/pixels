@@ -215,3 +215,41 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Status:** SHIPPED. 5 P0 stories + public OSS repo launch + full planning artifact suite + graphify refresh + boot smoke passed.
 - **Retrospective:** see `_bmad-output/planning-artifacts/retrospectives/sprint-1.md` — Paige's audit-log style retro with what-went-well / what-went-less-well / follow-up priority list / velocity signal for Sprint-2 sizing.
 - **Ready for Sprint-2 dispatch.** Candidate stories (by Orion's default sequence, to be ratified): PX-011 (hub-as-default-route), PX-030 (logo mode chooser), PX-050 (SVG export), PX-051 (multi-size transparent PNG), PX-052 (Pillow ICO export), PX-031 (shape library), PX-032 (font pairings). Revisions wave #2 non-blocking items (Paige terminology lock, Sally state inventory, John persona enrichment + product risks, Winston observability plan) run in parallel with Sprint 2.
+
+## 2026-04-24T04:00:00Z · Sprint-2 scope LOCKED + re-sequenced
+
+- **Action:** reviewed Sprint-2 candidates against the PRD success scenario ("user opens pixels, picks IG Post template, edits text, swaps logo, exports 1080×1080 PNG in < 5 min"). The end-to-end flow is blocked on templates + gallery + Brand-Kit propagation, NOT on logo primitives. Re-sequenced Logo Creator (Epic D) + Multi-Format Export (Epic F) into Sprint-3.
+- **Autonomous decision — Sprint-2 P0 slate (5 stories):**
+  1. **Wave 1 (parallel — FE vs BE):** PX-011 (hub-as-default route) + PX-022a (template seed infrastructure)
+  2. **Wave 2 (sequence, gated by 22a):** PX-022b (20 starter templates, content authoring)
+  3. **Wave 3 (sequence, gated by 22a+22b):** PX-023 (gallery + Brand-Kit pre-rendered thumbnails)
+  4. **Wave 4 (sequence, gated by 23):** PX-060 (Brand-Kit auto-apply on template-load + undo toast)
+- **Rationale:** (a) PX-011 + PX-022a touch fully disjoint surfaces (FE route/auth vs BE backend/seed) — parallel-safe. (b) PX-022b requires the seed module from 22a to receive its template JSON files. (c) PX-023 requires templates to exist in DB + the GET endpoint from 22a. (d) PX-060 consumes the project-with-source_template_id flow that PX-023's click-to-create writes. Tight dependency chain, but each story is ~S-M except PX-022b (L for 20-template authoring) and PX-023 (L for gallery + thumbnail pre-comp service).
+- **Story files written this dispatch:** PX-011, PX-023, PX-060 (PX-022a + PX-022b already existed from Sprint-1 revision-wave-1 split).
+- **Deferred to Sprint-3** (logged here so the intent is auditable): Epic D — PX-030 logo mode chooser + PX-031 shape library + PX-032 font pairings + PX-033 Brand-Kit swatches; Epic F — PX-050 SVG export + PX-051 multi-size PNG + PX-052 Pillow ICO; Epic E — Logo AI-Cleanup stories (PX-040 through PX-046). Sprint-3 is heavy — may split into Sprint-3 (Logo Creator + Export) and Sprint-4 (Logo AI-Cleanup) depending on Sprint-2 velocity.
+- **Kill-switch:** user can say "re-sequence" and I'll swap priorities; "smaller" and I'll drop PX-060 into Sprint-3; "more" and I'll pull PX-030 or PX-050 into Sprint-2.
+- **Per autonomy rule:** no user prompt issued. Dispatching Wave 1 immediately.
+
+## 2026-04-24T04:30:00Z · Sprint-2 Wave-1 COMPLETE · PX-011 + PX-022a landed in parallel
+
+- **Parallel dispatch success.** Two Amelia subagents ran concurrently on disjoint surfaces (FE vs BE); zero file-tree collision, both returned clean.
+
+### PX-011 (FE, hub-as-default route)
+- **Result:** 304/304 FE tests (+13 new), `tsc --noEmit` clean.
+- **Autonomous approvals on Amelia's behalf:**
+  1. **New functional `authGuard` created** at `src/app/core/guards/auth.guard.ts` — story said "reuse existing" but none existed. AC-5 (unauth → /auth redirect) unavoidable. Minimal CanActivateFn using `router.parseUrl('/auth')`. **APPROVED** — no cleaner resolution.
+  2. **Dashboard relocated from `''` to `/dashboard`** — was mounted at root, blocked AC-3 (root → `/hub`) while still needing to satisfy AC-4 (explicit `/dashboard` works). Repo-wide grep confirmed zero external links to the old `/` → Dashboard. **APPROVED**.
+  3. **Wildcard `'**'` now redirects to `hub`** (was `''`). Same user-visible behavior. **APPROVED**.
+  4. **No `?returnTo=` plumbing** — no AC required it; scope-discipline holds. **APPROVED**.
+- **Follow-up raised:** `AuthComponent.submit` uses `err: any` — pre-existing §4.5 violation; out of this story's scope. Captured as PX-011-FUP-1.
+
+### PX-022a (BE, template seed infra)
+- **Result:** 53/53 BE tests (+15 new), `mypy --strict app/seed app/schemas/template.py` clean.
+- **Autonomous approvals on Amelia's behalf:**
+  1. **Dual-router decision.** Existing `/api/public-templates` (community-shared templates, schema: `uses_count`, `author_id`) is semantically different from the new `/api/v1/templates` (MVP seed templates per ARD §8.1: `platform`, `tags`, `palette_slots`, `is_template`). Amelia added a new `seed_template_router` rather than rewriting. **APPROVED** — architecturally correct; they serve different concepts. **PX-023 (gallery) will consume `/api/v1/templates`** — the seed collection — not the community one. Locked.
+  2. **Seed format tolerance** — loader accepts full template documents OR logs-and-skips bare fabric scenes. Gives PX-022b authoring latitude. **APPROVED**.
+  3. **5 palette roles via `PaletteRoleLiteral`** (primary / secondary / text / accent / background) per ARD §8.1. **APPROVED**.
+  4. **Protocol types** (`_DatabaseProto`, `_TemplatesCollectionProto`) for mypy-strict passage without widening public imports. **APPROVED** — technical hygiene.
+- **Follow-up raised:** thumbnail 300×300 cap not enforced in pydantic (would pull Pillow into validation hot path) — left as PX-022b authoring-time contract. Noted; not a story-level issue.
+
+- **Next wave:** PX-022b (content authoring, 20 templates) — heavy L-sized, sequential since it writes into the infra PX-022a just created. Dispatching now.

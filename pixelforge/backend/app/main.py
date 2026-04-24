@@ -1,3 +1,5 @@
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,13 +12,43 @@ from app.auth_routes import auth_router
 from app.collab_routes import collab_router
 from app.brand_routes import brand_router
 from app.comments_routes import comments_router
-from app.template_routes import template_router
-from app.database import connect_db, close_db
+from app.template_routes import template_router, seed_template_router
+from app.database import connect_db, close_db, is_connected
+from app.seed import seed_templates
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """FastAPI lifespan: open/close Mongo and optionally seed starter templates.
+
+    Args:
+        app: The FastAPI application instance (unused but required by spec).
+
+    Yields:
+        Control to the running server between startup and shutdown phases.
+
+    The seed pass runs only when ``PIXELS_SEED_TEMPLATES=1`` in the env and the
+    DB connected successfully. Seeder errors are logged but never abort
+    startup — a missing seed should not take the API down.
+    """
     await connect_db()
+    if os.getenv("PIXELS_SEED_TEMPLATES") == "1":
+        if is_connected():
+            # Re-import to pick up the module-level ``db`` that ``connect_db``
+            # just populated. Avoids stale None from import-time binding.
+            from app.database import db as live_db
+
+            try:
+                inserted = await seed_templates(live_db)
+                logger.info("PIXELS_SEED_TEMPLATES: seeded %d templates", inserted)
+            except Exception as exc:  # noqa: BLE001 - log + continue is the contract
+                logger.exception("PIXELS_SEED_TEMPLATES: seeding failed — %s", exc)
+        else:
+            logger.warning(
+                "PIXELS_SEED_TEMPLATES=1 but DB not connected — skipping seed"
+            )
     yield
     await close_db()
 
@@ -51,3 +83,4 @@ app.include_router(collab_router, prefix="/api")
 app.include_router(brand_router, prefix="/api", tags=["Brand Kit"])
 app.include_router(comments_router, prefix="/api", tags=["Comments"])
 app.include_router(template_router, prefix="/api", tags=["Public Templates"])
+app.include_router(seed_template_router, prefix="/api", tags=["Seed Templates"])

@@ -1,8 +1,15 @@
-"""Public template gallery: community-shared templates anyone can clone."""
+"""Public template gallery: community-shared templates anyone can clone.
+
+This module also exposes the *seed starter templates* collection (ARD §8.1)
+under ``/v1/templates`` with ``platform`` and ``tags`` filters (PX-022a).
+The two endpoints read different collections on purpose:
+``public_templates`` is user-generated content; ``templates`` is curated seed
+data loaded by :mod:`app.seed.templates_seed`.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,6 +20,10 @@ from app.auth import require_user
 from app.database import get_db, is_connected
 
 template_router = APIRouter(prefix="/public-templates", tags=["Public Templates"])
+
+# Separate router for the seed/starter templates — different collection,
+# different schema, different URL namespace (versioned under /v1/).
+seed_template_router = APIRouter(prefix="/v1/templates", tags=["Seed Templates"])
 
 
 class PublicTemplateCreate(BaseModel):
@@ -228,3 +239,55 @@ def _doc_to_response(doc: dict, with_json: bool = False) -> dict:
     if with_json:
         data["canvas_json"] = doc.get("canvas_json", "{}")
     return data
+
+
+# ---------------------------------------------------------------------------
+# Seed / starter templates (ARD §8.1) — PX-022a
+# ---------------------------------------------------------------------------
+
+
+@seed_template_router.get("")
+async def list_seed_templates(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    platform: Optional[str] = Query(
+        default=None,
+        description="Filter by platform id (e.g. ``ig-post``).",
+    ),
+    tags: Optional[str] = Query(
+        default=None,
+        description=(
+            "Comma-separated tag list. A template matches when *any* of the "
+            "supplied tags intersects its ``tags`` array (OR semantics)."
+        ),
+    ),
+) -> list[dict[str, Any]]:
+    """List seed starter templates, optionally filtered by platform and tags.
+
+    Args:
+        db: Async Mongo database handle (injected via ``Depends(get_db)``).
+        platform: Optional platform id filter. When supplied, only templates
+            with an exact ``platform`` match are returned.
+        tags: Optional comma-separated tag list. Uses OR semantics — a
+            template is returned if any of its tags appears in the request.
+
+    Returns:
+        List of raw template documents (with ``_id`` stringified). Empty list
+        when the DB is offline or no rows match the filter.
+    """
+    if not is_connected():
+        return []
+
+    query: dict[str, Any] = {"is_template": True}
+    if platform:
+        query["platform"] = platform
+    if tags:
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        if tag_list:
+            query["tags"] = {"$in": tag_list}
+
+    cursor = db.templates.find(query)
+    results: list[dict[str, Any]] = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    return results

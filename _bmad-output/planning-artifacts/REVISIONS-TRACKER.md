@@ -114,3 +114,9 @@ Backend hygiene items surfaced while landing the `Depends(get_db)` refactor. Non
 
 - [ ] **GRAPHIFY-FUP-1 — Graphify should honor `.gitignore` on incremental detect.** Today's `--update` re-detects `backend/uploads/*.svg` (user artifacts, gitignored) and `graphify-out/graph.html` + `GRAPH_REPORT.md` (graphify's own outputs) on every run, forcing manual filtering. Upstream `graphify` improvement OR local shim. Size: S. Priority: P3 (won't block; forces occasional hand-carved merges).
 - [ ] **NG8011-FUP-1 — Four `@if`/`@else` + `<mat-icon>` content-projection warnings** on `dashboard.ts:380/382` and `sidebar-drawer.ts:729/731`. Pre-existing, not introduced by Sprint 1 but surfaced by the sprint-close boot smoke. Fix by wrapping each branch's content in `<ng-container>` OR splitting the `@if`/`@else` to one node per branch. Size: XS. Priority: P3.
+
+---
+
+## Wave #9 — follow-ups from Sprint-2 Wave-1 (2026-04-24)
+
+- [ ] **PX-011-FUP-1 — Tighten `AuthComponent.submit`'s `err: any`** to a typed union (`HttpErrorResponse | Error`). Pre-existing project-context §4.5 violation untouched during PX-011 per scope discipline. Size: XS. Priority: P3.
