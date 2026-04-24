@@ -88,44 +88,81 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
   imports: [MatButtonModule, MatIconModule, MatRippleModule, MatTooltipModule],
   template: `
     <section class="hub" aria-labelledby="hub-heading">
+      <div class="hub__bg" aria-hidden="true"></div>
+
       <header class="hub__header">
-        <h1 id="hub-heading" class="hub__title">What would you like to make today?</h1>
+        <div class="hub__header-copy">
+          <p class="hub__eyebrow">
+            <span class="hub__eyebrow-dot"></span>
+            <span>Pixelforge Studio</span>
+          </p>
+          <h1 id="hub-heading" class="hub__title">
+            Create something <span class="hub__title-accent">brilliant</span> today
+          </h1>
+          <p class="hub__subtitle">
+            Pick a canvas, start from scratch, or jump back into a recent project.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="hub__scratch"
+          matRipple
+          aria-label="Start from scratch"
+          (click)="onStartFromScratch()"
+        >
+          <mat-icon aria-hidden="true">add</mat-icon>
+          <span>Start from scratch</span>
+        </button>
       </header>
 
-      <ul class="hub__grid" role="list" aria-label="Content type choices">
-        @for (tile of tiles; track trackTileById($index, tile)) {
-          <li class="hub__grid-item">
-            <button
-              type="button"
-              class="hub__tile"
-              matRipple
-              [attr.aria-label]="tile.ariaLabel"
-              [attr.data-tile-id]="tile.id"
-              (click)="onTileActivate(tile)"
-            >
-              <span class="hub__tile-icon" aria-hidden="true">
-                <mat-icon>{{ tile.icon }}</mat-icon>
-              </span>
-              <span class="hub__tile-label">{{ tile.label }}</span>
-              <span class="hub__tile-subtitle">{{ tile.subtitle }}</span>
-            </button>
-          </li>
-        }
-      </ul>
+      <section class="hub__section" aria-labelledby="hub-make-heading">
+        <div class="hub__section-head">
+          <h2 id="hub-make-heading" class="hub__section-title">What will you make?</h2>
+          <span class="hub__section-meta">6 canvas presets</span>
+        </div>
 
-      <section class="hub__recent" aria-labelledby="hub-recent-heading">
-        <div class="hub__recent-head">
-          <h2 id="hub-recent-heading" class="hub__subheading">Recent projects</h2>
-          <button
-            type="button"
-            class="hub__scratch"
-            matRipple
-            aria-label="Start from scratch"
-            (click)="onStartFromScratch()"
-          >
-            <mat-icon aria-hidden="true">add</mat-icon>
-            <span>Start from scratch</span>
-          </button>
+        <ul class="hub__grid" role="list" aria-label="Content type choices">
+          @for (tile of tiles; track trackTileById($index, tile)) {
+            <li class="hub__grid-item">
+              <button
+                type="button"
+                class="hub__tile"
+                [class]="'hub__tile--' + tile.id"
+                matRipple
+                [attr.aria-label]="tile.ariaLabel"
+                [attr.data-tile-id]="tile.id"
+                (click)="onTileActivate(tile)"
+              >
+                <span class="hub__tile-bg" aria-hidden="true"></span>
+
+                <span class="hub__tile-preview" aria-hidden="true">
+                  <span class="hub__tile-frame" [attr.data-tile-id]="tile.id"></span>
+                </span>
+
+                <span class="hub__tile-body">
+                  <span class="hub__tile-icon" aria-hidden="true">
+                    <mat-icon>{{ tile.icon }}</mat-icon>
+                  </span>
+                  <span class="hub__tile-text">
+                    <span class="hub__tile-label">{{ tile.label }}</span>
+                    <span class="hub__tile-subtitle">{{ tile.subtitle }}</span>
+                  </span>
+                  <span class="hub__tile-arrow" aria-hidden="true">
+                    <mat-icon>arrow_forward</mat-icon>
+                  </span>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="hub__section hub__recent" aria-labelledby="hub-recent-heading">
+        <div class="hub__section-head">
+          <h2 id="hub-recent-heading" class="hub__section-title">Recent projects</h2>
+          @if (hasProjects()) {
+            <span class="hub__section-meta">{{ projects().length }} recent</span>
+          }
         </div>
 
         @if (hasProjects()) {
@@ -160,9 +197,14 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
             }
           </ul>
         } @else {
-          <p class="hub__recent-empty">
-            No recent projects yet. Pick a tile above to get started.
-          </p>
+          <div class="hub__recent-empty">
+            <span class="hub__recent-empty-glyph" aria-hidden="true">
+              <mat-icon>auto_awesome</mat-icon>
+            </span>
+            <p class="hub__recent-empty-copy">
+              No recent projects yet. Pick a canvas above to get started.
+            </p>
+          </div>
         }
       </section>
     </section>
@@ -170,34 +212,182 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
   styles: [
     `
       :host {
+        --px-violet: #7c3aed;
+        --px-violet-deep: #5b21b6;
+        --px-cyan: #06b6d4;
+        --px-pink: #ec4899;
+        --px-ink: #0f172a;
+        --px-ink-soft: #334155;
+        --px-muted: #64748b;
+        --px-line: #e2e8f0;
+        --px-surface: #ffffff;
+        --px-page: #f8fafc;
+
         display: block;
         min-height: 100%;
-        background: var(--mat-sys-surface, #fafafa);
-        color: var(--mat-sys-on-surface, #1a1a1a);
+        color: var(--px-ink);
+        background: var(--px-page);
+        font-family: var(--mat-sys-body-medium-font, 'Inter', -apple-system, BlinkMacSystemFont,
+          'Segoe UI', Roboto, sans-serif);
       }
+
       .hub {
+        position: relative;
         max-width: 1200px;
         margin: 0 auto;
-        padding: 48px 24px 64px;
+        padding: 64px 32px 80px;
       }
+
+      /* ── Decorative background: soft dotted grid + gradient orb ──────── */
+
+      .hub__bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-image:
+          radial-gradient(
+            ellipse at 80% -10%,
+            rgba(124, 58, 237, 0.12) 0%,
+            transparent 45%
+          ),
+          radial-gradient(
+            ellipse at -10% 110%,
+            rgba(6, 182, 212, 0.10) 0%,
+            transparent 45%
+          ),
+          radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.06) 1px, transparent 0);
+        background-size: auto, auto, 24px 24px;
+      }
+
+      .hub > *:not(.hub__bg) {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── Header ──────────────────────────────────────────────────── */
+
       .hub__header {
-        margin-bottom: 32px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 48px;
+        flex-wrap: wrap;
       }
+
+      .hub__header-copy {
+        flex: 1 1 360px;
+        min-width: 0;
+      }
+
+      .hub__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 14px;
+        padding: 6px 14px 6px 10px;
+        background: #ffffff;
+        border: 1px solid var(--px-line);
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--px-ink-soft);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      }
+      .hub__eyebrow-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--px-violet), var(--px-cyan));
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+      }
+
       .hub__title {
-        font-size: 1.75rem;
-        font-weight: 600;
         margin: 0;
-        line-height: 1.2;
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+        color: var(--px-ink);
       }
-      .hub__subheading {
-        font-size: 1rem;
+      .hub__title-accent {
+        background: linear-gradient(135deg, var(--px-violet) 0%, var(--px-pink) 60%, var(--px-cyan) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hub__subtitle {
+        margin: 12px 0 0;
+        color: var(--px-muted);
+        font-size: 1.02rem;
+        line-height: 1.5;
+        max-width: 560px;
+      }
+
+      .hub__scratch {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 20px;
+        background: linear-gradient(135deg, var(--px-violet) 0%, #a855f7 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 0.95rem;
         font-weight: 600;
-        margin: 0;
+        letter-spacing: 0.01em;
+        box-shadow: 0 4px 14px rgba(124, 58, 237, 0.28);
+        transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
       }
+      .hub__scratch:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 22px rgba(124, 58, 237, 0.36);
+        filter: brightness(1.05);
+      }
+      .hub__scratch:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
+      }
+      .hub__scratch mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ── Sections ────────────────────────────────────────────────── */
+
+      .hub__section {
+        margin-bottom: 56px;
+      }
+      .hub__section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .hub__section-title {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--px-ink);
+        letter-spacing: -0.01em;
+      }
+      .hub__section-meta {
+        font-size: 0.85rem;
+        color: var(--px-muted);
+      }
+
+      /* ── Tile grid ───────────────────────────────────────────────── */
+
       .hub__grid {
         list-style: none;
         padding: 0;
-        margin: 0 0 48px;
+        margin: 0;
         display: grid;
         gap: 20px;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -207,7 +397,7 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
-      @media (max-width: 639px) {
+      @media (max-width: 580px) {
         .hub__grid {
           grid-template-columns: 1fr;
         }
@@ -215,41 +405,98 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
       .hub__grid-item {
         display: block;
       }
+
+      /* ── Tile ────────────────────────────────────────────────────── */
+
       .hub__tile {
-        min-height: 160px;
+        position: relative;
+        overflow: hidden;
         width: 100%;
-        padding: 20px;
-        background: var(--mat-sys-surface-container, #fff);
-        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-        border-radius: 16px;
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        gap: 8px;
-        text-align: left;
+        padding: 0;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 18px;
         cursor: pointer;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-        transition:
-          transform 200ms ease-out,
-          box-shadow 200ms ease-out,
-          border-color 200ms ease-out;
+        text-align: left;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+          box-shadow 220ms ease, border-color 220ms ease;
+        display: flex;
+        flex-direction: column;
       }
       .hub__tile:hover {
-        transform: translateY(-2px);
-        border-color: var(--mat-sys-primary, #1976d2);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+        border-color: transparent;
+        box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.25),
+          0 0 0 1px rgba(124, 58, 237, 0.28);
       }
       .hub__tile:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
       }
       @media (prefers-reduced-motion: reduce) {
-        .hub__tile {
-          transition: none;
+        .hub__tile, .hub__scratch, .hub__tile-arrow {
+          transition: none !important;
         }
-        .hub__tile:hover {
-          transform: none;
-        }
+        .hub__tile:hover, .hub__scratch:hover { transform: none !important; }
       }
+
+      /* Tile background — radial tint that intensifies on hover */
+      .hub__tile-bg {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 100% 0%,
+          var(--tile-a, rgba(124, 58, 237, 0.10)) 0%,
+          transparent 60%
+        );
+        opacity: 0.6;
+        transition: opacity 240ms ease;
+      }
+      .hub__tile:hover .hub__tile-bg { opacity: 1; }
+
+      /* Tile preview — visual aspect-ratio hint at the top */
+      .hub__tile-preview {
+        position: relative;
+        display: block;
+        padding: 24px 20px 0;
+        min-height: 120px;
+        display: grid;
+        place-items: center;
+      }
+      .hub__tile-frame {
+        display: block;
+        border-radius: 6px;
+        background: linear-gradient(135deg, var(--tile-a) 0%, var(--tile-b) 100%);
+        box-shadow: 0 6px 20px -8px var(--tile-shadow, rgba(15, 23, 42, 0.25)),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      }
+      /* Per-tile aspect-ratio frames — actual platform proportions, scaled */
+      .hub__tile-frame[data-tile-id='ig-post']        { width: 68px; height: 68px; }
+      .hub__tile-frame[data-tile-id='ig-story']       { width: 44px; height: 78px; }
+      .hub__tile-frame[data-tile-id='linkedin-post']  { width: 92px; height: 48px; }
+      .hub__tile-frame[data-tile-id='linkedin-banner']{ width: 106px; height: 27px; }
+      .hub__tile-frame[data-tile-id='yt-thumb']       { width: 96px; height: 54px; }
+      .hub__tile-frame[data-tile-id='logo']           { width: 60px; height: 60px; border-radius: 50%; }
+
+      /* Per-tile color tokens */
+      .hub__tile--ig-post         { --tile-a: rgba(124, 58, 237, 0.18); --tile-b: rgba(236, 72, 153, 0.60); --tile-shadow: rgba(168, 85, 247, 0.45); --tile-accent: #7c3aed; }
+      .hub__tile--ig-story        { --tile-a: rgba(6, 182, 212, 0.18); --tile-b: rgba(16, 185, 129, 0.60); --tile-shadow: rgba(8, 145, 178, 0.45); --tile-accent: #06b6d4; }
+      .hub__tile--linkedin-post   { --tile-a: rgba(59, 130, 246, 0.18); --tile-b: rgba(79, 70, 229, 0.60); --tile-shadow: rgba(37, 99, 235, 0.45); --tile-accent: #3b82f6; }
+      .hub__tile--linkedin-banner { --tile-a: rgba(251, 191, 36, 0.20); --tile-b: rgba(249, 115, 22, 0.65); --tile-shadow: rgba(234, 88, 12, 0.40); --tile-accent: #f97316; }
+      .hub__tile--yt-thumb        { --tile-a: rgba(244, 63, 94, 0.18); --tile-b: rgba(225, 29, 72, 0.60); --tile-shadow: rgba(190, 18, 60, 0.45); --tile-accent: #e11d48; }
+      .hub__tile--logo            { --tile-a: rgba(16, 185, 129, 0.20); --tile-b: rgba(5, 150, 105, 0.65); --tile-shadow: rgba(5, 150, 105, 0.45); --tile-accent: #10b981; }
+
+      .hub__tile-body {
+        position: relative;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 14px;
+        padding: 20px;
+        border-top: 1px solid transparent;
+      }
+
       .hub__tile-icon {
         display: inline-flex;
         align-items: center;
@@ -257,107 +504,173 @@ const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, s
         width: 44px;
         height: 44px;
         border-radius: 12px;
-        background: var(--mat-sys-primary-container, rgba(25, 118, 210, 0.12));
-        color: var(--mat-sys-on-primary-container, #0d47a1);
+        background: linear-gradient(135deg, var(--tile-a) 0%, var(--tile-b) 100%);
+        color: #ffffff;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+        flex-shrink: 0;
       }
       .hub__tile-icon mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+
+      .hub__tile-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
       }
       .hub__tile-label {
-        font-size: 1.125rem;
+        font-size: 1.02rem;
         font-weight: 600;
-        color: var(--mat-sys-on-surface, #1a1a1a);
+        color: var(--px-ink);
+        letter-spacing: -0.005em;
       }
       .hub__tile-subtitle {
-        font-size: 0.875rem;
-        color: var(--mat-sys-on-surface-variant, #555);
+        font-size: 0.82rem;
+        color: var(--px-muted);
+        font-feature-settings: 'tnum' 1;
       }
-      .hub__recent {
-        margin-top: 16px;
-      }
-      .hub__recent-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 16px;
-      }
-      .hub__scratch {
+
+      .hub__tile-arrow {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        min-height: 44px;
-        padding: 8px 16px;
-        background: transparent;
-        border: 1px solid var(--mat-sys-outline, #767676);
-        border-radius: 22px;
-        color: var(--mat-sys-on-surface, #1a1a1a);
-        cursor: pointer;
-        font-size: 0.9rem;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        color: var(--tile-accent, var(--px-violet));
+        background: rgba(15, 23, 42, 0.04);
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: opacity 200ms ease, transform 200ms ease;
       }
-      .hub__scratch:hover {
-        background: var(--mat-sys-surface-container-high, rgba(0, 0, 0, 0.04));
+      .hub__tile-arrow mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
-      .hub__scratch:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+      .hub__tile:hover .hub__tile-arrow {
+        opacity: 1;
+        transform: translateX(0);
       }
+
+      /* ── Recent projects strip ───────────────────────────────────── */
+
       .hub__recent-strip {
         list-style: none;
-        padding: 0 0 8px;
-        margin: 0;
+        padding: 4px 4px 12px;
+        margin: 0 -4px;
         display: flex;
-        gap: 12px;
+        gap: 16px;
         overflow-x: auto;
         scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+      }
+      .hub__recent-strip::-webkit-scrollbar { height: 8px; }
+      .hub__recent-strip::-webkit-scrollbar-thumb {
+        background: var(--px-line);
+        border-radius: 4px;
       }
       .hub__recent-item {
         flex: 0 0 auto;
         scroll-snap-align: start;
       }
+
       .hub__recent-tile {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        width: 140px;
-        padding: 8px;
-        background: var(--mat-sys-surface-container, #fff);
-        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-        border-radius: 12px;
+        gap: 10px;
+        width: 180px;
+        padding: 10px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        border-radius: 14px;
         cursor: pointer;
         text-align: left;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      }
+      .hub__recent-tile:hover {
+        transform: translateY(-2px);
+        border-color: rgba(124, 58, 237, 0.4);
+        box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.2);
       }
       .hub__recent-tile:focus-visible {
-        outline: 3px solid var(--mat-sys-primary, #1976d2);
-        outline-offset: 2px;
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
       }
+
       .hub__recent-thumb {
         display: block;
         width: 100%;
         aspect-ratio: 1 / 1;
         object-fit: cover;
-        border-radius: 8px;
-        background: var(--mat-sys-surface-container-high, #f0f0f0);
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       }
       .hub__recent-thumb--placeholder {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: var(--mat-sys-on-surface-variant, #888);
+        color: var(--px-muted);
       }
+      .hub__recent-thumb--placeholder mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+      }
+
       .hub__recent-name {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         font-weight: 500;
+        color: var(--px-ink);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        padding: 0 4px 4px;
       }
+
+      /* ── Empty state ─────────────────────────────────────────────── */
+
       .hub__recent-empty {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 28px 24px;
+        background: var(--px-surface);
+        border: 1px dashed var(--px-line);
+        border-radius: 16px;
+      }
+      .hub__recent-empty-glyph {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(6, 182, 212, 0.12));
+        color: var(--px-violet);
+        flex-shrink: 0;
+      }
+      .hub__recent-empty-glyph mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+      .hub__recent-empty-copy {
         margin: 0;
-        color: var(--mat-sys-on-surface-variant, #666);
+        color: var(--px-ink-soft);
         font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 580px) {
+        .hub { padding: 40px 20px 56px; }
+        .hub__header { align-items: stretch; }
+        .hub__scratch { width: 100%; justify-content: center; }
+        .hub__recent-tile { width: 148px; }
       }
     `,
   ],

@@ -323,4 +323,18 @@ This is the authoritative record of every autonomous decision Orion has taken on
 - **Tests.** +4 in `auth.spec.ts` covering pill-tab ARIA (`role=tab`, `aria-selected` reflecting `mode()`, mode-switch on click, pill `type="button"`, heading text swap). Existing 12 tests all still pass against the new DOM because password-toggle selectors (`button.password-toggle`, `input[name="password"]`) and submit/guest flow are preserved. Total FE: **357/357** (up from 351). `tsc --noEmit` clean.
 - **Known follow-up.** Material outline focus color override uses `::ng-deep` on `.mdc-text-field--focused .mdc-notched-outline > *`. This is the current recommended escape hatch for Angular Material 21 (no first-class token API for per-component outline-focus color yet). If/when a global theme pass lands, fold this into the Material token config.
 
+## 2026-04-24T22:55:00Z · PX-064 /hub redesign — modern tile system + color-coded platform previews
+
+- **Trigger.** User landed on `/hub` post-login and called it "simple black and purple, not feeling good." Requested: cool, intuitive, modern, professional, responsive.
+- **Autonomous design direction (skipping Sally again, same §R5 rationale as PX-063).** Single-file scope: `hub.component.ts` template + styles. Class body untouched.
+- **What changed visually:**
+  - Page background: soft slate-50 + fixed decorative layer (two radial gradient orbs in violet + cyan corners, 24px dotted grid pattern, `z-index: 0`, `pointer-events: none`).
+  - Header: eyebrow "Pixelforge Studio" pill + oversized display heading "Create something **brilliant** today" with a violet→pink→cyan gradient-text accent. Subtitle copy. "Start from scratch" promoted from outlined ghost button to a full-width gradient primary CTA (violet→fuchsia) with hover-lift + shadow bloom. On mobile the CTA stacks under the header.
+  - Tile system: each of the 6 tiles is now color-coded with a dedicated gradient (ig-post: violet→pink; ig-story: cyan→teal; linkedin-post: blue→indigo; linkedin-banner: amber→orange; yt-thumb: rose→crimson; logo: emerald). Every tile renders an **actual-aspect-ratio "frame"** preview at the top (ig-post=square 68×68, ig-story=44×78 portrait, linkedin-banner=106×27 ultra-wide, yt-thumb=96×54 16:9, logo=60×60 circle) so the user *sees* the shape they're picking. Tile body: colored gradient icon chip + label + dimensions + arrow glyph that slides in on hover. Hover: translateY(-4px), outer glow ring in brand violet, subtle radial-tint intensification. Keyboard focus gets a violet outline ring.
+  - Recent-projects strip: thumbnails scaled up from 140px → 180px, better hover affordance, custom scrollbar. Empty state upgraded from a plain paragraph to a dashed-card row with a gradient-chip sparkle glyph.
+  - Responsive: 3-col desktop → 2-col tablet (≤1023px) → 1-col phone (≤580px). Phone tweaks: tighter padding, full-width CTA, narrower recent tiles.
+- **Test contract preserved.** All DOM-dependent selectors kept verbatim: `button.hub__tile` + `data-tile-id` attribute, `.hub__recent-strip`, `.hub__recent-tile`, `.hub__recent-name`, `.hub__recent-empty`, `.hub__scratch`, and the `aria-label="Start from scratch"` literal. One test fail during iteration (I'd lengthened the aria-label); reverted immediately. **357/357 FE passing**, tsc clean.
+- **Accessibility.** `role="list"` on grid and recent strip preserved. `prefers-reduced-motion` disables transforms on tiles, the scratch CTA, and arrow glyph. Focus-visible rings meet 3px + 3px offset on every interactive element. Decorative background + aspect frames are `aria-hidden`.
+- **Out of scope (followups surfaced by user, now queued):** no logout action anywhere, no `/profile` route. Tracked as PX-065.
+
 
