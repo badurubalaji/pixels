@@ -223,4 +223,45 @@ describe('AuthComponent — PX-011 navigation', () => {
       expect(btn?.getAttribute('type')).toBe('button');
     });
   });
+
+  describe('pill-tab switcher (PX-063 redesign)', () => {
+    beforeEach(async () => {
+      await setup();
+    });
+
+    const pills = (): NodeListOf<HTMLButtonElement> =>
+      fixture.nativeElement.querySelectorAll('.pill-tab');
+
+    it('renders two tablist pills with aria-selected reflecting mode()', () => {
+      const [logIn, signUp] = Array.from(pills());
+      expect(logIn?.getAttribute('role')).toBe('tab');
+      expect(signUp?.getAttribute('role')).toBe('tab');
+      expect(logIn?.getAttribute('aria-selected')).toBe('true');
+      expect(signUp?.getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('clicking Sign Up pill switches mode and flips aria-selected', () => {
+      const [logIn, signUp] = Array.from(pills());
+      signUp?.click();
+      fixture.detectChanges();
+      expect(component.mode()).toBe('signup');
+      expect(logIn?.getAttribute('aria-selected')).toBe('false');
+      expect(signUp?.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('pill buttons have type="button" (never submit the form)', () => {
+      for (const p of Array.from(pills())) {
+        expect(p.getAttribute('type')).toBe('button');
+      }
+    });
+
+    it('form heading swaps text with mode()', () => {
+      const heading = (): HTMLElement | null =>
+        fixture.nativeElement.querySelector('.form-heading');
+      expect(heading()?.textContent?.trim()).toBe('Welcome back');
+      component.mode.set('signup');
+      fixture.detectChanges();
+      expect(heading()?.textContent?.trim()).toBe('Get started');
+    });
+  });
 });
