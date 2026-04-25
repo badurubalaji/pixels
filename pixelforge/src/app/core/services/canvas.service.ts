@@ -1253,6 +1253,19 @@ export class CanvasService {
 
     this.clearGuidelines();
 
+    // PX-107 — Alt held during drag temporarily disables snap so power
+    // users can place an object exactly without fighting the magnet.
+    const evt = e.e as MouseEvent | TouchEvent | undefined;
+    if ((evt as MouseEvent | undefined)?.altKey) return;
+
+    // PX-107 — scale the snap threshold by viewport zoom so the on-screen
+    // pull radius stays roughly constant (~6 screen px) at any zoom level.
+    // At 4× zoom a 6 canvas-px threshold would feel like 24 screen-px,
+    // which is too aggressive; at 0.25× zoom it'd be 1.5 screen-px, too
+    // tight to engage. Dividing by zoom inverts both effects.
+    const zoom = this.canvas.getZoom() || 1;
+    const t = SNAP_THRESHOLD / zoom;
+
     const cw = this._canvasWidth();
     const ch = this._canvasHeight();
     const bound = obj.getBoundingRect();
@@ -1268,7 +1281,7 @@ export class CanvasService {
     const canvasCenterY = ch / 2;
 
     // Snap to canvas center horizontal
-    if (Math.abs(objCenterX - canvasCenterX) < SNAP_THRESHOLD) {
+    if (Math.abs(objCenterX - canvasCenterX) < t) {
       const delta = canvasCenterX - objCenterX;
       obj.set('left', (obj.left ?? 0) + delta);
       obj.setCoords();
@@ -1276,7 +1289,7 @@ export class CanvasService {
     }
 
     // Snap to canvas center vertical
-    if (Math.abs(objCenterY - canvasCenterY) < SNAP_THRESHOLD) {
+    if (Math.abs(objCenterY - canvasCenterY) < t) {
       const delta = canvasCenterY - objCenterY;
       obj.set('top', (obj.top ?? 0) + delta);
       obj.setCoords();
@@ -1289,14 +1302,14 @@ export class CanvasService {
       const thirdsY = [ch / 3, (ch * 2) / 3];
 
       for (const tx of thirdsX) {
-        if (Math.abs(objCenterX - tx) < SNAP_THRESHOLD) {
+        if (Math.abs(objCenterX - tx) < t) {
           obj.set('left', (obj.left ?? 0) + (tx - objCenterX));
           obj.setCoords();
           this.addGuideline(tx, 0, tx, ch, true);
         }
       }
       for (const ty of thirdsY) {
-        if (Math.abs(objCenterY - ty) < SNAP_THRESHOLD) {
+        if (Math.abs(objCenterY - ty) < t) {
           obj.set('top', (obj.top ?? 0) + (ty - objCenterY));
           obj.setCoords();
           this.addGuideline(0, ty, cw, ty, false);
@@ -1305,28 +1318,28 @@ export class CanvasService {
     }
 
     // Snap to canvas left edge
-    if (Math.abs(objLeft) < SNAP_THRESHOLD) {
+    if (Math.abs(objLeft) < t) {
       obj.set('left', (obj.left ?? 0) - objLeft);
       obj.setCoords();
       this.addGuideline(0, 0, 0, ch, true);
     }
 
     // Snap to canvas right edge
-    if (Math.abs(objRight - cw) < SNAP_THRESHOLD) {
+    if (Math.abs(objRight - cw) < t) {
       obj.set('left', (obj.left ?? 0) + (cw - objRight));
       obj.setCoords();
       this.addGuideline(cw, 0, cw, ch, true);
     }
 
     // Snap to canvas top edge
-    if (Math.abs(objTop) < SNAP_THRESHOLD) {
+    if (Math.abs(objTop) < t) {
       obj.set('top', (obj.top ?? 0) - objTop);
       obj.setCoords();
       this.addGuideline(0, 0, cw, 0, false);
     }
 
     // Snap to canvas bottom edge
-    if (Math.abs(objBottom - ch) < SNAP_THRESHOLD) {
+    if (Math.abs(objBottom - ch) < t) {
       obj.set('top', (obj.top ?? 0) + (ch - objBottom));
       obj.setCoords();
       this.addGuideline(0, ch, cw, ch, false);
@@ -1337,37 +1350,95 @@ export class CanvasService {
       o => o !== obj && !(o as any)._isGuideline && !(o as any)._isGrid
     );
 
+    // PX-107 — track which axes have already locked to a guide this tick
+    // so subsequent edge-snaps don't fight the center-snap (and vice versa).
+    let snappedX = false;
+    let snappedY = false;
+
     for (const other of otherObjects) {
       const ob = other.getBoundingRect();
       const otherCX = ob.left + ob.width / 2;
       const otherCY = ob.top + ob.height / 2;
+      const otherLeft = ob.left;
+      const otherRight = ob.left + ob.width;
+      const otherTop = ob.top;
+      const otherBottom = ob.top + ob.height;
 
-      // Center-to-center horizontal
       const refreshedBound = obj.getBoundingRect();
       const curCX = refreshedBound.left + refreshedBound.width / 2;
       const curCY = refreshedBound.top + refreshedBound.height / 2;
+      const curLeft = refreshedBound.left;
+      const curRight = refreshedBound.left + refreshedBound.width;
+      const curTop = refreshedBound.top;
+      const curBottom = refreshedBound.top + refreshedBound.height;
 
-      if (Math.abs(curCX - otherCX) < SNAP_THRESHOLD) {
+      // Center-to-center horizontal
+      if (!snappedX && Math.abs(curCX - otherCX) < t) {
         obj.set('left', (obj.left ?? 0) + (otherCX - curCX));
         obj.setCoords();
         const minY = Math.min(refreshedBound.top, ob.top);
         const maxY = Math.max(refreshedBound.top + refreshedBound.height, ob.top + ob.height);
         this.addGuideline(otherCX, minY, otherCX, maxY, true);
+        snappedX = true;
+      }
+
+      // PX-107 — edge-to-edge horizontal: left↔left, right↔right, and the
+      // adjacent variants left↔right / right↔left for "stack against" layout.
+      if (!snappedX) {
+        const xCandidates: Array<{ from: number; to: number; line: number }> = [
+          { from: curLeft, to: otherLeft, line: otherLeft },
+          { from: curRight, to: otherRight, line: otherRight },
+          { from: curLeft, to: otherRight, line: otherRight },
+          { from: curRight, to: otherLeft, line: otherLeft },
+        ];
+        for (const c of xCandidates) {
+          if (Math.abs(c.from - c.to) < t) {
+            obj.set('left', (obj.left ?? 0) + (c.to - c.from));
+            obj.setCoords();
+            const minY = Math.min(refreshedBound.top, ob.top);
+            const maxY = Math.max(refreshedBound.top + refreshedBound.height, ob.top + ob.height);
+            this.addGuideline(c.line, minY, c.line, maxY, true);
+            snappedX = true;
+            break;
+          }
+        }
       }
 
       // Center-to-center vertical
-      if (Math.abs(curCY - otherCY) < SNAP_THRESHOLD) {
+      if (!snappedY && Math.abs(curCY - otherCY) < t) {
         obj.set('top', (obj.top ?? 0) + (otherCY - curCY));
         obj.setCoords();
         const minX = Math.min(refreshedBound.left, ob.left);
         const maxX = Math.max(refreshedBound.left + refreshedBound.width, ob.left + ob.width);
         this.addGuideline(minX, otherCY, maxX, otherCY, false);
+        snappedY = true;
+      }
+
+      // PX-107 — edge-to-edge vertical: top↔top, bottom↔bottom + adjacencies.
+      if (!snappedY) {
+        const yCandidates: Array<{ from: number; to: number; line: number }> = [
+          { from: curTop, to: otherTop, line: otherTop },
+          { from: curBottom, to: otherBottom, line: otherBottom },
+          { from: curTop, to: otherBottom, line: otherBottom },
+          { from: curBottom, to: otherTop, line: otherTop },
+        ];
+        for (const c of yCandidates) {
+          if (Math.abs(c.from - c.to) < t) {
+            obj.set('top', (obj.top ?? 0) + (c.to - c.from));
+            obj.setCoords();
+            const minX = Math.min(refreshedBound.left, ob.left);
+            const maxX = Math.max(refreshedBound.left + refreshedBound.width, ob.left + ob.width);
+            this.addGuideline(minX, c.line, maxX, c.line, false);
+            snappedY = true;
+            break;
+          }
+        }
       }
     }
 
     // Equal-spacing detection: when at least 2 other objects exist
     if (otherObjects.length >= 2) {
-      this.detectEqualSpacing(obj, otherObjects);
+      this.detectEqualSpacing(obj, otherObjects, t);
     }
   }
 
@@ -1375,7 +1446,7 @@ export class CanvasService {
    * Detect equal spacing between this object and pairs of other objects,
    * snap to maintain equal gaps, and draw distance indicators.
    */
-  private detectEqualSpacing(obj: fabric.FabricObject, others: fabric.FabricObject[]): void {
+  private detectEqualSpacing(obj: fabric.FabricObject, others: fabric.FabricObject[], threshold: number = SNAP_THRESHOLD): void {
     const bound = obj.getBoundingRect();
     const objLeft = bound.left;
     const objRight = bound.left + bound.width;
@@ -1403,7 +1474,7 @@ export class CanvasService {
         const gapObjB = bLeft - objRight;
 
         // If close to equal spacing (within threshold), snap and draw indicator
-        if (gapAObj > 0 && gapObjB > 0 && Math.abs(gapAObj - gapObjB) < SNAP_THRESHOLD * 2) {
+        if (gapAObj > 0 && gapObjB > 0 && Math.abs(gapAObj - gapObjB) < threshold * 2) {
           const idealLeft = aRight + (bLeft - aRight - bound.width) / 2;
           const delta = idealLeft - objLeft;
           obj.set('left', (obj.left ?? 0) + delta);
@@ -1432,7 +1503,7 @@ export class CanvasService {
         const gapAObj = objTop - aBottom;
         const gapObjB = bTop - objBottom;
 
-        if (gapAObj > 0 && gapObjB > 0 && Math.abs(gapAObj - gapObjB) < SNAP_THRESHOLD * 2) {
+        if (gapAObj > 0 && gapObjB > 0 && Math.abs(gapAObj - gapObjB) < threshold * 2) {
           const idealTop = aBottom + (bTop - aBottom - bound.height) / 2;
           const delta = idealTop - objTop;
           obj.set('top', (obj.top ?? 0) + delta);
