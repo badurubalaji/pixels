@@ -815,4 +815,37 @@ Wide sprint — three concrete features + a critical persistence fix + a deferre
 - **PX-077 manual** — Browser-driven e2e smoke (still genuinely needs you driving).
 - **PX-074** — Email change (held on transactional-email service choice — I'll surface a compact 4-option recommendation matrix next turn so you can pick in one read).
 
+## 2026-04-25T13:55:00Z · Sprint-17 close — retrospective
+
+User asked for two things this turn:
+> *"frames lets have different shapes, so that designers will use those single frames and create different collages"*
+> *"for frames allow to add replace image on right click and unable to add or change image in frame please check and fix"*
+
+Both shipped as PX-102.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `fcf87bd` | PX-102 | Six FrameShape variants (rect, rounded, circle, hexagon, star, heart) + 5 single-shape presets in the Frames panel + "Make photo frame" recovery path on right-click for legacy/regular images. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The "make photo frame" recovery path is the real fix to "unable to add or change image in frame".** The user's pre-PX-101 saved project has filled `FabricImage` objects whose `customType` got stripped by fabric's default `toJSON`. PX-101's load-time heuristic recovers EMPTY placeholders by structural fingerprint (Group + dashed-stroke Rect + "+" Textbox), but a filled image at the data level looks identical to any cropped image — there's no reliable structural signal to recover them automatically. The new right-click "Make photo frame" promotes any selected `FabricImage` into a photo-frame in one click, attaching `customType` + frame defaults. This same path doubles as an intentional feature for users who imported a normal image and want to apply pan / zoom / shape edits to it.
+
+**The shape feature was bigger than I expected.** The clip-path math for `replaceFrameWithImage` needed `absolutePositioned: true` so the clip lives in canvas coords (matching the frame's bounds + angle) instead of object-local coords (which would rotate WITH the image and produce wrong masking). Six shapes share one math kernel (`buildFrameShape`) used both for the empty-placeholder outline AND the filled-frame clipPath — single source of truth for the shape geometry.
+
+**Sidebar preview using CSS `clip-path`.** The Frames panel cards render mini-previews of each layout. Adding shape-aware previews via `clip-path: polygon(...)` (hexagon, star) and `clip-path: path(...)` (heart) in CSS keeps the previews accurate without needing fabric.js at the panel level. Heart preview uses the same SVG path as the fabric Path object — single source of truth across the canvas + the preview.
+
+**What went well**
+1. The clip-path approach kept all the existing math (cover/contain/fill, pan/zoom) shape-agnostic. Only the FRAME's clip changed; the IMAGE's render math stayed the same. Composition over inheritance.
+2. PX-101's `PERSISTED_CUSTOM_PROPS` allowlist made adding `frameShape` to persistence a one-liner. The pattern paid off two days running.
+
+**What was hard**
+1. The recovery story for filled-image legacy frames. There's no reliable structural fingerprint, so I went with manual user action ("Make photo frame" right-click) rather than auto-heuristic. The button is also useful as a forward feature, which softens the "this is a recovery hack" framing.
+2. The `clipPath` positioning in fabric isn't intuitive — `absolutePositioned: false` puts it in object-local coords; `absolutePositioned: true` puts it in canvas coords. For a frame with rotation, only the absolute form aligns the clip with the frame's drawn bounds. Worth memorializing.
+
+**Sprint-18 candidates**
+- **PX-103** — Per-frame shape editor in property-panel. Lets users change an existing frame's shape after it's been created (currently shape is only set at insertion). Bounded scope.
+- **PX-096** — Independent in-frame photo rotation (still queued; deferred-spec story file ready).
+- **PX-077 manual** — Browser-driven e2e smoke.
+- **PX-074** — Email change (held).
+
 
