@@ -61,9 +61,22 @@ export interface HubTile {
 const GALLERY_SLUG_BY_PRESET: Readonly<Record<Exclude<PlatformType, 'custom'>, string>> = {
   'ig-post': 'ig-post',
   'ig-story': 'ig-story',
+  'ig-reel': 'ig-reel',
+  'fb-post': 'fb-post',
+  'fb-cover': 'fb-cover',
+  'tw-post': 'tw-post',
+  'tw-header': 'tw-header',
   'linkedin-post': 'linkedin-post',
   'linkedin-banner': 'linkedin-banner',
   'yt-thumb': 'yt-thumb',
+  'yt-channel-art': 'yt-channel-art',
+  'tiktok-video': 'tiktok-video',
+  'pinterest-pin': 'pinterest-pin',
+  'presentation-16-9': 'presentation-16-9',
+  'doc-a4': 'doc-a4',
+  'doc-letter': 'doc-letter',
+  'business-card': 'business-card',
+  'logo': 'logo',
 };
 
 /**
@@ -837,9 +850,12 @@ export class HubComponent implements OnInit {
    * instance field without per-instance overhead.
    */
   private static buildTiles(): readonly HubTile[] {
+    // PX-120: skip both `custom` (sentinel) and `logo` (handled by the
+    // hardcoded mode-chooser tile below — gallery-route version would
+    // duplicate it).
     const platformTiles: HubTile[] = PLATFORM_PRESETS
-      .filter((preset): preset is PlatformPreset & { id: Exclude<PlatformType, 'custom'> } =>
-        preset.id !== 'custom',
+      .filter((preset): preset is PlatformPreset & { id: Exclude<PlatformType, 'custom' | 'logo'> } =>
+        preset.id !== 'custom' && preset.id !== 'logo',
       )
       .map((preset) => ({
         id: preset.id,

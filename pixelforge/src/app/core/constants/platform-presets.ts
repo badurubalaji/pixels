@@ -31,9 +31,22 @@
 export type PlatformType =
   | 'ig-post'
   | 'ig-story'
+  | 'ig-reel'
+  | 'fb-post'
+  | 'fb-cover'
+  | 'tw-post'
+  | 'tw-header'
   | 'linkedin-post'
   | 'linkedin-banner'
   | 'yt-thumb'
+  | 'yt-channel-art'
+  | 'tiktok-video'
+  | 'pinterest-pin'
+  | 'presentation-16-9'
+  | 'doc-a4'
+  | 'doc-letter'
+  | 'business-card'
+  | 'logo'
   | 'custom';
 
 /**
@@ -74,11 +87,33 @@ export interface PlatformPreset {
  * ```
  */
 export const PLATFORM_PRESETS: readonly PlatformPreset[] = [
+  // --- Social: Instagram ---
   { id: 'ig-post', label: 'Instagram Post', width: 1080, height: 1080, aspect: '1:1', icon: 'camera_alt' },
   { id: 'ig-story', label: 'Instagram Story', width: 1080, height: 1920, aspect: '9:16', icon: 'photo_camera' },
+  { id: 'ig-reel', label: 'Instagram Reel', width: 1080, height: 1920, aspect: '9:16', icon: 'movie' },
+  // --- Social: Facebook ---
+  { id: 'fb-post', label: 'Facebook Post', width: 1200, height: 630, aspect: '1.91:1', icon: 'thumb_up' },
+  { id: 'fb-cover', label: 'Facebook Cover', width: 820, height: 312, aspect: '2.63:1', icon: 'panorama' },
+  // --- Social: Twitter / X ---
+  { id: 'tw-post', label: 'Twitter Post', width: 1200, height: 675, aspect: '16:9', icon: 'chat' },
+  { id: 'tw-header', label: 'Twitter Header', width: 1500, height: 500, aspect: '3:1', icon: 'view_carousel' },
+  // --- Social: LinkedIn ---
   { id: 'linkedin-post', label: 'LinkedIn Post', width: 1200, height: 627, aspect: '1.91:1', icon: 'work' },
   { id: 'linkedin-banner', label: 'LinkedIn Banner', width: 1584, height: 396, aspect: '4:1', icon: 'view_carousel' },
+  // --- Video ---
   { id: 'yt-thumb', label: 'YouTube Thumbnail', width: 1280, height: 720, aspect: '16:9', icon: 'smart_display' },
+  { id: 'yt-channel-art', label: 'YouTube Channel Art', width: 2560, height: 1440, aspect: '16:9', icon: 'theaters' },
+  { id: 'tiktok-video', label: 'TikTok Video', width: 1080, height: 1920, aspect: '9:16', icon: 'music_video' },
+  // --- Pinterest ---
+  { id: 'pinterest-pin', label: 'Pinterest Pin', width: 1000, height: 1500, aspect: '2:3', icon: 'push_pin' },
+  // --- Presentations / Docs ---
+  { id: 'presentation-16-9', label: 'Presentation (16:9)', width: 1920, height: 1080, aspect: '16:9', icon: 'slideshow' },
+  { id: 'doc-a4', label: 'A4 Document', width: 2480, height: 3508, aspect: '1:1.41', icon: 'description' },
+  { id: 'doc-letter', label: 'US Letter', width: 2550, height: 3300, aspect: '1:1.29', icon: 'article' },
+  // --- Print ---
+  { id: 'business-card', label: 'Business Card', width: 1050, height: 600, aspect: '1.75:1', icon: 'badge' },
+  { id: 'logo', label: 'Logo', width: 500, height: 500, aspect: '1:1', icon: 'auto_awesome' },
+  // --- Sentinel ---
   { id: 'custom', label: 'Custom', width: 0, height: 0, aspect: 'custom', icon: 'tune' },
 ] as const;
 

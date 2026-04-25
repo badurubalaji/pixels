@@ -66,14 +66,16 @@ describe('HubComponent', () => {
       await setupTestBed([]);
     });
 
-    it('renders exactly 6 tiles', () => {
+    it('renders one tile per platform preset (excluding custom + logo) plus the Logo mode-chooser tile', () => {
+      // PX-120: catalog expanded from 6 → 19; tile count = 17 platform
+      // tiles + 1 hardcoded Logo tile = 18.
       const tileButtons = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
         'button.hub__tile',
       );
-      expect(tileButtons.length).toBe(6);
+      expect(tileButtons.length).toBe(18);
     });
 
-    it('renders the 5 platform tiles in the expected order with dimension subtitles', () => {
+    it('first three tiles are Instagram presets in the expected order', () => {
       const tileButtons = fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
         'button.hub__tile',
       );
@@ -85,14 +87,25 @@ describe('HubComponent', () => {
       expect(tileButtons[1].getAttribute('data-tile-id')).toBe('ig-story');
       expect(tileButtons[1].textContent).toContain('1080×1920');
 
-      expect(tileButtons[2].getAttribute('data-tile-id')).toBe('linkedin-post');
-      expect(tileButtons[2].textContent).toContain('1200×627');
+      expect(tileButtons[2].getAttribute('data-tile-id')).toBe('ig-reel');
+      expect(tileButtons[2].textContent).toContain('1080×1920');
+    });
 
-      expect(tileButtons[3].getAttribute('data-tile-id')).toBe('linkedin-banner');
-      expect(tileButtons[3].textContent).toContain('1584×396');
+    it('renders Facebook + Twitter + LinkedIn + YouTube + TikTok + Pinterest preset tiles', () => {
+      const ids = Array.from(
+        fixture.nativeElement.querySelectorAll<HTMLButtonElement>('button.hub__tile'),
+      ).map((b) => b.getAttribute('data-tile-id'));
 
-      expect(tileButtons[4].getAttribute('data-tile-id')).toBe('yt-thumb');
-      expect(tileButtons[4].textContent).toContain('1280×720');
+      expect(ids).toContain('fb-post');
+      expect(ids).toContain('fb-cover');
+      expect(ids).toContain('tw-post');
+      expect(ids).toContain('tw-header');
+      expect(ids).toContain('linkedin-post');
+      expect(ids).toContain('linkedin-banner');
+      expect(ids).toContain('yt-thumb');
+      expect(ids).toContain('yt-channel-art');
+      expect(ids).toContain('tiktok-video');
+      expect(ids).toContain('pinterest-pin');
     });
 
     it('renders a Logo tile with "Make a logo" subtitle', () => {
