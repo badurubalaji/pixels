@@ -553,4 +553,30 @@ PX-077 (manual e2e smoke) is human-in-the-loop, so sprint-7 reframed around the 
 
 If sprint-7 is the right pause point — six routes redesigned, full auth profile flow, theme defaulting to light, graphify fresh, all on origin/main — then sprint-8 is the natural moment for a real-world smoke test. The user's eyes on the running app would catch any leftover dark surfaces in surfaces I didn't reach.
 
+## 2026-04-25T10:12:00Z · Sprint-8 close — retrospective
+
+User asked for toolbar consistency *and* alpha (transparency) in every color picker. Combined those into one focused sprint.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `ed3e5fe` | PX-080 + PX-081 | New `<app-color-picker>` reusable component with alpha slider, hex/rgba parser, and emit policy (#RRGGBB at α=100, #RRGGBBAA at α<100). Replaced every `<input type="color">` across text-toolbar (text/fill/stroke), property-panel (shape stroke / text outline / shadow), and gradient-panel (solid fill + N gradient stops). Plus text-toolbar retheme: dark zinc → white surface + slate ring + soft shadow + 48px height. 16 new spec cases for parse/emit/clamp/commit semantics. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**What went well**
+1. The single-component strategy for the color picker meant adding alpha to **seven** color sites in one diff. Adding alpha to each native input independently would've been seven separate PRs and seven UX inconsistencies.
+2. Alpha emit policy (drop the suffix when α=100) keeps backward compatibility with everything that previously consumed the picker's value as `#RRGGBB`. fabric.js, CSS, and the project-context palette validators all keep working unchanged.
+3. Checkered backdrop on the swatch is a small visual detail but tells the user **at a glance** that the picked color has transparency. No reading required.
+
+**What was hard**
+1. Resisted the temptation to retheme alignment-panel + image-filters-panel + animation-timeline in the same commit. They're all dark-zinc holdouts but each has its own template + 200+ lines of styles. Filed as PX-082 below.
+2. The eyedropper button next to the gradient panel solid-color picker survived because it's keyed to a CanvasService.isEyedropper() flow — moving it would've been service-touching scope creep. Left it as-is alongside the new picker.
+
+**Sprint-9 candidates (priority order)**
+- **PX-077** — Manual e2e browser smoke test. Now strictly higher priority than visual cleanup since color picker + 6 redesigned routes + auth profile flow are all unverified end-to-end.
+- **PX-082** — Remaining toolbar component retheme: alignment-panel, image-filters-panel, animation-timeline, color-palette-panel, sidebar-drawer chrome. Same override-block pattern.
+- **PX-083** — Eyedropper "Pick from canvas" — currently a stub on gradient-panel; could be wired to a fabric.js color-sampling pass.
+- **PX-074** — Email change with verification (held).
+
+Sprint-9 starts with **PX-082** unless the user pivots to manual smoke (PX-077).
+
 
