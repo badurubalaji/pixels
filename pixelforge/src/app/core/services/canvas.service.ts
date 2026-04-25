@@ -683,6 +683,69 @@ export class CanvasService {
   }
 
   /**
+   * Pan and zoom the photo *within* a cover-mode photo-frame (PX-094).
+   *
+   * @param frame - A `customType: 'photo-frame'` `FabricImage` in cover
+   *   mode. No-op for empty placeholders, contain, or fill (those modes
+   *   already show the whole photo or stretch it to fit).
+   * @param panX - Normalized horizontal pan, `-1..1`. `0` = centered;
+   *   `1` = max pan right (image's left edge fully visible at the
+   *   frame's left); `-1` = max pan left.
+   * @param panY - Normalized vertical pan, `-1..1`. Same semantics.
+   * @param zoom - User zoom multiplier, `1..` (1 = base cover scale,
+   *   2 = doubled, etc.). Larger values crop more aggressively.
+   *
+   * @remarks
+   * Stored on the FabricImage as `framePanX`, `framePanY`, `frameZoom`
+   * custom props so the property-panel can rehydrate sliders on
+   * selection. Non-destructive — the source pixels are never resampled
+   * here, only the crop window changes.
+   */
+  setFrameView(
+    frame: fabric.FabricObject,
+    panX: number,
+    panY: number,
+    zoom: number,
+  ): void {
+    if (!this.canvas) return;
+    if ((frame as any).customType !== 'photo-frame') return;
+    if (!(frame instanceof fabric.FabricImage)) return;
+    if ((frame as any).fitMode && (frame as any).fitMode !== 'cover') return;
+    const imgEl = (frame as any).getElement?.() as HTMLImageElement | undefined;
+    if (!imgEl) return;
+    const iw = imgEl.naturalWidth || imgEl.width;
+    const ih = imgEl.naturalHeight || imgEl.height;
+    if (!iw || !ih) return;
+
+    const fw = (frame as any).frameWidth ?? 100;
+    const fh = (frame as any).frameHeight ?? 100;
+    const z = Math.max(1, Math.min(4, zoom));
+    const baseScale = Math.max(fw / iw, fh / ih);
+    const effectiveScale = baseScale * z;
+    const srcW = fw / effectiveScale;
+    const srcH = fh / effectiveScale;
+    const px = Math.max(-1, Math.min(1, panX));
+    const py = Math.max(-1, Math.min(1, panY));
+    const maxPanX = (iw - srcW) / 2;
+    const maxPanY = (ih - srcH) / 2;
+
+    frame.set({
+      width: srcW,
+      height: srcH,
+      cropX: (iw - srcW) / 2 + px * maxPanX,
+      cropY: (ih - srcH) / 2 + py * maxPanY,
+      scaleX: effectiveScale,
+      scaleY: effectiveScale,
+    });
+
+    (frame as any).framePanX = px;
+    (frame as any).framePanY = py;
+    (frame as any).frameZoom = z;
+
+    this.canvas.renderAll();
+  }
+
+  /**
    * Switch a filled photo-frame between cover / contain / fill (PX-091).
    *
    * @param frame - A `customType: 'photo-frame'` `fabric.FabricImage`

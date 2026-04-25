@@ -112,6 +112,64 @@ interface ObjectProps {
             </div>
           </mat-expansion-panel>
 
+          @if (isPhotoFrame() && frameFitMode() === 'cover') {
+            <!-- Photo position & zoom inside a cover-mode photo-frame (PX-094) -->
+            <mat-expansion-panel expanded>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Photo position</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="slider-row">
+                <span>Horizontal</span>
+                <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
+                  <input
+                    matSliderThumb
+                    [ngModel]="framePanX()"
+                    (ngModelChange)="setFrameView('panX', $event)"
+                    data-testid="frame-pan-x"
+                  />
+                </mat-slider>
+                <span class="slider-value">{{ framePanX().toFixed(2) }}</span>
+              </div>
+
+              <div class="slider-row">
+                <span>Vertical</span>
+                <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
+                  <input
+                    matSliderThumb
+                    [ngModel]="framePanY()"
+                    (ngModelChange)="setFrameView('panY', $event)"
+                    data-testid="frame-pan-y"
+                  />
+                </mat-slider>
+                <span class="slider-value">{{ framePanY().toFixed(2) }}</span>
+              </div>
+
+              <div class="slider-row">
+                <span>Zoom</span>
+                <mat-slider min="1" max="4" step="0.05" class="flex-slider">
+                  <input
+                    matSliderThumb
+                    [ngModel]="frameZoom()"
+                    (ngModelChange)="setFrameView('zoom', $event)"
+                    data-testid="frame-zoom"
+                  />
+                </mat-slider>
+                <span class="slider-value">{{ frameZoom().toFixed(2) }}×</span>
+              </div>
+
+              <button
+                mat-button
+                class="frame-reset-btn"
+                data-testid="frame-reset"
+                (click)="resetFrameView()"
+              >
+                <mat-icon>restart_alt</mat-icon>
+                Reset to center
+              </button>
+            </mat-expansion-panel>
+          }
+
           <!-- Fill & Stroke -->
           <mat-expansion-panel expanded>
             <mat-expansion-panel-header>
@@ -706,6 +764,13 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   private readonly _isRect = signal(false);
   private readonly _isLocked = signal(false);
 
+  /** PX-094: photo-frame state mirror for the pan/zoom controls. */
+  readonly isPhotoFrame = signal<boolean>(false);
+  readonly frameFitMode = signal<'cover' | 'contain' | 'fill'>('cover');
+  readonly framePanX = signal<number>(0);
+  readonly framePanY = signal<number>(0);
+  readonly frameZoom = signal<number>(1);
+
   readonly shadowBlur = signal(0);
   readonly shadowOffsetX = signal(5);
   readonly shadowOffsetY = signal(5);
@@ -1293,6 +1358,54 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
       p.lineHeight = textObj.lineHeight ?? 1.16;
     }
 
+    // PX-094 — sync photo-frame pan/zoom signals with the active object.
+    const customType = (obj as any).customType;
+    this.isPhotoFrame.set(customType === 'photo-frame');
+    if (customType === 'photo-frame') {
+      this.frameFitMode.set((obj as any).fitMode ?? 'cover');
+      this.framePanX.set((obj as any).framePanX ?? 0);
+      this.framePanY.set((obj as any).framePanY ?? 0);
+      this.frameZoom.set((obj as any).frameZoom ?? 1);
+    }
+
     this.props.set(p);
+  }
+
+  /**
+   * Apply a single-axis change from the photo-frame pan/zoom sliders
+   * (PX-094). Pulls the other two axes from the local signals so all
+   * three stay in lock-step with the canvas.
+   *
+   * @param axis - Which slider fired the change.
+   * @param value - New slider value.
+   */
+  setFrameView(axis: 'panX' | 'panY' | 'zoom', value: number): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+
+    if (axis === 'panX') this.framePanX.set(value);
+    if (axis === 'panY') this.framePanY.set(value);
+    if (axis === 'zoom') this.frameZoom.set(value);
+
+    this.canvasService.setFrameView(
+      obj,
+      this.framePanX(),
+      this.framePanY(),
+      this.frameZoom(),
+    );
+  }
+
+  /**
+   * Reset photo-frame pan/zoom to the centered cover-mode default.
+   */
+  resetFrameView(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    this.framePanX.set(0);
+    this.framePanY.set(0);
+    this.frameZoom.set(1);
+    this.canvasService.setFrameView(obj, 0, 0, 1);
   }
 }

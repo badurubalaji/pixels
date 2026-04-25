@@ -239,6 +239,18 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
             <mat-icon>delete_outline</mat-icon>
           </button>
 
+          <!-- PX-093: hide/unhide the right properties panel -->
+          <button
+            mat-icon-button
+            class="panels-toggle-btn"
+            [class.active-toggle]="panelsHidden()"
+            [matTooltip]="panelsHidden() ? 'Show properties panel' : 'Hide properties panel'"
+            data-testid="panels-toggle"
+            (click)="panelsHidden.update(v => !v)"
+          >
+            <mat-icon>{{ panelsHidden() ? 'view_sidebar' : 'menu_open' }}</mat-icon>
+          </button>
+
           <span class="topbar-sep"></span>
 
           <button
@@ -393,16 +405,34 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
           </div>
         </app-canvas-rulers>
 
-        <!-- Right Panel: collapses when nothing is selected (Canva-style) -->
-        <div class="right-panel" [class.collapsed]="!hasSelection() && !layersPinned()">
-          @if (hasSelection()) {
+        <!-- Right Panel: collapses when nothing is selected (Canva-style),
+             or when the user explicitly hid it via the topbar toggle (PX-093). -->
+        <div
+          class="right-panel"
+          [class.collapsed]="panelsHidden() || (!hasSelection() && !layersPinned())"
+        >
+          @if (hasSelection() && !panelsHidden()) {
             <app-property-panel />
             <app-image-filters-panel />
           }
-          @if (hasSelection() || layersPinned()) {
+          @if ((hasSelection() || layersPinned()) && !panelsHidden()) {
             <app-layer-panel />
           }
         </div>
+
+        <!-- Properties panel show/hide affordance (PX-093). Visible when
+             collapsed-by-toggle so the user can re-open from the canvas edge. -->
+        @if (panelsHidden()) {
+          <button
+            mat-icon-button
+            class="panels-edge-toggle"
+            matTooltip="Show properties panel"
+            data-testid="panels-edge-toggle"
+            (click)="panelsHidden.set(false)"
+          >
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+        }
 
         <!-- Layers toggle (always visible, lets user pin layers panel open) -->
         <button
@@ -1408,6 +1438,33 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       .save-btn:not(:disabled):hover { transform: none !important; }
     }
 
+    /* PX-093 — properties-panel hide/unhide */
+    .panels-edge-toggle {
+      position: absolute !important;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      z-index: 30;
+      width: 28px !important;
+      height: 56px !important;
+      min-width: 0 !important;
+      padding: 0 !important;
+      border-radius: 8px 0 0 8px !important;
+      background: var(--px-surface, #ffffff) !important;
+      color: var(--px-violet, #7c3aed) !important;
+      border: 1px solid var(--px-line, #e2e8f0) !important;
+      border-right: none !important;
+      box-shadow: -2px 0 8px rgba(15, 23, 42, 0.08);
+    }
+    .panels-edge-toggle:hover {
+      background: rgba(124, 58, 237, 0.08) !important;
+    }
+    .panels-edge-toggle mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
     /* ═══════════════════════════════════════════════════════════════
        PX-076 — editor body retheme
        Same final-selector-wins pattern as PX-068/069/072. Retones
@@ -1490,6 +1547,17 @@ export class Editor implements AfterViewInit, OnDestroy {
   readonly hasSelection = signal(false);
   readonly layersPinned = signal(false);
   readonly pageLocked = signal(false);
+  /**
+   * User-driven hide for the right properties panel (PX-093).
+   *
+   * @remarks
+   * Independent of `hasSelection` — when this is `true` the panel
+   * stays collapsed even if an object is selected. Auto-collapse on
+   * empty selection (the original Canva-style behavior) still works
+   * by default; this signal lets the user reclaim canvas width when
+   * they don't need property edits during a layout pass.
+   */
+  readonly panelsHidden = signal(false);
 
   // Per-page notes (ephemeral; persisted in the `pages` array below)
   readonly currentPageNotes = computed(() => this.pages()[this.activePage()]?.notes ?? '');
