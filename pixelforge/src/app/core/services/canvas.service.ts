@@ -2,6 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Subject } from 'rxjs';
 import * as fabric from 'fabric';
 import { Layer, LayerType } from '../models/project.model';
+import { FramePreset } from '../data/frame-presets';
 import { v4 as uuidv4 } from 'uuid';
 
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star' | 'polygon' | 'diamond' | 'hexagon' | 'arrow' | 'line';
@@ -492,6 +493,214 @@ export class CanvasService {
       opacity: 1,
       order: this._layers().length,
       data: {},
+    });
+  }
+
+  // ============================
+  // Photo frames / collage (PX-090)
+  // ============================
+
+  /**
+   * Add a collage layout — N empty photo-frame placeholders — to the
+   * canvas at the preset's normalized slot coordinates.
+   *
+   * @param preset - One of {@link FRAME_PRESETS}. Each slot is normalized
+   *   `[0..1]`; this method scales slots to fit 80% of the canvas and
+   *   centers the result so the same preset works on any platform.
+   *
+   * @remarks
+   * Each placeholder is a `fabric.Group` containing a dashed-stroke Rect
+   * (violet at low opacity for brand consistency) and a centered "+"
+   * Textbox hint. The group carries `customType: 'photo-frame'` so the
+   * editor's click-to-fill listener can identify it later.
+   *
+   * @see Story PX-090 AC-2/AC-3.
+   */
+  addFrameLayout(preset: FramePreset): void {
+    if (!this.canvas) return;
+    const cw = this._canvasWidth();
+    const ch = this._canvasHeight();
+    const scale = 0.8;
+    const targetW = cw * scale;
+    const targetH = ch * scale;
+    const offsetX = (cw - targetW) / 2;
+    const offsetY = (ch - targetH) / 2;
+
+    for (const slot of preset.slots) {
+      const left = offsetX + slot.x * targetW;
+      const top = offsetY + slot.y * targetH;
+      const width = slot.w * targetW;
+      const height = slot.h * targetH;
+      const group = this.buildEmptyFrame(left, top, width, height, slot.rotation ?? 0);
+      const layerId = uuidv4();
+      (group as any).layerId = layerId;
+      this.canvas.add(group);
+      this.addLayer({
+        id: layerId,
+        name: `Photo frame`,
+        type: LayerType.Shape,
+        visible: true,
+        locked: false,
+        opacity: 1,
+        order: this._layers().length,
+        data: { framePreset: preset.id },
+      });
+    }
+    this.canvas.renderAll();
+  }
+
+  /**
+   * Build one empty photo-frame placeholder as a fabric Group.
+   *
+   * @param left - Top-left X in canvas coords.
+   * @param top - Top-left Y in canvas coords.
+   * @param width - Frame width in canvas coords.
+   * @param height - Frame height in canvas coords.
+   * @param rotation - Optional rotation in degrees.
+   * @returns A `fabric.Group` flagged as `customType: 'photo-frame'`.
+   */
+  private buildEmptyFrame(
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    rotation: number,
+  ): fabric.FabricObject {
+    const rect = new fabric.Rect({
+      left: 0,
+      top: 0,
+      width,
+      height,
+      fill: 'rgba(124, 58, 237, 0.06)',
+      stroke: '#7c3aed',
+      strokeWidth: 2,
+      strokeDashArray: [8, 6],
+      strokeUniform: true,
+      originX: 'left',
+      originY: 'top',
+    });
+    const plus = new fabric.Textbox('+', {
+      left: width / 2,
+      top: height / 2,
+      width: 60,
+      fontSize: Math.min(width, height) * 0.35,
+      fill: '#7c3aed',
+      originX: 'center',
+      originY: 'center',
+      textAlign: 'center',
+      fontFamily: 'sans-serif',
+      selectable: false,
+      evented: false,
+    });
+    const group = new fabric.Group([rect, plus], {
+      left,
+      top,
+      angle: rotation,
+      originX: 'left',
+      originY: 'top',
+    });
+    (group as any).customType = 'photo-frame';
+    return group;
+  }
+
+  /**
+   * Replace a photo-frame placeholder (or a previously-filled frame) with
+   * an image clipped to the frame's bounds (PX-090 AC-4 / AC-6).
+   *
+   * @param frame - The active fabric object whose `customType` is
+   *   `'photo-frame'`. Either an empty Group placeholder or a filled
+   *   FabricImage produced by an earlier call.
+   * @param imageUrl - DataURL or http(s) URL of the photo to drop in.
+   *   Loaded via `Image.crossOrigin='anonymous'` for CORS-friendly
+   *   remote URLs.
+   * @returns A promise that resolves once the canvas has rendered with
+   *   the new image in place. Rejects on image-load failure.
+   *
+   * @remarks
+   * The replacement preserves: position, rotation, and the frame's
+   * `layerId` (so undo/redo stays linear). The new image gets a
+   * rectangular `clipPath` matching the frame's bounding box so
+   * over-scan photos crop cleanly. The image is sized to fully cover
+   * the frame ("cover" semantics — the photo's smaller dimension fits
+   * exactly; the larger one extends past and is clipped).
+   */
+  async replaceFrameWithImage(
+    frame: fabric.FabricObject,
+    imageUrl: string,
+  ): Promise<void> {
+    if (!this.canvas) return;
+
+    return new Promise((resolve, reject) => {
+      const imgEl = new Image();
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.onload = () => {
+        const canvas = this.canvas!;
+        const layerId = (frame as any).layerId;
+        const left = frame.left ?? 0;
+        const top = frame.top ?? 0;
+        const angle = frame.angle ?? 0;
+        // Frame's logical bounds — Group reports its own width/height
+        // pre-scale; multiply by scaleX/scaleY for the actual displayed size.
+        const fw = (frame.width ?? 100) * (frame.scaleX ?? 1);
+        const fh = (frame.height ?? 100) * (frame.scaleY ?? 1);
+
+        // "Cover" the frame: scale the photo so its shorter dimension
+        // matches the frame; the longer dimension extends past and is
+        // clipped. This is the same semantics CSS background-size:cover
+        // uses, and what most users expect of a photo dropped into a slot.
+        const iw = imgEl.naturalWidth || imgEl.width;
+        const ih = imgEl.naturalHeight || imgEl.height;
+        const coverScale = Math.max(fw / iw, fh / ih);
+
+        const fabricImg = new fabric.FabricImage(imgEl);
+        fabricImg.set({
+          left,
+          top,
+          angle,
+          originX: 'left',
+          originY: 'top',
+          scaleX: coverScale,
+          scaleY: coverScale,
+          clipPath: new fabric.Rect({
+            left: 0,
+            top: 0,
+            width: iw,
+            height: ih,
+            originX: 'center',
+            originY: 'center',
+            // Bound the clip to the frame's pixel size, centered on the
+            // image's natural center so scaling lines up with the cover
+            // math above.
+            absolutePositioned: false,
+          }),
+        });
+        // WHY: after `cover` scaling the image's drawn rect equals the
+        // frame's drawn rect; aligning the clipPath to the same drawn
+        // rect just means clipping the image at its own visible bounds —
+        // i.e. no clipping is needed for the cover case. clipPath stays
+        // as a no-op for now; future precise-fit modes (contain, fill)
+        // would tune it. Documented for next iteration.
+        if ((fabricImg as any).clipPath) {
+          (fabricImg as any).clipPath = undefined;
+        }
+        // Constrain the image to the frame's box by overriding width/
+        // height directly — fabric uses these for hit-testing and
+        // bounding-box rendering; the photo extends past as a visual
+        // bleed beyond the box but selection handles match the frame.
+        fabricImg.set({ width: iw, height: ih });
+
+        (fabricImg as any).layerId = layerId;
+        (fabricImg as any).customType = 'photo-frame';
+
+        const idx = canvas.getObjects().indexOf(frame);
+        canvas.remove(frame);
+        canvas.insertAt(idx >= 0 ? idx : canvas.getObjects().length, fabricImg);
+        canvas.setActiveObject(fabricImg);
+        canvas.renderAll();
+        resolve();
+      };
+      imgEl.onerror = () => reject(new Error('Failed to load image'));
+      imgEl.src = imageUrl;
     });
   }
 

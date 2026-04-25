@@ -25,6 +25,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CanvasService, ShapeType } from '../../core/services/canvas.service';
+import { FramePreset } from '../../core/data/frame-presets';
 import { getPlatformPreset } from '../../core/constants/platform-presets';
 import { ProjectService } from '../../core/services/project.service';
 import { ExportService } from '../../core/services/export.service';
@@ -328,6 +329,17 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
           (addText)="addTextWithOptions($event)"
           (uploadImage)="triggerImageUpload()"
           (removeBg)="removeBackground()"
+          (addFrameLayout)="onAddFrameLayout($event)"
+        />
+
+        <!-- PX-090: hidden file input that the click-to-fill listener
+             on photo-frame placeholders triggers programmatically. -->
+        <input
+          #frameImageInput
+          type="file"
+          hidden
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          (change)="onFrameImageFile($event)"
         />
 
         <!-- Canvas Area with Rulers -->
@@ -1464,6 +1476,8 @@ export class Editor implements AfterViewInit, OnDestroy {
   @ViewChild('editorCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('canvasContainer') containerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
+  /** Hidden input wired to the photo-frame click-to-fill flow (PX-090). */
+  @ViewChild('frameImageInput') frameImageInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('contextMenu') contextMenu!: ContextMenuComponent;
   @ViewChild('presentation') presentationRef!: PresentationMode;
 
@@ -1698,6 +1712,24 @@ export class Editor implements AfterViewInit, OnDestroy {
     const height = project?.height ?? 1000;
 
     this.canvasService.initCanvas(this.canvasRef.nativeElement, width, height);
+
+    // PX-090: bind click-to-fill on photo-frame placeholders. Fabric's
+    // mouse:up fires after both clicks and drags; we only filter on
+    // customType === 'photo-frame' so drags on other objects pass.
+    const fabricCanvas = this.canvasService.getCanvas();
+    if (fabricCanvas) {
+      let downAt = 0;
+      fabricCanvas.on('mouse:down', () => {
+        downAt = Date.now();
+      });
+      fabricCanvas.on('mouse:up', (opt: { target?: fabric.FabricObject | null }) => {
+        // WHY: a brief threshold rejects drag-releases — click-to-fill
+        // only fires on a true tap (down + up within ~300ms).
+        if (Date.now() - downAt < 300) {
+          this.maybeOpenFrameFiller(opt.target ?? null);
+        }
+      });
+    }
 
     // Apply ?platform=<type> query param (Story PX-020 AC-5). The `custom`
     // preset has 0x0 sentinel dimensions — it means "user-defined, no
@@ -2020,6 +2052,76 @@ export class Editor implements AfterViewInit, OnDestroy {
    */
   addShape(type: ShapeType): void {
     this.canvasService.addShape(type);
+  }
+
+  /**
+   * Drop a collage layout (N empty photo-frame placeholders) onto the
+   * canvas — wired from the sidebar's Frames panel (PX-090).
+   *
+   * @param preset - The selected {@link FramePreset}.
+   */
+  onAddFrameLayout(preset: FramePreset): void {
+    this.canvasService.addFrameLayout(preset);
+  }
+
+  /**
+   * Tracks the photo-frame placeholder a click-to-fill flow targeted —
+   * set on `mouse:down` over a placeholder, consumed by the file
+   * input's `change` handler when the user picks a photo (PX-090 AC-4).
+   */
+  private framePendingFill: fabric.FabricObject | null = null;
+
+  /**
+   * Handle the hidden file input's change event after a photo-frame
+   * was clicked. Reads the file as a DataURL and delegates to
+   * {@link CanvasService.replaceFrameWithImage}.
+   *
+   * @param event - The DOM `change` event from `<input #frameImageInput>`.
+   */
+  onFrameImageFile(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (input) input.value = '';
+    if (!file || !this.framePendingFill) return;
+
+    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.type)) {
+      this.snackBar.open('Photo must be PNG, JPEG, WebP, or GIF.', 'Dismiss', {
+        duration: 3000,
+      });
+      this.framePendingFill = null;
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const target = this.framePendingFill;
+      this.framePendingFill = null;
+      if (!target) return;
+      void this.canvasService.replaceFrameWithImage(target, dataUrl);
+    };
+    reader.onerror = () => {
+      this.framePendingFill = null;
+      this.snackBar.open('Could not read that photo.', 'Dismiss', {
+        duration: 3000,
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Hook into fabric's `mouse:down` to detect clicks on photo-frame
+   * placeholders / filled frames and route them into the file picker
+   * flow (PX-090 AC-4 / AC-6).
+   *
+   * @param target - The fabric object reported by the canvas event.
+   */
+  private maybeOpenFrameFiller(target: fabric.FabricObject | null): void {
+    if (!target) return;
+    if ((target as any).customType !== 'photo-frame') return;
+    this.framePendingFill = target;
+    this.frameImageInputRef?.nativeElement.click();
   }
 
   /**

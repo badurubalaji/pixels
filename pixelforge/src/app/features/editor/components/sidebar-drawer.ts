@@ -12,6 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSelectModule } from '@angular/material/select';
 import { ShapeType } from '../../../core/services/canvas.service';
+import { FRAME_PRESETS, FramePreset } from '../../../core/data/frame-presets';
 import { TemplateService, LOGO_TEMPLATES, LogoTemplate } from '../../../core/services/template.service';
 import { BRAND_PALETTES } from '../../../core/models/color-palettes';
 import { CanvasService, BackgroundMode } from '../../../core/services/canvas.service';
@@ -216,6 +217,37 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   <mat-icon>horizontal_rule</mat-icon>
                   <span>Line</span>
                 </button>
+              </div>
+
+              <!-- Photo frames / collage (PX-090) -->
+              <div class="section-label">Photo frames</div>
+              <p class="frames-hint">
+                Drop a layout, then click any empty slot to add a photo.
+              </p>
+              <div class="frame-grid" data-testid="frame-presets">
+                @for (preset of framePresets; track preset.id) {
+                  <button
+                    type="button"
+                    class="frame-card"
+                    [attr.data-preset-id]="preset.id"
+                    [matTooltip]="preset.name"
+                    (click)="addFrameLayout.emit(preset)"
+                  >
+                    <span class="frame-preview" aria-hidden="true">
+                      @for (slot of preset.slots; track $index) {
+                        <span
+                          class="frame-slot"
+                          [style.left.%]="slot.x * 100"
+                          [style.top.%]="slot.y * 100"
+                          [style.width.%]="slot.w * 100"
+                          [style.height.%]="slot.h * 100"
+                          [style.transform]="'rotate(' + (slot.rotation || 0) + 'deg)'"
+                        ></span>
+                      }
+                    </span>
+                    <span class="frame-name">{{ preset.name }}</span>
+                  </button>
+                }
               </div>
 
               <!-- Stock Icons -->
@@ -1047,6 +1079,77 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
         opacity: 0.5;
         margin-top: 2px;
       }
+    }
+
+    /* === Frames (PX-090 collage) === */
+    .frames-hint {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      background: rgba(124, 58, 237, 0.06);
+      border: 1px solid rgba(124, 58, 237, 0.18);
+      border-radius: 10px;
+      color: var(--px-ink-soft, #334155);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .frame-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .frame-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease,
+        box-shadow 160ms ease;
+    }
+    .frame-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(124, 58, 237, 0.5);
+      box-shadow: 0 8px 18px -8px rgba(15, 23, 42, 0.18);
+    }
+    .frame-card:focus-visible {
+      outline: 3px solid rgba(124, 58, 237, 0.45);
+      outline-offset: 3px;
+    }
+
+    .frame-preview {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .frame-slot {
+      position: absolute;
+      background: linear-gradient(135deg,
+        rgba(124, 58, 237, 0.55) 0%,
+        rgba(6, 182, 212, 0.55) 100%);
+      border-radius: 3px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+      transform-origin: center;
+    }
+
+    .frame-name {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--px-ink, #0f172a);
+      text-align: center;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .frame-card { transition: none !important; }
+      .frame-card:hover { transform: none !important; }
     }
 
     /* === Shapes === */
@@ -2348,6 +2451,18 @@ export class SidebarDrawerComponent {
   addText = output<{ text: string; fontSize: number; fontWeight: string; fontFamily?: string }>();
   uploadImage = output<void>();
   removeBg = output<void>();
+  /**
+   * Emitted when the user clicks a collage layout preset card. The
+   * editor host listens for this and forwards to
+   * `CanvasService.addFrameLayout`. Output (rather than direct service
+   * call) keeps the sidebar drawer's data dependencies one-way.
+   *
+   * @see Story PX-090 AC-2.
+   */
+  addFrameLayout = output<FramePreset>();
+
+  /** All collage presets — bound to the Frames drawer panel grid. */
+  readonly framePresets = FRAME_PRESETS;
 
   readonly basicShapes: { type: ShapeType; name: string; icon: string }[] = [
     { type: 'rect', name: 'Rectangle', icon: 'rectangle' },
