@@ -881,3 +881,38 @@ Two features landed in a single commit; both were ready in story-spec form going
 - **PX-077 manual** — Browser-driven e2e smoke (still your call).
 - **PX-074** — Email change (held).
 
+## 2026-04-25T15:18:00Z · Sprint-19 close — retrospective
+
+User-flagged in one turn:
+> *"action and toolbar when images selects keep it in single toolbar, that too it should come above the image if above image at top it should come at bottom. in side properties add image replacement in case of frames, when frame selected and do right click the bottom one's are not appearing, according to screen aligh the right click options, in case of frame add replace image option in right click options"*
+
+All three landed in one commit; bounded scope, no spec-deferred work this sprint.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `14a2410` | PX-104 + PX-105 + PX-106 | Removed the floating quick-action-bar component; folded its align/group/lock/duplicate/delete actions into the text-toolbar's common-controls section. Surfaced a prominent "Add photo" / "Replace photo" button at the top of the property-panel's photo-frame section. Right-click context menu now estimates real height from item + divider counts and flips upward when it would overflow the viewport; max-height + scroll added as a small-viewport safety net. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**PX-104 — single toolbar.** Two floating bars were attached to every selection: `<app-quick-action-bar>` (below the object, contained align/group/lock/duplicate/delete) and `<app-text-toolbar>` (above the object, contained formatting). Both fired on `selection:created/updated/cleared` and had their own drag-handle, position-glued listeners, and lock-state read. User flagged it as visually noisy. Resolution: ABSORB the qa-bar's actions into the text-toolbar's common-controls section (right side, after the Position dropdown). The text-toolbar already prefers above-with-below-fallback positioning, which was the "above the image, flip to bottom if too close to top" behavior the user described — no positioning code change needed. Deleted `quick-action-bar.ts` outright (~340 LOC removed from the bundle); removed the import + element from editor.ts; cleaned up the `.qa-bar` entry from the keep-selection allowlist. Net: 357 deletions vs 133 insertions across 6 files.
+
+**PX-105 — prominent frame Replace.** The Replace-photo button existed but was buried at the bottom of the "Photo in frame" expansion-panel — for empty placeholder frames it was below 6+ rows of irrelevant pan/zoom/shape/rotate/tilt sliders. New top-row button rendered ABOVE the expansion panel, full-width gradient, label conditional on `obj instanceof fabric.Group` (empty placeholder → "Add photo" with `add_photo_alternate` icon; filled `FabricImage` → "Replace photo" with `swap_horiz`). Same `pf:request-frame-replace` CustomEvent path — keeps the property-panel decoupled from the editor's hidden file input.
+
+**PX-106 — context menu viewport clamp.** Old logic used hard-coded estimates (`230 vw` width, `400 vh` height). With the frame-selection menu reaching 17+ items (frame actions + clipboard + layer + transform + align + visibility/lock + comment/link/alt-text + image extras for filled frames), the actual height was ~700px — way past the 410px estimate. New math: `items.length * 38 + dividerCount * 9 + 16` for vertical extent, plus a `max-height: calc(100vh - 16px); overflow-y: auto` safety net so very small viewports still scroll instead of clip. The Replace photo + Reset crop & zoom items for `customType === 'photo-frame'` selections were already prepended (PX-100/102) — verified, no schema change needed.
+
+**Why one big commit.** The three stories share the same root cause (toolbar UX surfacing): the user couldn't reach key actions because they were either hidden (qa-bar duplicating delete/duplicate that text-toolbar already had), buried (Replace photo deep in an expansion panel), or clipped (context menu off-screen). Splitting would have produced churn without value — three semantically related fixes shipped together.
+
+**What went well**
+1. Net code DELETION (-224 LOC across the sprint). Removing the qa-bar component cleared duplicate logic for selection-tracking, drag-handle, lock-state read, and document-listener cleanup — code that was unnecessary the moment the text-toolbar absorbed the actions.
+2. The text-toolbar already had the right positioning semantics (above-by-default, below-fallback). Zero positioning math changed; just absorbed buttons.
+3. Pre/post build error count stayed at 3 (pre-existing fabric.getPointer typing issue unrelated to this sprint). My changes added zero new errors.
+4. All 429 unit tests pass.
+
+**What was hard**
+1. The qa-bar had a few tests-side selectors (`.qa-bar` in editor.ts's keep-selection allowlist, `quick-action-bar` references in canvas.service comments). Easy to miss — caught all of them with a final grep scan before commit.
+2. Estimating context-menu height accurately requires knowing item counts + divider distribution. Per-item-type measurement at runtime would be cleaner but adds a layout-thrash; the static estimate is good enough for typical menu compositions and the max-height-scroll fallback covers edge cases.
+
+**Sprint-20 candidates**
+- **PX-077 manual** — Browser-driven e2e smoke (still genuinely needs you driving).
+- **PX-074** — Email change (held — still need transactional-email service pick: SES / SendGrid / Postmark / Resend).
+- Possibly: alignment-snap UX polish, multi-frame selection behavior, layer-panel context-menu parity. Nothing pressing on the photo-frames stack — the feature is now coherent end-to-end (insert from preset, swap shape after creation, add/replace photo, pan/zoom/rotate/tilt, persistence, right-click affordances, single floating toolbar).
+
