@@ -315,6 +315,38 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
         <span class="tb-sep"></span>
 
+        <!-- PX-104: align/group/lock absorbed from the old quick-action-bar
+             so the user only ever sees ONE floating toolbar per selection. -->
+        <button mat-icon-button [matMenuTriggerFor]="alignMenu" matTooltip="Align to page">
+          <mat-icon>format_align_center</mat-icon>
+        </button>
+        <mat-menu #alignMenu="matMenu">
+          <button mat-menu-item (click)="alignTo('left')"><mat-icon>align_horizontal_left</mat-icon>Left</button>
+          <button mat-menu-item (click)="alignTo('center-h')"><mat-icon>align_horizontal_center</mat-icon>Center horizontally</button>
+          <button mat-menu-item (click)="alignTo('right')"><mat-icon>align_horizontal_right</mat-icon>Right</button>
+          <button mat-menu-item (click)="alignTo('top')"><mat-icon>align_vertical_top</mat-icon>Top</button>
+          <button mat-menu-item (click)="alignTo('center-v')"><mat-icon>align_vertical_center</mat-icon>Center vertically</button>
+          <button mat-menu-item (click)="alignTo('bottom')"><mat-icon>align_vertical_bottom</mat-icon>Bottom</button>
+        </mat-menu>
+
+        @if (isMultiSelection()) {
+          <button mat-icon-button matTooltip="Group (Ctrl+G)" (click)="groupSelection()">
+            <mat-icon>group_work</mat-icon>
+          </button>
+        } @else if (isGroup()) {
+          <button mat-icon-button matTooltip="Ungroup (Ctrl+Shift+G)" (click)="ungroupSelection()">
+            <mat-icon>workspaces</mat-icon>
+          </button>
+        }
+
+        <button
+          mat-icon-button
+          [matTooltip]="isLocked() ? 'Unlock' : 'Lock (Alt+Shift+L)'"
+          (click)="toggleLock()"
+        >
+          <mat-icon>{{ isLocked() ? 'lock' : 'lock_open' }}</mat-icon>
+        </button>
+
         <button mat-icon-button (click)="duplicate()" matTooltip="Duplicate (Ctrl+D)">
           <mat-icon>content_copy</mat-icon>
         </button>
@@ -672,6 +704,11 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   // Common state
   readonly opacity = signal(1);
 
+  // PX-104 — absorbed from the old quick-action-bar
+  readonly isMultiSelection = signal(false);
+  readonly isGroup = signal(false);
+  readonly isLocked = signal(false);
+
   readonly fonts = this.fontService.getAllFontFamilies();
   readonly alignIcon = signal('format_align_left');
 
@@ -857,6 +894,11 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     if (customType === 'photo-frame' && (obj as any).fitMode) {
       this.frameFit.set((obj as any).fitMode);
     }
+
+    // PX-104 — drive the new align/group/lock affordances
+    this.isMultiSelection.set(obj instanceof fabric.ActiveSelection);
+    this.isGroup.set(obj instanceof fabric.Group && !(obj instanceof fabric.ActiveSelection));
+    this.isLocked.set(!!(obj as any)?._locked);
 
     if (!obj) {
       this.selectionType.set('none');
@@ -1199,6 +1241,45 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
 
   deleteSelected(): void {
     this.canvasService.removeActiveObject();
+  }
+
+  // ========== PX-104: align / group / lock ==========
+
+  alignTo(direction: 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom'): void {
+    this.canvasService.alignObjects(direction);
+  }
+
+  groupSelection(): void {
+    this.canvasService.groupSelected();
+  }
+
+  ungroupSelection(): void {
+    this.canvasService.ungroupSelected();
+  }
+
+  toggleLock(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    const locked = !(obj as any)._locked;
+    (obj as any)._locked = locked;
+    obj.set({
+      selectable: true,
+      evented: true,
+      lockMovementX: locked,
+      lockMovementY: locked,
+      lockRotation: locked,
+      lockScalingX: locked,
+      lockScalingY: locked,
+      lockSkewingX: locked,
+      lockSkewingY: locked,
+      hasControls: !locked,
+      hasBorders: true,
+      hoverCursor: locked ? 'not-allowed' : 'move',
+    });
+    this.isLocked.set(locked);
+    canvas!.requestRenderAll();
+    this.canvasService.commitChange(obj);
   }
 
   // ========== PRIVATE HELPERS ==========

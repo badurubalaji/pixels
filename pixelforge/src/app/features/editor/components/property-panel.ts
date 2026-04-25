@@ -113,6 +113,21 @@ interface ObjectProps {
           </mat-expansion-panel>
 
           @if (isPhotoFrame()) {
+            <!-- PX-105: prominent top-row Add/Replace button so the action is
+                 visible for ANY frame selection (filled or empty), not buried
+                 inside the expansion panel below. -->
+            <div class="frame-quick-actions">
+              <button
+                mat-flat-button
+                class="frame-replace-btn frame-replace-btn--prominent"
+                data-testid="frame-replace-top"
+                (click)="onReplacePhotoClick()"
+              >
+                <mat-icon>{{ isEmptyPhotoFrame() ? 'add_photo_alternate' : 'swap_horiz' }}</mat-icon>
+                {{ isEmptyPhotoFrame() ? 'Add photo' : 'Replace photo' }}
+              </button>
+            </div>
+
             <!-- Photo in frame — crop / resize / adjust / rotate (PX-094 + PX-095) -->
             <mat-expansion-panel expanded>
               <mat-expansion-panel-header>
@@ -867,6 +882,16 @@ interface ObjectProps {
       color: #ffffff !important;
       border-radius: 10px !important;
     }
+    /* PX-105 — top-row variant; same gradient, no top margin since it sits
+       at the top of the photo-frame section. */
+    .frame-quick-actions {
+      padding: 0 4px 8px;
+    }
+    .frame-replace-btn--prominent {
+      margin-top: 0 !important;
+      height: 40px !important;
+      font-weight: 600 !important;
+    }
 
     /* PX-103 — frame shape selector */
     .frame-shape-row {
@@ -928,6 +953,9 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
 
   /** PX-094: photo-frame state mirror for the pan/zoom controls. */
   readonly isPhotoFrame = signal<boolean>(false);
+  /** True for an empty placeholder frame (no photo loaded yet) — drives the
+   *  "Add photo" vs "Replace photo" button label in PX-105. */
+  readonly isEmptyPhotoFrame = signal<boolean>(false);
   readonly frameFitMode = signal<'cover' | 'contain' | 'fill'>('cover');
   readonly framePanX = signal<number>(0);
   readonly framePanY = signal<number>(0);
@@ -1536,6 +1564,8 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     // PX-094 — sync photo-frame pan/zoom signals with the active object.
     const customType = (obj as any).customType;
     this.isPhotoFrame.set(customType === 'photo-frame');
+    // PX-105: filled frames are FabricImage; empty placeholders are Group.
+    this.isEmptyPhotoFrame.set(customType === 'photo-frame' && obj instanceof fabric.Group);
     if (customType === 'photo-frame') {
       this.frameFitMode.set((obj as any).fitMode ?? 'cover');
       this.framePanX.set((obj as any).framePanX ?? 0);

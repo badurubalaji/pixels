@@ -53,7 +53,6 @@ import { AiDesignService } from '../../core/services/ai-design.service';
 import { QualityScoreService, QualityBreakdown } from '../../core/services/quality-score.service';
 import { OnboardingTour } from './components/onboarding-tour';
 import { AnimationTimeline } from './components/animation-timeline';
-import { QuickActionBar } from './components/quick-action-bar';
 import { ImageFiltersPanelComponent } from './components/image-filters-panel';
 import { ContextMenuComponent } from './components/context-menu';
 import { TextToolbarComponent } from './components/text-toolbar';
@@ -116,7 +115,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     CollabOverlay,
     OnboardingTour,
     AnimationTimeline,
-    QuickActionBar,
     ImageFiltersPanelComponent,
     ContextMenuComponent,
     TextToolbarComponent,
@@ -556,7 +554,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     <app-collab-overlay />
     <app-onboarding-tour />
     <app-animation-timeline />
-    <app-quick-action-bar />
     <app-presentation-mode #presentation [pages]="presentationPages()" />
 
     <!-- Processing Overlay -->
@@ -1888,7 +1885,6 @@ export class Editor implements AfterViewInit, OnDestroy {
       '.canvas-area',
       '.right-panel',
       '.ctx-toolbar',
-      '.qa-bar',
       '.canvas-actions',
       '.editor-topbar',
       '.mat-mdc-menu-panel',
@@ -2365,14 +2361,9 @@ export class Editor implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * When the user clicks the canvas background (outside of any Fabric object
-   * and outside of the <canvas> element itself), deselect the active object so
-   * floating toolbars (text-toolbar, quick-action-bar) hide.
-   */
-  /**
    * When the user clicks the canvas background (outside any fabric object
    * and outside the `<canvas>` element itself), deselect the active object
-   * so floating toolbars hide.
+   * so the floating toolbar hides.
    *
    * @param event - DOM `mousedown` event.
    */

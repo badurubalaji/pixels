@@ -52,6 +52,8 @@ interface MenuItem {
       border-radius: 10px;
       padding: 6px 0;
       min-width: 220px;
+      max-height: calc(100vh - 16px);
+      overflow-y: auto;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
       animation: fadeIn 0.1s ease-out;
     }
@@ -305,13 +307,27 @@ export class ContextMenuComponent {
 
     this.menuItems.set(items);
 
-    // Position menu, keep within viewport
+    // PX-106: estimate menu height from item + divider counts so a long
+    // frame menu (image actions + clipboard + layer + transform + align +
+    // visibility/lock + comment/link/alt-text + image extras → up to 17+
+    // items) doesn't get clipped at the bottom of the viewport.
+    const ITEM_PX = 38;
+    const DIVIDER_PX = 9;
+    const PADDING_PX = 16;
+    const dividerCount = items.filter(it => it.dividerAfter).length;
+    const estHeight = items.length * ITEM_PX + dividerCount * DIVIDER_PX + PADDING_PX;
+
+    const MENU_W = 240;
+    const SAFE = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+
+    // Default origin = the click point. Flip leftward / upward when the
+    // menu would overflow the right or bottom edges.
     let x = event.clientX;
     let y = event.clientY;
-    if (x + 230 > vw) x = vw - 240;
-    if (y + 400 > vh) y = vh - 410;
+    if (x + MENU_W + SAFE > vw) x = Math.max(SAFE, vw - MENU_W - SAFE);
+    if (y + estHeight + SAFE > vh) y = Math.max(SAFE, vh - estHeight - SAFE);
 
     this.posX.set(x);
     this.posY.set(y);
