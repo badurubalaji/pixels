@@ -7,6 +7,12 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
+  /**
+   * Public URL of the user's avatar image, when one has been uploaded
+   * via PX-073. `null` / undefined means no avatar — UI surfaces fall
+   * back to the gradient initials chip.
+   */
+  avatar_url?: string | null;
   created_at: string;
 }
 
@@ -102,9 +108,71 @@ export class AuthService {
     });
   }
 
+  /**
+   * Upload (or replace) the authenticated caller's avatar (PX-073).
+   *
+   * @param file - A `File` from a `<input type="file">` change event.
+   *   Must be `image/png`, `image/jpeg`, or `image/webp`, ≤ 1 MB.
+   *   Anything else 400s server-side.
+   * @returns An `Observable<AuthUser>` resolving with the post-upload
+   *   user record (with `avatar_url` populated). On success, the
+   *   `currentUser` signal + persisted user are refreshed atomically.
+   *
+   * @remarks
+   * Wraps `POST /api/auth/me/avatar` as multipart. The interceptor
+   * attaches the JWT; we do not set `Content-Type` ourselves — the
+   * browser sets the correct multipart boundary automatically.
+   */
+  uploadAvatar(file: File): Observable<AuthUser> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http
+      .post<AuthUser>(`${this.baseUrl}/api/auth/me/avatar`, formData)
+      .pipe(tap(user => this.setUserOnly(user)));
+  }
+
+  /**
+   * Remove the authenticated caller's avatar (PX-073).
+   *
+   * @returns An `Observable<AuthUser>` resolving with the cleared user
+   *   record (`avatar_url=null`). Idempotent — safe to call when no
+   *   avatar is set.
+   */
+  deleteAvatar(): Observable<AuthUser> {
+    return this.http
+      .delete<AuthUser>(`${this.baseUrl}/api/auth/me/avatar`)
+      .pipe(tap(user => this.setUserOnly(user)));
+  }
+
   private setUserOnly(user: AuthUser): void {
     this._currentUser.set(user);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  /**
+   * Resolve a user's avatar URL to a fully-qualified address suitable
+   * for an `<img src>` (PX-073).
+   *
+   * @param user - Any `AuthUser`-shaped record (or null) — typically
+   *   either `currentUser()` or another user pulled from a list.
+   * @returns The absolute URL when the user has an avatar, otherwise
+   *   `null`. Relative `/api/auth/avatar/{id}` URLs from the backend
+   *   are prefixed with `environment.apiUrl` so they resolve against
+   *   the API origin (FE may be on a different port in dev).
+   *
+   * @example
+   * ```html
+   * @if (authService.avatarSrc(user); as src) {
+   *   <img [src]="src" alt="" />
+   * }
+   * ```
+   */
+  avatarSrc(user: { avatar_url?: string | null } | null | undefined): string | null {
+    const url = user?.avatar_url;
+    if (!url) return null;
+    // Already absolute? — keep as-is.
+    if (/^https?:\/\//i.test(url)) return url;
+    return `${this.baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
   private setAuth(response: AuthResponse): void {

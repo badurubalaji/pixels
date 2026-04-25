@@ -60,7 +60,11 @@ import { AuthService, AuthUser } from '../../core/services/auth.service';
         [matMenuTriggerFor]="menu"
         [attr.aria-label]="'Open user menu for ' + (u.name || u.email)"
       >
-        <span class="user-menu__avatar" aria-hidden="true">{{ initials() }}</span>
+        @if (avatarSrc(); as src) {
+          <img class="user-menu__avatar user-menu__avatar--image" [src]="src" alt="" />
+        } @else {
+          <span class="user-menu__avatar" aria-hidden="true">{{ initials() }}</span>
+        }
         <span class="user-menu__identity">
           <span class="user-menu__name">{{ u.name || u.email.split('@')[0] }}</span>
           <span class="user-menu__email">{{ u.email }}</span>
@@ -70,7 +74,15 @@ import { AuthService, AuthUser } from '../../core/services/auth.service';
 
       <mat-menu #menu="matMenu" class="user-menu__panel" xPosition="before">
         <div class="user-menu__panel-head" aria-hidden="true">
-          <span class="user-menu__avatar user-menu__avatar--big">{{ initials() }}</span>
+          @if (avatarSrc(); as src) {
+            <img
+              class="user-menu__avatar user-menu__avatar--big user-menu__avatar--image"
+              [src]="src"
+              alt=""
+            />
+          } @else {
+            <span class="user-menu__avatar user-menu__avatar--big">{{ initials() }}</span>
+          }
           <span class="user-menu__panel-identity">
             <span class="user-menu__name">{{ u.name || u.email.split('@')[0] }}</span>
             <span class="user-menu__email">{{ u.email }}</span>
@@ -155,6 +167,10 @@ import { AuthService, AuthUser } from '../../core/services/auth.service';
         width: 40px;
         height: 40px;
         font-size: 0.95rem;
+      }
+      .user-menu__avatar--image {
+        background: var(--px-page);
+        object-fit: cover;
       }
 
       .user-menu__identity {
@@ -278,6 +294,17 @@ export class UserMenuComponent {
    * computed so the template reads a single signal per render.
    */
   readonly user = computed<AuthUser | null>(() => this.authService.currentUser());
+
+  /**
+   * Resolved absolute URL of the signed-in user's avatar image, or
+   * `null` when none has been uploaded (PX-073).
+   *
+   * @returns Absolute URL or `null`. Drives whether the chip avatar
+   *   renders an `<img>` (uploaded) vs. the gradient initials chip.
+   */
+  readonly avatarSrc = computed<string | null>(() =>
+    this.authService.avatarSrc(this.user()),
+  );
 
   /**
    * Two-letter initials derived from the user's name (or email local-part).

@@ -44,6 +44,10 @@ describe('UserMenuComponent — PX-065', () => {
           useValue: {
             currentUser: currentUserSig,
             logout: logoutSpy,
+            avatarSrc: vi.fn(
+              (u: { avatar_url?: string | null } | null | undefined) =>
+                u?.avatar_url ? `http://localhost:8000${u.avatar_url}` : null,
+            ),
           },
         },
       ],
@@ -100,6 +104,15 @@ describe('UserMenuComponent — PX-065', () => {
       expect(signin).toBeTruthy();
       expect(signin?.getAttribute('aria-label')).toBe('Sign in');
       expect(fixture.nativeElement.querySelector('.user-menu__trigger')).toBeNull();
+    });
+
+    it('renders an <img> avatar in the chip when user.avatar_url is set (PX-073)', async () => {
+      await setup(mkUser({ avatar_url: '/api/auth/avatar/u1?v=1' }));
+      const img = fixture.nativeElement.querySelector<HTMLImageElement>(
+        'img.user-menu__avatar--image',
+      );
+      expect(img).toBeTruthy();
+      expect(img?.src).toContain('/api/auth/avatar/u1');
     });
   });
 

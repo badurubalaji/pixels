@@ -23,6 +23,11 @@ describe('ProfileComponent — PX-065', () => {
   let navigate: ReturnType<typeof vi.fn>;
   let updateMeSpy: ReturnType<typeof vi.fn>;
   let changePasswordSpy: ReturnType<typeof vi.fn>;
+  let uploadAvatarSpy: ReturnType<typeof vi.fn>;
+  let deleteAvatarSpy: ReturnType<typeof vi.fn>;
+  let avatarSrcImpl: (
+    user: { avatar_url?: string | null } | null | undefined,
+  ) => string | null;
 
   const mkUser = (overrides: Partial<AuthUser> = {}): AuthUser => ({
     id: 'u-42',
@@ -37,6 +42,12 @@ describe('ProfileComponent — PX-065', () => {
     logoutSpy = vi.fn();
     updateMeSpy = vi.fn(patch => of(mkUser({ name: patch.name ?? undefined })));
     changePasswordSpy = vi.fn(() => of(undefined));
+    uploadAvatarSpy = vi.fn(() =>
+      of(mkUser({ avatar_url: '/api/auth/avatar/u-42?v=1' })),
+    );
+    deleteAvatarSpy = vi.fn(() => of(mkUser({ avatar_url: null })));
+    avatarSrcImpl = (u): string | null =>
+      u?.avatar_url ? `http://localhost:8000${u.avatar_url}` : null;
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
@@ -50,6 +61,9 @@ describe('ProfileComponent — PX-065', () => {
             logout: logoutSpy,
             updateMe: updateMeSpy,
             changePassword: changePasswordSpy,
+            uploadAvatar: uploadAvatarSpy,
+            deleteAvatar: deleteAvatarSpy,
+            avatarSrc: vi.fn(u => avatarSrcImpl(u)),
           },
         },
       ],
@@ -336,6 +350,111 @@ describe('ProfileComponent — PX-065', () => {
       component.pwdCurrent.set('only-current');
       component.saveChangePwd();
       expect(changePasswordSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('avatar upload (PX-073)', () => {
+    /** Build a `File` that satisfies the size/MIME guards. */
+    const makeFile = (
+      name = 'me.png',
+      type = 'image/png',
+      sizeBytes = 1024,
+    ): File => {
+      const blob = new Blob([new Uint8Array(sizeBytes)], { type });
+      return new File([blob], name, { type });
+    };
+
+    beforeEach(async () => await setup());
+
+    it('renders the gradient initials avatar when user has no avatar_url', () => {
+      const img = fixture.nativeElement.querySelector(
+        'img.profile__avatar--image',
+      );
+      const initialsEl = fixture.nativeElement.querySelector('.profile__avatar');
+      expect(img).toBeNull();
+      expect(initialsEl?.textContent?.trim()).toBe('JB');
+    });
+
+    it('renders an <img> avatar when user.avatar_url is set', async () => {
+      await setup(mkUser({ avatar_url: '/api/auth/avatar/u-42?v=1' }));
+      const img = fixture.nativeElement.querySelector<HTMLImageElement>(
+        'img.profile__avatar--image',
+      );
+      expect(img).toBeTruthy();
+      expect(img?.src).toContain('/api/auth/avatar/u-42');
+    });
+
+    it('rejects an unsupported MIME client-side without calling the service', () => {
+      component.onAvatarFileChange({
+        target: { files: [makeFile('note.txt', 'text/plain')], value: 'note.txt' },
+      } as unknown as Event);
+      expect(component.avatarError()).toBe(
+        'Avatar must be a PNG, JPEG, or WebP image.',
+      );
+      expect(uploadAvatarSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects an oversize file client-side without calling the service', () => {
+      component.onAvatarFileChange({
+        target: {
+          files: [makeFile('big.png', 'image/png', 1_100_000)],
+          value: 'big.png',
+        },
+      } as unknown as Event);
+      expect(component.avatarError()).toBe('Avatar must be 1 MB or smaller.');
+      expect(uploadAvatarSpy).not.toHaveBeenCalled();
+    });
+
+    it('valid file dispatches uploadAvatar and clears uploading state on success', () => {
+      const file = makeFile();
+      component.onAvatarFileChange({
+        target: { files: [file], value: 'me.png' },
+      } as unknown as Event);
+      expect(uploadAvatarSpy).toHaveBeenCalledWith(file);
+      expect(component.uploadingAvatar()).toBe(false);
+      expect(component.avatarError()).toBe('');
+    });
+
+    it('surfaces backend error detail on upload failure', () => {
+      uploadAvatarSpy.mockReturnValueOnce(
+        throwError(() => ({
+          status: 422,
+          error: { detail: 'Image could not be decoded' },
+        })),
+      );
+      component.onAvatarFileChange({
+        target: { files: [makeFile()], value: 'me.png' },
+      } as unknown as Event);
+      expect(component.avatarError()).toBe('Image could not be decoded');
+      expect(component.uploadingAvatar()).toBe(false);
+    });
+
+    it('removeAvatar calls deleteAvatar and clears state on success', async () => {
+      await setup(mkUser({ avatar_url: '/api/auth/avatar/u-42?v=1' }));
+      component.removeAvatar();
+      expect(deleteAvatarSpy).toHaveBeenCalled();
+      expect(component.uploadingAvatar()).toBe(false);
+    });
+
+    it('removeAvatar surfaces error detail on failure', async () => {
+      await setup(mkUser({ avatar_url: '/api/auth/avatar/u-42?v=1' }));
+      deleteAvatarSpy.mockReturnValueOnce(
+        throwError(() => ({ status: 0 })),
+      );
+      component.removeAvatar();
+      expect(component.avatarError()).toBe('Could not remove — please try again.');
+    });
+
+    it('Remove button only renders when an avatar is set', async () => {
+      // No avatar — no Remove button.
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="profile-avatar-remove"]'),
+      ).toBeNull();
+
+      await setup(mkUser({ avatar_url: '/api/auth/avatar/u-42?v=1' }));
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="profile-avatar-remove"]'),
+      ).toBeTruthy();
     });
   });
 });

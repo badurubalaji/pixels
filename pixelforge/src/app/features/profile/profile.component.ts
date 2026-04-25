@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  ViewChild,
   computed,
   inject,
   signal,
@@ -69,7 +71,37 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
       @if (user(); as u) {
         <article class="profile__card">
           <div class="profile__card-head">
-            <span class="profile__avatar" aria-hidden="true">{{ initials() }}</span>
+            <div class="profile__avatar-wrap">
+              @if (avatarSrc(); as src) {
+                <img class="profile__avatar profile__avatar--image" [src]="src" alt="" />
+              } @else {
+                <span class="profile__avatar" aria-hidden="true">{{ initials() }}</span>
+              }
+              @if (uploadingAvatar()) {
+                <span class="profile__avatar-overlay" aria-hidden="true">
+                  <mat-spinner diameter="22"></mat-spinner>
+                </span>
+              }
+              <button
+                type="button"
+                class="profile__avatar-edit"
+                matRipple
+                aria-label="Change profile photo"
+                data-testid="profile-avatar-pick"
+                [disabled]="uploadingAvatar()"
+                (click)="onAvatarPick()"
+              >
+                <mat-icon aria-hidden="true">photo_camera</mat-icon>
+              </button>
+              <input
+                #avatarInput
+                type="file"
+                hidden
+                accept="image/png,image/jpeg,image/webp"
+                data-testid="profile-avatar-input"
+                (change)="onAvatarFileChange($event)"
+              />
+            </div>
             <div class="profile__head-copy">
               <p class="profile__eyebrow">
                 <span class="profile__eyebrow-dot"></span>
@@ -79,6 +111,31 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
                 {{ u.name || u.email.split('@')[0] }}
               </h1>
               <p class="profile__subtitle">{{ u.email }}</p>
+              @if (avatarError(); as err) {
+                <p class="profile__avatar-error" role="alert">{{ err }}</p>
+              }
+              <div class="profile__avatar-actions">
+                <button
+                  type="button"
+                  class="profile__avatar-link"
+                  data-testid="profile-avatar-change"
+                  [disabled]="uploadingAvatar()"
+                  (click)="onAvatarPick()"
+                >
+                  {{ avatarSrc() ? 'Change photo' : 'Upload photo' }}
+                </button>
+                @if (avatarSrc()) {
+                  <button
+                    type="button"
+                    class="profile__avatar-link profile__avatar-link--danger"
+                    data-testid="profile-avatar-remove"
+                    [disabled]="uploadingAvatar()"
+                    (click)="removeAvatar()"
+                  >
+                    Remove
+                  </button>
+                }
+              </div>
             </div>
           </div>
 
@@ -383,6 +440,10 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
         margin-bottom: 32px;
       }
 
+      .profile__avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+      }
       .profile__avatar {
         display: inline-flex;
         align-items: center;
@@ -398,7 +459,88 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28),
           0 6px 20px -8px rgba(124, 58, 237, 0.45);
         flex-shrink: 0;
+        object-fit: cover;
       }
+      .profile__avatar--image {
+        background: var(--px-page);
+      }
+
+      .profile__avatar-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.55);
+        border-radius: 50%;
+      }
+      .profile__avatar-overlay ::ng-deep .mat-mdc-progress-spinner circle {
+        stroke: #ffffff;
+      }
+
+      .profile__avatar-edit {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        color: var(--px-ink-soft);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+        transition: transform 160ms ease, color 160ms ease, border-color 160ms ease;
+      }
+      .profile__avatar-edit:hover:not(:disabled) {
+        color: var(--px-violet);
+        border-color: rgba(124, 58, 237, 0.5);
+        transform: scale(1.06);
+      }
+      .profile__avatar-edit:disabled { opacity: 0.5; cursor: not-allowed; }
+      .profile__avatar-edit:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
+      }
+      .profile__avatar-edit mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      .profile__avatar-error {
+        margin: 8px 0 0;
+        padding: 6px 10px;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        max-width: 360px;
+      }
+
+      .profile__avatar-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 10px;
+      }
+      .profile__avatar-link {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--px-violet);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .profile__avatar-link:hover:not(:disabled) { text-decoration: underline; }
+      .profile__avatar-link:disabled { opacity: 0.5; cursor: not-allowed; }
+      .profile__avatar-link--danger { color: #b91c1c; }
 
       .profile__head-copy {
         min-width: 0;
@@ -1062,5 +1204,113 @@ export class ProfileComponent {
           this.pwdError.set(detail || 'Could not update password — please try again.');
         },
       });
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  //  PX-073 — avatar upload
+  // ────────────────────────────────────────────────────────────────
+
+  /**
+   * Reference to the hidden `<input type="file">` so {@link onAvatarPick}
+   * can trigger the OS file dialog programmatically.
+   */
+  @ViewChild('avatarInput')
+  readonly avatarInput?: ElementRef<HTMLInputElement>;
+
+  /** `true` while a `POST /api/auth/me/avatar` round-trip is in flight. */
+  readonly uploadingAvatar = signal<boolean>(false);
+  /** Inline error displayed under the avatar block (empty = no error). */
+  readonly avatarError = signal<string>('');
+
+  /**
+   * Resolved absolute avatar URL for the signed-in user, or `null` when
+   * none is set.
+   *
+   * @returns Absolute URL or `null`. Drives whether the avatar tile
+   *   renders an `<img>` (uploaded) vs. the gradient initials chip
+   *   (placeholder).
+   */
+  readonly avatarSrc = computed<string | null>(() =>
+    this.authService.avatarSrc(this.user()),
+  );
+
+  /**
+   * Open the OS file picker by clicking the hidden `<input type="file">`.
+   *
+   * @remarks
+   * Same pattern as the dashboard's "Upload" cat-shortcut. We don't
+   * touch the input value — change events fire fresh on every pick so
+   * picking the same file twice still triggers a re-upload.
+   */
+  onAvatarPick(): void {
+    this.avatarError.set('');
+    this.avatarInput?.nativeElement.click();
+  }
+
+  /**
+   * Handle the file picker's change event by uploading the selected
+   * image (PX-073).
+   *
+   * @param event - The DOM `change` event from the hidden file input.
+   *
+   * @remarks
+   * Client-side validation: type must be one of the three allowed
+   * MIMEs; size must be ≤ 1 MB. Both checks fail fast before the
+   * network round-trip; the backend re-validates anyway. After a
+   * successful upload, `currentUser()` is refreshed by the service —
+   * no manual signal write needed here.
+   */
+  onAvatarFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (input) input.value = '';
+    if (!file) return;
+
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      this.avatarError.set('Avatar must be a PNG, JPEG, or WebP image.');
+      return;
+    }
+    if (file.size > 1_048_576) {
+      this.avatarError.set('Avatar must be 1 MB or smaller.');
+      return;
+    }
+
+    this.uploadingAvatar.set(true);
+    this.avatarError.set('');
+
+    this.authService.uploadAvatar(file).subscribe({
+      next: () => {
+        this.uploadingAvatar.set(false);
+      },
+      error: (err: unknown) => {
+        this.uploadingAvatar.set(false);
+        const detail = this.extractErrorDetail(err);
+        this.avatarError.set(detail || 'Could not upload — please try again.');
+      },
+    });
+  }
+
+  /**
+   * Remove the user's avatar via `AuthService.deleteAvatar` (PX-073).
+   *
+   * @remarks
+   * No confirm-prompt — Material guidance is to make destructive UI
+   * undoable rather than gated, but we don't yet have an undo stack
+   * for profile mutations. Worst case the user re-uploads. If users
+   * complain we can add a confirm dialog in a follow-up.
+   */
+  removeAvatar(): void {
+    if (this.uploadingAvatar()) return;
+    this.uploadingAvatar.set(true);
+    this.avatarError.set('');
+    this.authService.deleteAvatar().subscribe({
+      next: () => this.uploadingAvatar.set(false),
+      error: (err: unknown) => {
+        this.uploadingAvatar.set(false);
+        const detail = this.extractErrorDetail(err);
+        this.avatarError.set(detail || 'Could not remove — please try again.');
+      },
+    });
   }
 }

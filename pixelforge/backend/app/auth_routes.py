@@ -1,11 +1,23 @@
 """Authentication endpoints: signup, login, current-user lookup."""
 from __future__ import annotations
 
+import io
+import logging
+import os
 from datetime import datetime, timezone
 from typing import Annotated
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
+from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth import (
@@ -22,7 +34,21 @@ from app.auth import (
 )
 from app.database import get_db
 
+logger = logging.getLogger(__name__)
+
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+# ── Avatar upload (PX-073) ────────────────────────────────────────────
+AVATAR_DIR = os.path.join(os.getenv("UPLOAD_DIR", "uploads"), "avatars")
+AVATAR_MAX_BYTES = 1 * 1024 * 1024  # 1 MB
+AVATAR_ALLOWED_MIMES = {"image/png", "image/jpeg", "image/webp"}
+AVATAR_EXT_BY_MIME = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+}
+os.makedirs(AVATAR_DIR, exist_ok=True)
 
 
 def _user_to_public(doc: dict) -> UserPublic:
@@ -38,6 +64,7 @@ def _user_to_public(doc: dict) -> UserPublic:
         id=str(doc["_id"]),
         email=doc["email"],
         name=doc.get("name"),
+        avatar_url=doc.get("avatar_url"),
         created_at=doc.get("created_at", datetime.now(timezone.utc)),
     )
 
@@ -257,3 +284,165 @@ async def change_password(
         },
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@auth_router.post("/me/avatar", response_model=UserPublic)
+async def upload_avatar(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    file: UploadFile = File(...),
+    current_user: dict = Depends(require_user),
+) -> UserPublic:
+    """Upload (or replace) the authenticated caller's avatar (PX-073).
+
+    Args:
+        db: Async Mongo database handle.
+        file: Multipart upload — ``image/png``, ``image/jpeg``, or
+            ``image/webp``, ≤ 1 MB. Validated by content-type **and**
+            re-parsed via Pillow ``verify()`` for defense-in-depth.
+        current_user: Decoded JWT claims (required).
+
+    Returns:
+        ``UserPublic`` reflecting the post-upload state with the new
+        ``avatar_url`` populated.
+
+    Raises:
+        HTTPException: 400 for unsupported MIME or oversize, 422 for
+            corrupt image content, 404 if the user record was deleted
+            mid-session.
+
+    Example:
+        >>> # POST /api/auth/me/avatar  (multipart)
+        >>> # Authorization: Bearer <jwt>
+        >>> # file=@me.png
+    """
+    if file.content_type not in AVATAR_ALLOWED_MIMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image type: {file.content_type or 'unknown'}",
+        )
+
+    contents = await file.read()
+    if len(contents) > AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Avatar must be 1 MB or smaller")
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Empty upload")
+
+    # WHY: content-type is client-claimed and trivially spoofed. Pillow
+    # verify() actually parses the bitstream and rejects malformed or
+    # truncated images before they reach disk.
+    try:
+        from PIL import Image  # local import — pillow is heavy at import time
+
+        Image.open(io.BytesIO(contents)).verify()
+    except Exception as exc:  # noqa: BLE001 — pillow raises a zoo of exception types
+        raise HTTPException(
+            status_code=422, detail="Image could not be decoded — file may be corrupt"
+        ) from exc
+
+    user_oid = ObjectId(current_user["id"])
+    user_id_str = str(user_oid)
+    ext = AVATAR_EXT_BY_MIME[file.content_type]
+
+    # Single deterministic filename per user — uploading replaces the
+    # previous avatar in-place. Existing files for the same user with a
+    # different extension are stale and must be deleted alongside.
+    for stale_ext in AVATAR_EXT_BY_MIME.values():
+        if stale_ext == ext:
+            continue
+        stale_path = os.path.join(AVATAR_DIR, f"{user_id_str}{stale_ext}")
+        if os.path.exists(stale_path):
+            try:
+                os.remove(stale_path)
+            except OSError as exc:
+                logger.warning("Could not remove stale avatar %s: %s", stale_path, exc)
+
+    target_path = os.path.join(AVATAR_DIR, f"{user_id_str}{ext}")
+    with open(target_path, "wb") as f:
+        f.write(contents)
+
+    # Cache-buster query param so the browser refetches after a replace.
+    avatar_url = f"/api/auth/avatar/{user_id_str}?v={int(datetime.now(timezone.utc).timestamp())}"
+    result = await db.users.find_one_and_update(
+        {"_id": user_oid},
+        {"$set": {"avatar_url": avatar_url, "updated_at": datetime.now(timezone.utc)}},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _user_to_public(result)
+
+
+@auth_router.delete("/me/avatar", response_model=UserPublic)
+async def delete_avatar(
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+) -> UserPublic:
+    """Remove the authenticated caller's avatar (PX-073).
+
+    Args:
+        db: Async Mongo database handle.
+        current_user: Decoded JWT claims (required).
+
+    Returns:
+        ``UserPublic`` with ``avatar_url=None``. Idempotent — calling
+        when no avatar is set still returns the user record unchanged
+        (no 404).
+
+    Raises:
+        HTTPException: 404 if the user record was deleted mid-session.
+
+    @see Story PX-073
+    """
+    user_oid = ObjectId(current_user["id"])
+    user_id_str = str(user_oid)
+
+    for ext in AVATAR_EXT_BY_MIME.values():
+        path = os.path.join(AVATAR_DIR, f"{user_id_str}{ext}")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError as exc:
+                logger.warning("Could not remove avatar %s: %s", path, exc)
+
+    result = await db.users.find_one_and_update(
+        {"_id": user_oid},
+        {"$set": {"avatar_url": None, "updated_at": datetime.now(timezone.utc)}},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _user_to_public(result)
+
+
+@auth_router.get("/avatar/{user_id}")
+async def get_avatar(user_id: str) -> FileResponse:
+    """Serve a user's avatar file by id (PX-073).
+
+    Args:
+        user_id: The user's stringified ``ObjectId``.
+
+    Returns:
+        ``FileResponse`` streaming the avatar with the correct MIME.
+
+    Raises:
+        HTTPException: 404 if no avatar file exists for this id.
+
+    @remarks
+        Public read endpoint — no auth required. Avatars surface in the
+        user-menu chip and on each project's collaborator avatars where
+        the viewer may not yet be authenticated against the same user.
+        Storing only image content (not user PII) keeps this safe.
+    """
+    # Validate user_id format defensively — not strictly needed since
+    # we only look at filenames, but it surfaces a clear 400 on garbage.
+    if not user_id or any(c in user_id for c in "/\\.."):
+        raise HTTPException(status_code=400, detail="Invalid user id")
+
+    for ext in AVATAR_EXT_BY_MIME.values():
+        path = os.path.join(AVATAR_DIR, f"{user_id}{ext}")
+        if os.path.exists(path):
+            mime = next(
+                (m for m, e in AVATAR_EXT_BY_MIME.items() if e == ext), "image/png"
+            )
+            return FileResponse(path, media_type=mime)
+    raise HTTPException(status_code=404, detail="No avatar")
