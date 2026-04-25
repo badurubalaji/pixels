@@ -762,4 +762,29 @@ The allowlist takes the second + third + fourth cases and lets only sidebar-draw
 - **PX-077** — Manual e2e smoke (still your call).
 - **PX-074** — Email change (held).
 
+## 2026-04-25T12:02:00Z · Sprint-15 close — retrospective
+
+User-reported in two parts:
+> *"still unable to replace photo in frames"*
+> *"quick action bar still stays when we delete that image"*
+
+Both shipped together as PX-098. The story-id collision with the queued sprint-14 candidate is intentional — the actual scope absorbed the click-to-fill robustness work the queued PX-098 had earmarked, and added the qa-bar+delete fix on top.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `c15728b` | PX-098 | Two regressions fixed: (1) `CanvasService.removeActiveObject` now explicitly calls `discardActiveObject()` + `canvas.fire('selection:cleared')` after removing the object, so the floating qa-bar and text-toolbar both hide when the user deletes a selection. (2) Click-to-fill on photo-frames switched from a 300ms time threshold to a 6px movement threshold — duration-independent, captures the mousedown-target as a fallback. New "Replace photo" gradient button in the property-panel's "Photo in frame" expansion-panel dispatches a `pf:request-frame-replace` custom event the editor host listens for; this is the guaranteed-working path independent of canvas-click detection. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Why the click threshold change.** The original `Date.now() - downAt < 300` rejected slow taps as "drags." Mouse hardware varies; trackpads with low travel report fast events while pen tablets often have multi-hundred-ms taps. Distance-based detection (`movedSqr < 36` = 6px circle) is duration-agnostic and matches the OS's own click vs. drag heuristic.
+
+**Why the explicit Replace button.** Click-to-fill is a discovery problem: users don't know the canvas surface is clickable to swap photos. A button labeled "Replace photo" inside the property-panel is self-documenting. The CustomEvent dispatch keeps the property-panel decoupled from the editor's hidden file input; the editor binds one document listener instead of forwarding through Angular outputs.
+
+**Why fabric needs the explicit `selection:cleared` fire.** `canvas.remove(obj)` removes the object from the scene but fabric's `_activeObject` reference can persist briefly. The `selection:cleared` event is emitted only on selection-state changes, not on object removal. Without explicitly clearing + firing, listeners that hide UI on deselect (qa-bar's `hide()`, text-toolbar's `selectionType.set('none')`) never run after a programmatic delete. This is a known fabric quirk — worth memorializing as a service-layer rule: **always `discardActiveObject()` before/after `canvas.remove(active)`**.
+
+**Sprint-16 candidates**
+- **PX-096** — Independent in-frame photo rotation (clipPath restructure).
+- **PX-099** — Drag-to-pan inside cover-mode frames (touch/mouse drag updates framePanX/Y directly, complementing the sliders). Less critical now that PX-098 surfaced the explicit Replace button; users can pan via sliders.
+- **PX-077** — Manual e2e smoke (still your call).
+- **PX-074** — Email change (held).
+
 
