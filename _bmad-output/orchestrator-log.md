@@ -848,4 +848,36 @@ Both shipped as PX-102.
 - **PX-077 manual** — Browser-driven e2e smoke.
 - **PX-074** — Email change (held).
 
+## 2026-04-25T14:42:00Z · Sprint-18 close — retrospective
+
+Two features landed in a single commit; both were ready in story-spec form going into the sprint.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `6f5c96a` | PX-103 + PX-096 | Per-frame shape selector (6-button row in the property-panel) that swaps clipPath on filled frames or rebuilds the placeholder Group; in-frame photo rotation via dual-angle bookkeeping (`frame.angle = frameAngle + photoAngle`, clipPath stays at `frameAngle`). |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**PX-103 — change shape after creation.** `setFrameShape(frame, shape)` branches on `customType` state: filled `FabricImage` frames swap `clipPath` in place using the existing `buildFrameShape` kernel; empty-placeholder Groups need a structural rebuild (the placeholder uses a real `Rect`/`Path` child, not a clipPath). Both branches set `frameShape` on the object and persist via `PERSISTED_CUSTOM_PROPS`. The 6-button row in the property-panel is gated on `customType === 'photo-frame'` and reads back the active object's `frameShape` on selection so the active button reflects current state.
+
+**PX-096 — dual-angle bookkeeping pattern.** Avoided the deferred-spec's Group + nested-Image restructure entirely. The trick: a `FabricImage` already has `angle` (the visible rotation) and a separate `clipPath.angle` (the mask's rotation). Treat them as two independent angles by tracking `frameAngle` (clipPath rotation = mask orientation) and `photoAngle` (photo's tilt within the mask) as custom props, then derive `frame.angle = frameAngle + photoAngle` and `clipPath.angle = frameAngle` on every update. The fabric `object:rotating` event listener on the editor host calls `syncFrameAngleAfterRotate` which back-computes `frameAngle = frame.angle - photoAngle`, so dragging the rotation handle still feels normal AND the photo-tilt slider still works against it. The "Photo tilt" slider (-45..45°) lives in the property-panel's frame section, hidden in fill mode (no rotation makes sense when the photo fills the entire frame ignoring crop bounds).
+
+**Why dual-angle beat the Group restructure.** The deferred PX-096 spec called for a Group containing a clipPath rect and an inner Image — restructuring would have rippled through every photo-frame method (cover/contain/fill math, pan/zoom, persistence, click-to-fill detection). Dual-angle keeps the existing FabricImage shape; only adds two custom props and one new event hook. About 80 LOC across canvas.service.ts + editor.ts + property-panel.ts vs. the ~250 LOC the Group restructure would have needed.
+
+**`PERSISTED_CUSTOM_PROPS` paid off again.** Two new props (`frameAngle`, `photoAngle`) added to the allowlist — that's it. The pattern from PX-101 keeps absorbing new frame state with one-liner changes. Memorialize: every new custom prop on a fabric object MUST be added to this list, period.
+
+**What went well**
+1. Solving PX-096 with dual-angle instead of the Group restructure. Saved ~170 LOC and avoided rippling changes across 6+ methods.
+2. The 6-button shape selector reuses `FRAME_SHAPES` constants from the existing PX-102 work — no new shape data, just a new entry point.
+3. graphify ran clean: 1611 nodes, 3009 edges, 89 communities. Stable graph shape after 3 sprints of frame-feature additions.
+
+**What was hard**
+1. Empty-placeholder shape changes need a Group rebuild; filled frames just swap clipPath. Two branches in `setFrameShape` is unavoidable — the placeholder's outline is a child object, not a mask. Documented in the method's two-branch shape so future refactors don't miss it.
+2. Right-click menu options were going off-screen for frames near the bottom of the canvas (user-flagged in the next turn). Sprint-19 work — see candidates below.
+
+**Sprint-19 candidates** (queued from user request mid-sprint-18)
+- **PX-104** — Single-toolbar consolidation: merge floating qa-bar + ctx-toolbar into one top-aligned toolbar that flips below the image when too close to the canvas top. Resolves the "two toolbars stacked at the same time" UX.
+- **PX-105** — Replace-image button always visible in the property-panel's frame section (currently only inside the "Photo in frame" expansion-panel — user wants it surfaced when ANY frame is selected, including empty placeholders).
+- **PX-106** — Right-click menu screen-clamp: detect when context menu would clip below the viewport, flip its origin upward. Add Replace photo to the right-click menu unconditionally for frames (fix for "in case of frame add replace image option in right click options").
+- **PX-077 manual** — Browser-driven e2e smoke (still your call).
+- **PX-074** — Email change (held).
 
