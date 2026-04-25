@@ -953,3 +953,38 @@ User-flagged at the top of the sprint:
 - **PX-074** — Email change (held — still need transactional-email service pick: SES / SendGrid / Postmark / Resend).
 - Possibly: snap to layer-panel "groups" boundaries, multi-object alignment-while-dragging (currently only single-object drag triggers `handleObjectMoving`), or alignment-toolbar polish in the property-panel.
 
+## 2026-04-25T15:48:00Z · Sprint-21 close — retrospective
+
+User flagged a Canva reference for crop-in-frame UX:
+> *"the crop in frame how we can do that can be checked in canva1.png"*
+
+Two options offered (lean aspect-ratio chips vs full modal-mode crop). User picked the lean version → shipped as PX-108.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `812541f` | PX-108 | Canva-style aspect-ratio chips (Freeform / 1:1 / 4:3 / 16:9 / 3:4 / 9:16) at the top of the "Photo in frame" property-panel section. Clicking a ratio reshapes the frame keeping the geometric center fixed, then refits the photo to the new bounds. Both filled `FabricImage` frames (in-place clipPath rebuild + applyFrameFit) and empty `Group` placeholders (rebuild via `buildEmptyFrame`) handled. New `CanvasService.setFrameAspectRatio(frame, ratio)` is the join point. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The 70/20 trade-off worked.** Full Canva-style modal-mode crop would have meant: a separate component, mode enter/exit, commit/revert state machine, undo-stack interaction, and a left-panel switcheroo to mirror Canva's pattern. The leaner version: one service method, six chip buttons, signal-bound active state. ~150 LOC vs ~600 LOC. The trade-off the user accepted: chips are always visible (vs Canva's transient mode), and "Apply / Cancel" is implicit (every chip click is a committed change). Designers used to Photoshop or Figma sliders won't notice; Canva-natives might miss the "modal feels like a focused tool" framing — easy to layer the modal pattern on top later if needed.
+
+**Why "longer-axis" sizing.** Two reasonable choices: keep area constant (`newW * newH = oldW * oldH`, golden-ratio-style) or keep the longer axis fixed. Picked longer-axis because:
+- Predictable for users — "I had a 200px-wide square, switching to 16:9 keeps it 200px wide, drops the height to ~112". Area-constant would move BOTH dims, feels like a magic shrink.
+- Avoids tiny slots — going from 1:1 → 16:9 area-constant on a 100×100 box would give a 133×75, fine. Going 1:1 → 9:16 gives 75×133, also fine. But going 4:3 → 9:16 shrinks meaningfully. Longer-axis keeps the slot at "hero" size.
+
+**Why every chip click commits.** Considered an explicit "Apply" button. Rejected because: (1) the existing pan-X / zoom / rotate sliders all commit immediately, so a chip-only "Apply" would be inconsistent; (2) Ctrl+Z already covers "I changed my mind"; (3) the canvas updates instantly on chip click, which the user can read as the visual confirmation. If we add a full crop modal later, that gets the explicit Apply.
+
+**What went well**
+1. Reused all the existing photo-frame plumbing — `buildFrameShape`, `buildEmptyFrame`, `applyFrameFit`, `PERSISTED_CUSTOM_PROPS`. The new method is mostly geometry math + a fork on `instanceof FabricImage` vs `Group`.
+2. The chip pattern (rounded pill with active gradient) re-uses the visual language from PX-103's shape selector. Visual consistency without copying the icons-only pattern (text labels are right for ratio chips).
+3. Build clean (still 0 errors after PX-107 fixed the fabric `getPointer` ones), all 429 tests pass, graphify came in at 1577 / 3058 / 79 — small growth as expected.
+
+**What was hard**
+1. The "Original" chip is missing — would map to the photo's natural aspect, but only meaningful for filled frames AND requires reading `imgEl.naturalWidth/Height`. Skipped to keep scope bounded; the 1:1 / 4:3 / 16:9 / 3:4 / 9:16 set covers most photo-aspect intents. If user requests it, ~30 LOC addition.
+2. Empty `Group` placeholders rebuild as a NEW Group (per the existing `setFrameShape` pattern) — the active-object reference changes after the call. Re-read from `canvas.getActiveObject()` before reading customProps. Already a documented pattern from PX-103.
+
+**Sprint-22 candidates**
+- **PX-077 manual** — Browser-driven e2e smoke (still your call).
+- **PX-074** — Email change (held — pick transactional-email service).
+- **Original-aspect chip + Smart Crop placeholder** — round out the chip set if the user wants Canva parity.
+- **Crop modal-mode (full)** — convert the always-visible sliders into a transient "Crop" tool launched from the toolbar, matching Canva's left-panel pattern.
+
