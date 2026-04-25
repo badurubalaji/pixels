@@ -511,4 +511,28 @@ Sprint-5 was a single-story sprint focused on the avatar feature.
 
 Sprint-6 starts with **PX-076**.
 
+## 2026-04-25T09:55:00Z · Sprint-6 close — retrospective
+
+Single-story sprint to land the editor body retheme.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `715d664` | PX-076 | /editor body — canvas workspace #09090b → #f1f5f9 with subtle dotted grid (Canva-style soft neutral); right panel + page bar + canvas-actions toolbar + floating layers-toggle all retoned to the light/violet palette via override block. Zero behavior / template / class-body changes. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**What went well**
+1. The override-block pattern hit its sweet spot here. Editor body styles are thousands of lines deep and intertwined with fabric.js; appending ~70 lines of selector-wins CSS at the end retoned five distinct surfaces without touching one structural rule.
+2. Six redesigned routes now look like one product (`/auth`, `/hub`, `/gallery/:type`, `/profile`, `/dashboard`, `/editor/:id`) — same gradient orbs + dotted grid + violet/cyan accents + gradient primary CTAs + slate-soft typography.
+
+**What was hard**
+1. Tempted to redesign property-panel + layer-panel internals while in the area but held the line — they're separate components with their own templates and stylesheets, and the right scope for those is their own pass (PX-079 if requested). Sprint scope discipline.
+
+**Sprint-7 candidates (priority order)**
+- **PX-077** — End-to-end browser smoke test of the full redesigned flow: signup → upload avatar → set display name → pick a gallery template → land in editor → verify Brand-Kit auto-apply toast → save → return to /hub. Documents what works, surfaces any visual regression introduced across PX-060…PX-076.
+- **PX-074** — Email change with verification (held; needs transactional email choice).
+- **PX-079** — Property-panel + layer-panel internal retheme (companion to PX-076 outer chrome).
+- **PX-080** — Editor toolbar internals (text toolbar, alignment panel, etc.) — same scope-discipline split from PX-072/076.
+
+The user's standing rhythm rule is to keep sprints continuous; sprint-7 will start with **PX-077** unless redirected.
+
 
