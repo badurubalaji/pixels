@@ -18,7 +18,7 @@
 - [[_COMMUNITY_Community 5|Community 5]]
 - [[_COMMUNITY_ApiService|ApiService]]
 - [[_COMMUNITY_Auth Core + Profile (PX-071073075)|Auth Core + Profile (PX-071/073/075)]]
-- [[_COMMUNITY_Editor (PX-072 chrome + PX-076 body)|Editor (PX-072 chrome + PX-076 body)]]
+- [[_COMMUNITY_Editor (PX-072076)|Editor (PX-072/076)]]
 - [[_COMMUNITY_AI Background Service|AI Background Service]]
 - [[_COMMUNITY_Database + FastAPI Bootstrap|Database + FastAPI Bootstrap]]
 - [[_COMMUNITY_Community 11|Community 11]]
@@ -124,7 +124,7 @@ Nodes (18): ActiveSelection, Canvas, Circle, EventEmitter, FabricImage, FabricOb
 Cohesion: 0.06
 Nodes (6): AccessibilityService, FontService, QualityScoreService, StyleVariationsService, TemplateService, ThemeService
 
-### Community 8 - "Editor (PX-072 chrome + PX-076 body)"
+### Community 8 - "Editor (PX-072/076)"
 Cohesion: 0.05
 Nodes (2): Editor, ToolbarPanelComponent
 
@@ -315,7 +315,7 @@ Nodes (1): Require ``thumbnail_data_url`` to start with ``data:image/``.        
 ## Knowledge Gaps
 - **219 isolated node(s):** `Brand kit API: per-user saved colors, fonts, and logos.`, `Comments API: per-project annotation threads with replies.`, `ng serve (dev server)`, `ng generate (scaffolding)`, `ng build` (+214 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Editor (PX-072 chrome + PX-076 body)`** (60 nodes): `.getProject()`, `.publishTemplate()`, `.handleMessage()`, `.openProject()`, `Editor`, `.addPage()`, `.addShape()`, `.addTextWithOptions()`, `.cancelNameEdit()`, `.dataURLToBlob()`, `.deletePage()`, `.deletePageAt()`, `.deleteSelected()`, `.duplicateCurrentPage()`, `.duplicatePage()`, `.duplicatePageAt()`, `.fileNew()`, `.fitToScreen()`, `.formatTimer()`, `.goBack()`, `.handleSystemPaste()`, `.initPages()`, `.loadImageFile()`, `.maybeShowBrandKitToast()`, `.ngAfterViewInit()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onImageUpload()`, `.onKeyDown()`, `.onMouseWheel()`, `.openAuditDialog()`, `.openExportDialog()`, `.openResizeDialog()`, `.openShareDialog()`, `.openShortcutsDialog()`, `.openVersionsDialog()`, `.publishAsTemplate()`, `.redo()`, `.saveCurrentPageState()`, `.saveProject()`, `.setZoomPct()`, `.startNameEdit()`, `.startPresentation()`, `.switchToPage()`, `.toggleThirds()`, `.toggleTimer()`, `.triggerImageUpload()`, `.undo()`, `.updatePageNotes()`, `.zoomIn()`, `.zoomOut()`, `.setZoom()`, `.loadFromJSON()`, `.getCanvasState()`, `.openProject()`, `toolbar-panel.ts`, `editor.ts`, `ToolbarPanelComponent`, `.applyTemplate()`
+- **Thin community `Editor (PX-072/076)`** (60 nodes): `.getProject()`, `.publishTemplate()`, `.handleMessage()`, `.openProject()`, `Editor`, `.addPage()`, `.addShape()`, `.addTextWithOptions()`, `.cancelNameEdit()`, `.dataURLToBlob()`, `.deletePage()`, `.deletePageAt()`, `.deleteSelected()`, `.duplicateCurrentPage()`, `.duplicatePage()`, `.duplicatePageAt()`, `.fileNew()`, `.fitToScreen()`, `.formatTimer()`, `.goBack()`, `.handleSystemPaste()`, `.initPages()`, `.loadImageFile()`, `.maybeShowBrandKitToast()`, `.ngAfterViewInit()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onImageUpload()`, `.onKeyDown()`, `.onMouseWheel()`, `.openAuditDialog()`, `.openExportDialog()`, `.openResizeDialog()`, `.openShareDialog()`, `.openShortcutsDialog()`, `.openVersionsDialog()`, `.publishAsTemplate()`, `.redo()`, `.saveCurrentPageState()`, `.saveProject()`, `.setZoomPct()`, `.startNameEdit()`, `.startPresentation()`, `.switchToPage()`, `.toggleThirds()`, `.toggleTimer()`, `.triggerImageUpload()`, `.undo()`, `.updatePageNotes()`, `.zoomIn()`, `.zoomOut()`, `.setZoom()`, `.loadFromJSON()`, `.getCanvasState()`, `.openProject()`, `toolbar-panel.ts`, `editor.ts`, `ToolbarPanelComponent`, `.applyTemplate()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Font Service`** (39 nodes): `.createProject()`, `.getPublicTemplate()`, `.listPublicTemplates()`, `Dashboard`, `.clearTemplateFilters()`, `.constructor()`, `.createFromCategory()`, `.createFromPreset()`, `.createFromTemplate()`, `.deleteProject()`, `.duplicateProject()`, `.emptyTrash()`, `.filterByTag()`, `.formatDate()`, `.formatRelativeTime()`, `.generateAiDesign()`, `.getPresetIcon()`, `.goToLogin()`, `.goToTab()`, `.loadGallery()`, `.logout()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onGalleryClick()`, `.onGallerySearch()`, `.onHomeUpload()`, `.openNewProjectDialog()`, `.restoreProject()`, `.setGalleryCategory()`, `.triggerHomeUpload()`, `.useGalleryTemplate()`, `.useSuggestion()`, `.fileMakeCopy()`, `.onSignOut()`, `dashboard.ts`, `user-menu.component.ts`, `UserMenuComponent`, `.onSignOut()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.

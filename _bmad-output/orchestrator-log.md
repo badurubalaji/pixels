@@ -535,4 +535,22 @@ Single-story sprint to land the editor body retheme.
 
 The user's standing rhythm rule is to keep sprints continuous; sprint-7 will start with **PX-077** unless redirected.
 
+## 2026-04-25T10:00:00Z · Sprint-7 close — retrospective
+
+PX-077 (manual e2e smoke) is human-in-the-loop, so sprint-7 reframed around the editor-panel theming concern.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `5ed5e4a` | PX-079 | Default theme → light. ThemeService.loadTheme() inverts the system-pref fallback (returns 'light' unless `prefers-color-scheme: dark`). styles.scss collapses body's default to the light palette so first paint matches the redesigned routes (no flash-of-dark on cold load). body.theme-dark resets the Material variables to `initial` so the toggle still flips both directions. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Why this beat the original PX-079 plan.** I had queued "property/layer panel internal retheme" as PX-079, but the panels use `var(--mat-sys-surface-container)` — Material tokens that already adapt to theme. The actual problem was the body defaulting to dark, which made every panel inherit the dark palette. Flipping the default lit up every Material-themed surface in one ~30-line change instead of N component-by-component edits. Bigger leverage, smaller diff.
+
+**Carry forward to sprint-8**
+- **PX-077** — Manual e2e smoke (still human-in-the-loop; the user is the natural driver here).
+- **PX-080** — Editor toolbar internals (text toolbar, alignment panel, etc.) if any still look out of place after PX-079's theme flip.
+- **PX-074** — Email change (held).
+
+If sprint-7 is the right pause point — six routes redesigned, full auth profile flow, theme defaulting to light, graphify fresh, all on origin/main — then sprint-8 is the natural moment for a real-world smoke test. The user's eyes on the running app would catch any leftover dark surfaces in surfaces I didn't reach.
+
 
