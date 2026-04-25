@@ -649,4 +649,48 @@ User asked: *"add photo frames for collage photos to add. Please check that stor
 - **PX-077** — Manual e2e smoke (still pending; PX-090 + PX-084 + PX-082 + PX-079 stack would all benefit from a real walkthrough).
 - **PX-085** — Sweep for other CLI residue (if any remains).
 
+## 2026-04-25T11:20:00Z · Sprint-12 close — retrospective
+
+Mixed sprint: planned PX-091 polish, hit a user-reported bug mid-sprint, plus closure on PX-085 and an automated proxy for PX-077.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `f0f22d5` | PX-091 | Photo-frame fit modes (cover / contain / fill) + the AC-7 close on drawn bounds. Real cropX/cropY math so the FabricImage's drawn rect equals the frame's box — no more visual bleed. New text-toolbar button-toggle group surfaces only when the active object is a `customType: 'photo-frame'`. State persisted on the image (`frameWidth`, `frameHeight`, `fitMode`) so toggle is lossless. |
+| `e1c58b4` | PX-092 | Editor canvas scroll fix. User reported "unable to scroll the editor canvas". Root cause: `.canvas-area` had `flex: 1 + overflow: auto`, but its parent `.rulers-content` was a plain block element — `flex: 1` was effectively dead, canvas-area sized to its content (canvas-stack), no overflow situation existed. Fixed by making canvas-rulers' `:host` / `.rulers-container` / `.rulers-content` a continuous flex column, and adding `min-height: 0` + explicit `width/height: 100%` to `.canvas-area`. The classic flex+overflow gotcha. |
+| `8ef0c25` | PX-085 (closure) | Sweep confirmed clean. The earlier `app.html` placeholder removed in PX-084 was actually **dead code** — nothing referenced it (the App component uses an inline template). The 342-line CLI residue was real but inert; deleting it was a hygiene win, not a bug fix. Other suspects audited: `app.scss` empty (✓), `app.spec.ts` already meaningful (✓), `index.html` already branded (✓). No further residue found. Worth correcting the earlier PX-084 retro's claim that it fixed the editor scroll — the actual fix is PX-092. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**PX-077 — automated API smoke (proxy for the human-driven version)**
+
+Ran an 11-step end-to-end smoke against the live backend stack via curl + jq:
+
+```
+1) signup → smoke<ts>@pixels.dev   ✓ token len=221
+2) GET /auth/me                    ✓ email round-trip
+3) PATCH /auth/me name             ✓ name='Smoke Test User'
+4) GET /v1/templates               ✓ 20 templates
+5) GET /projects                   ✓ 0 (new user, expected)
+6) POST /projects (blank)          ✓ id=69ec586bf...
+7) Avatar upload (1px PNG)         ✓ avatar_url=/api/auth/avatar/...?v=...
+8) GET avatar bytes                ✓ served 70 bytes
+9) Change password                 ✓ rotated
+10) Login with new password        ✓ new token works
+11) DELETE avatar                  ✓ avatar_url=null
+```
+
+All 11 green. Confirms the auth + projects + templates + avatar API surface is healthy end-to-end. Does NOT replace browser-smoke (canvas rendering, drag interactions, sidebar drawer behavior) — those still need the user driving in front of the running app.
+
+**What went well**
+1. PX-091's `cropX/cropY` route avoided the `clipPath` rabbit hole entirely. Setting source-region dims on the FabricImage was cleaner than wrestling with rotated clipPaths and produced correct hit-testing as a bonus.
+2. PX-092 was a 30-second diagnosis (flex without flex parent → flex:1 dead) and a 6-line fix. The flex-min-0 incantation should be a sprint-0 lint somewhere.
+
+**What was hard**
+1. PX-084 attribution. I'd attributed the earlier "page-bar invisible" bug to the Angular CLI placeholder in `app.html`. Turns out nothing referenced that file. The user's original report — page-bar not visible — was almost certainly the same `flex: 1` deadness as PX-092 just shipped. Worth the correction.
+2. PX-077 limit. The browser-driven smoke is the one I genuinely can't run autonomously. The API smoke is the closest practical proxy.
+
+**Sprint-13 candidates** (next 2 user-flagged):
+- **PX-093** — properties sidebar hide/unhide toggle. Already half-built — `app-property-panel` lives inside `.right-panel { width: 280px; transition: width }` with a `&.collapsed { width: 0 }` style, and there's a `layersPinned()` signal nearby. Wiring a top-of-panel collapse button + a peek-back-from-edge affordance.
+- **PX-094** — in-frame photo manipulation: pan / zoom / rotate the photo *within* a frame (not just the frame in the canvas). PX-090 + PX-091 cover the frame's bounding box; PX-094 lets the user choose **which part** of an over-scan photo shows in cover mode (drag to pan; scroll/pinch to zoom).
+- **PX-074** — Email change. Held; needs your pick on a transactional email service (SES / SendGrid / Postmark / Resend).
+
 
