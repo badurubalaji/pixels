@@ -445,6 +445,116 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
       '</g>',
     ),
   },
+  // PX-130 — additional continuous-pattern borders (Google ref: "mandala art border")
+  {
+    name: 'Mandala border — lotus chain',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="20" x2="100" y2="20" stroke="#7c2d12" stroke-width="1"/>' +
+      '<line x1="0" y1="80" x2="100" y2="80" stroke="#7c2d12" stroke-width="1"/>' +
+      '<g fill="#9333ea">' +
+      // 5 lotus blooms in a row
+      '<g transform="translate(10 50)"><ellipse rx="3" ry="14" transform="rotate(-30)"/><ellipse rx="3" ry="14"/><ellipse rx="3" ry="14" transform="rotate(30)"/></g>' +
+      '<g transform="translate(30 50)"><ellipse rx="3" ry="14" transform="rotate(-30)"/><ellipse rx="3" ry="14"/><ellipse rx="3" ry="14" transform="rotate(30)"/></g>' +
+      '<g transform="translate(50 50)"><ellipse rx="3" ry="14" transform="rotate(-30)"/><ellipse rx="3" ry="14"/><ellipse rx="3" ry="14" transform="rotate(30)"/></g>' +
+      '<g transform="translate(70 50)"><ellipse rx="3" ry="14" transform="rotate(-30)"/><ellipse rx="3" ry="14"/><ellipse rx="3" ry="14" transform="rotate(30)"/></g>' +
+      '<g transform="translate(90 50)"><ellipse rx="3" ry="14" transform="rotate(-30)"/><ellipse rx="3" ry="14"/><ellipse rx="3" ry="14" transform="rotate(30)"/></g>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="10" cy="50" r="3"/>' +
+      '<circle cx="30" cy="50" r="3"/>' +
+      '<circle cx="50" cy="50" r="3"/>' +
+      '<circle cx="70" cy="50" r="3"/>' +
+      '<circle cx="90" cy="50" r="3"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mandala border — arch repeat',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="80" x2="100" y2="80" stroke="#7c2d12" stroke-width="1.5"/>' +
+      '<g fill="none" stroke="#dc2626" stroke-width="1.5">' +
+      // Continuous archways
+      '<path d="M0 80 Q 10 30 20 80"/>' +
+      '<path d="M20 80 Q 30 30 40 80"/>' +
+      '<path d="M40 80 Q 50 30 60 80"/>' +
+      '<path d="M60 80 Q 70 30 80 80"/>' +
+      '<path d="M80 80 Q 90 30 100 80"/>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="10" cy="32" r="3"/>' +
+      '<circle cx="30" cy="32" r="3"/>' +
+      '<circle cx="50" cy="32" r="3"/>' +
+      '<circle cx="70" cy="32" r="3"/>' +
+      '<circle cx="90" cy="32" r="3"/>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="10" cy="32" r="1.2"/>' +
+      '<circle cx="30" cy="32" r="1.2"/>' +
+      '<circle cx="50" cy="32" r="1.2"/>' +
+      '<circle cx="70" cy="32" r="1.2"/>' +
+      '<circle cx="90" cy="32" r="1.2"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mandala border — dot lattice',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="25" x2="100" y2="25" stroke="#9333ea" stroke-width="0.8"/>' +
+      '<line x1="0" y1="75" x2="100" y2="75" stroke="#9333ea" stroke-width="0.8"/>' +
+      '<g fill="#9333ea">' +
+      // Top dot row
+      '<circle cx="5" cy="25" r="1.5"/><circle cx="15" cy="25" r="1.5"/><circle cx="25" cy="25" r="1.5"/>' +
+      '<circle cx="35" cy="25" r="1.5"/><circle cx="45" cy="25" r="1.5"/><circle cx="55" cy="25" r="1.5"/>' +
+      '<circle cx="65" cy="25" r="1.5"/><circle cx="75" cy="25" r="1.5"/><circle cx="85" cy="25" r="1.5"/>' +
+      '<circle cx="95" cy="25" r="1.5"/>' +
+      // Bottom dot row
+      '<circle cx="5" cy="75" r="1.5"/><circle cx="15" cy="75" r="1.5"/><circle cx="25" cy="75" r="1.5"/>' +
+      '<circle cx="35" cy="75" r="1.5"/><circle cx="45" cy="75" r="1.5"/><circle cx="55" cy="75" r="1.5"/>' +
+      '<circle cx="65" cy="75" r="1.5"/><circle cx="75" cy="75" r="1.5"/><circle cx="85" cy="75" r="1.5"/>' +
+      '<circle cx="95" cy="75" r="1.5"/>' +
+      '</g>' +
+      // 5 mandala-style flowers in the middle band
+      '<g fill="#a855f7">' +
+      '<g transform="translate(10 50)"><circle r="6"/><circle r="6" cy="-6" fill="#fbbf24"/></g>' +
+      '<g transform="translate(30 50)"><circle r="6"/><circle r="6" cy="-6" fill="#fbbf24"/></g>' +
+      '<g transform="translate(50 50)"><circle r="6"/><circle r="6" cy="-6" fill="#fbbf24"/></g>' +
+      '<g transform="translate(70 50)"><circle r="6"/><circle r="6" cy="-6" fill="#fbbf24"/></g>' +
+      '<g transform="translate(90 50)"><circle r="6"/><circle r="6" cy="-6" fill="#fbbf24"/></g>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="10" cy="50" r="2"/>' +
+      '<circle cx="30" cy="50" r="2"/>' +
+      '<circle cx="50" cy="50" r="2"/>' +
+      '<circle cx="70" cy="50" r="2"/>' +
+      '<circle cx="90" cy="50" r="2"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mandala border — wave + dots',
+    category: 'mandala-border',
+    svg: wrap(
+      '<path d="M0 50 Q 6.25 30 12.5 50 Q 18.75 70 25 50 Q 31.25 30 37.5 50 Q 43.75 70 50 50 ' +
+      'Q 56.25 30 62.5 50 Q 68.75 70 75 50 Q 81.25 30 87.5 50 Q 93.75 70 100 50" ' +
+      'fill="none" stroke="#9a3412" stroke-width="1.5"/>' +
+      '<path d="M0 50 Q 6.25 70 12.5 50 Q 18.75 30 25 50 Q 31.25 70 37.5 50 Q 43.75 30 50 50 ' +
+      'Q 56.25 70 62.5 50 Q 68.75 30 75 50 Q 81.25 70 87.5 50 Q 93.75 30 100 50" ' +
+      'fill="none" stroke="#dc2626" stroke-width="1.5"/>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="6.25" cy="30" r="1.8"/>' +
+      '<circle cx="18.75" cy="70" r="1.8"/>' +
+      '<circle cx="31.25" cy="30" r="1.8"/>' +
+      '<circle cx="43.75" cy="70" r="1.8"/>' +
+      '<circle cx="56.25" cy="30" r="1.8"/>' +
+      '<circle cx="68.75" cy="70" r="1.8"/>' +
+      '<circle cx="81.25" cy="30" r="1.8"/>' +
+      '<circle cx="93.75" cy="70" r="1.8"/>' +
+      '</g>',
+    ),
+  },
 
   // ===========================
   // MURAL — figurative folk art (PX-128)
