@@ -37,3 +37,49 @@ async def test_me_returns_current_user(
     resp = await client.get("/api/auth/me", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["email"] == "test@example.com"
+
+
+async def test_update_me_sets_name(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """PATCH /api/auth/me writes the new name and returns it (PX-071)."""
+    resp = await client.patch(
+        "/api/auth/me", headers=auth_headers, json={"name": "Jane Bloggs"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Jane Bloggs"
+
+    # Round-trip via GET to confirm persistence.
+    getme = await client.get("/api/auth/me", headers=auth_headers)
+    assert getme.json()["name"] == "Jane Bloggs"
+
+
+async def test_update_me_trims_whitespace_and_clears_on_empty(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """Whitespace-only or empty name clears the field (stored as None, PX-071)."""
+    # First set a name.
+    await client.patch("/api/auth/me", headers=auth_headers, json={"name": "Jane"})
+    # Now clear it via whitespace.
+    resp = await client.patch(
+        "/api/auth/me", headers=auth_headers, json={"name": "   "}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] is None
+
+
+async def test_update_me_rejects_oversize_name(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """Names over 60 characters are rejected with 400 (PX-071)."""
+    long_name = "x" * 61
+    resp = await client.patch(
+        "/api/auth/me", headers=auth_headers, json={"name": long_name}
+    )
+    assert resp.status_code == 400
+
+
+async def test_update_me_requires_auth(client: AsyncClient) -> None:
+    """PATCH /api/auth/me without a token returns 401 (PX-071)."""
+    resp = await client.patch("/api/auth/me", json={"name": "x"})
+    assert resp.status_code in (401, 403)

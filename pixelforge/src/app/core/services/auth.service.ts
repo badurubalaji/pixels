@@ -56,6 +56,33 @@ export class AuthService {
     localStorage.removeItem(USER_KEY);
   }
 
+  /**
+   * Update the authenticated caller's own profile (PX-071).
+   *
+   * @param patch - Partial payload. Today only `name` is accepted; a `null`
+   *   or empty string clears the display name (backend stores as null and
+   *   consumers fall back to the email local-part).
+   * @returns An `Observable<AuthUser>` that resolves with the post-update
+   *   user record. On success, `currentUser()` and `localStorage` are both
+   *   refreshed so guarded routes re-render with the new value immediately.
+   *
+   * @remarks
+   * Wraps `PATCH /api/auth/me`. The request uses `withCredentials: false`
+   * and relies on the bearer-token interceptor to attach the JWT. Errors
+   * surface via the returned observable's error channel — callers decide
+   * how to render them (e.g. inline form error vs. snackbar).
+   */
+  updateMe(patch: { name?: string | null }): Observable<AuthUser> {
+    return this.http
+      .patch<AuthUser>(`${this.baseUrl}/api/auth/me`, patch)
+      .pipe(tap(user => this.setUserOnly(user)));
+  }
+
+  private setUserOnly(user: AuthUser): void {
+    this._currentUser.set(user);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
   private setAuth(response: AuthResponse): void {
     this._currentUser.set(response.user);
     this._token.set(response.token);

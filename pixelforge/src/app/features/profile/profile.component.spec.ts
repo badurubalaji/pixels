@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { ProfileComponent } from './profile.component';
@@ -20,6 +21,7 @@ describe('ProfileComponent — PX-065', () => {
   let currentUserSig: ReturnType<typeof signal<AuthUser | null>>;
   let logoutSpy: ReturnType<typeof vi.fn>;
   let navigate: ReturnType<typeof vi.fn>;
+  let updateMeSpy: ReturnType<typeof vi.fn>;
 
   const mkUser = (overrides: Partial<AuthUser> = {}): AuthUser => ({
     id: 'u-42',
@@ -32,6 +34,7 @@ describe('ProfileComponent — PX-065', () => {
   const setup = async (user: AuthUser | null = mkUser()) => {
     currentUserSig = signal<AuthUser | null>(user);
     logoutSpy = vi.fn();
+    updateMeSpy = vi.fn(patch => of(mkUser({ name: patch.name ?? undefined })));
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
@@ -40,7 +43,11 @@ describe('ProfileComponent — PX-065', () => {
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { currentUser: currentUserSig, logout: logoutSpy },
+          useValue: {
+            currentUser: currentUserSig,
+            logout: logoutSpy,
+            updateMe: updateMeSpy,
+          },
         },
       ],
     }).compileComponents();
@@ -124,6 +131,106 @@ describe('ProfileComponent — PX-065', () => {
     it('memberSince returns "Unknown" for an unparseable created_at', async () => {
       await setup(mkUser({ created_at: 'not-a-date' }));
       expect(component.memberSince()).toBe('Unknown');
+    });
+  });
+
+  describe('inline name-edit (PX-071)', () => {
+    beforeEach(async () => await setup());
+
+    it('starts in display mode with a pencil Edit button', () => {
+      expect(component.editingName()).toBe(false);
+      const btn = fixture.nativeElement.querySelector<HTMLButtonElement>(
+        '[data-testid="profile-name-edit"]',
+      );
+      expect(btn).toBeTruthy();
+      expect(btn?.getAttribute('aria-label')).toBe('Edit display name');
+    });
+
+    it('clicking Edit enters edit mode and seeds the draft from current name', () => {
+      component.startEditName();
+      fixture.detectChanges();
+      expect(component.editingName()).toBe(true);
+      expect(component.nameDraft()).toBe('Jane Bloggs');
+      const input = fixture.nativeElement.querySelector<HTMLInputElement>(
+        '[data-testid="profile-name-input"]',
+      );
+      expect(input).toBeTruthy();
+    });
+
+    it('Save button is disabled when the draft equals the saved value', () => {
+      component.startEditName();
+      fixture.detectChanges();
+      const saveBtn = (): HTMLButtonElement | null =>
+        fixture.nativeElement.querySelector('[data-testid="profile-name-save"]');
+      expect(saveBtn()?.disabled).toBe(true);
+
+      component.nameDraft.set('Jane Blogger');
+      fixture.detectChanges();
+      expect(saveBtn()?.disabled).toBe(false);
+    });
+
+    it('Save calls AuthService.updateMe with the trimmed draft', () => {
+      component.startEditName();
+      component.nameDraft.set('  New Name  ');
+      component.saveEditName();
+      expect(updateMeSpy).toHaveBeenCalledWith({ name: 'New Name' });
+    });
+
+    it('Save exits edit mode on success', () => {
+      component.startEditName();
+      component.nameDraft.set('New Name');
+      component.saveEditName();
+      expect(component.editingName()).toBe(false);
+      expect(component.savingName()).toBe(false);
+      expect(component.nameError()).toBe('');
+    });
+
+    it('empty draft sends name:null to clear the field', () => {
+      component.startEditName();
+      component.nameDraft.set('   ');
+      component.saveEditName();
+      expect(updateMeSpy).toHaveBeenCalledWith({ name: null });
+    });
+
+    it('Cancel exits edit mode without calling the service', () => {
+      component.startEditName();
+      component.nameDraft.set('Discarded');
+      component.cancelEditName();
+      expect(component.editingName()).toBe(false);
+      expect(updateMeSpy).not.toHaveBeenCalled();
+    });
+
+    it('surfaces backend 400 detail as inline error + stays in edit mode', async () => {
+      updateMeSpy.mockReturnValueOnce(
+        throwError(() => ({
+          status: 400,
+          error: { detail: 'Display name must be 60 characters or fewer' },
+        })),
+      );
+      component.startEditName();
+      component.nameDraft.set('X'.repeat(61));
+      component.saveEditName();
+      expect(component.editingName()).toBe(true);
+      expect(component.nameError()).toBe(
+        'Display name must be 60 characters or fewer',
+      );
+      expect(component.savingName()).toBe(false);
+    });
+
+    it('falls back to a generic error when the backend gives no detail', () => {
+      updateMeSpy.mockReturnValueOnce(throwError(() => ({ status: 0 })));
+      component.startEditName();
+      component.nameDraft.set('Network Fail');
+      component.saveEditName();
+      expect(component.nameError()).toBe('Could not save — please try again.');
+    });
+
+    it('nameDirty is false when the draft equals the persisted value (with whitespace trim)', () => {
+      component.startEditName();
+      component.nameDraft.set('  Jane Bloggs  ');
+      expect(component.nameDirty()).toBe(false);
+      component.nameDraft.set('Jane');
+      expect(component.nameDirty()).toBe(true);
     });
   });
 });

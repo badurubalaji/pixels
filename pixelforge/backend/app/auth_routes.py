@@ -13,6 +13,7 @@ from app.auth import (
     UserLogin,
     UserPublic,
     UserSignup,
+    UserUpdate,
     create_token,
     hash_password,
     require_user,
@@ -134,3 +135,61 @@ async def get_me(
     if not doc:
         raise HTTPException(status_code=404, detail="User not found")
     return _user_to_public(doc)
+
+
+@auth_router.patch("/me", response_model=UserPublic)
+async def update_me(
+    body: UserUpdate,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+):
+    """Partially update the authenticated caller's own profile (PX-071).
+
+    Args:
+        body: ``UserUpdate`` partial payload. Currently only ``name`` is
+            writable. A ``null`` or empty name clears the field (display
+            falls back to the email local-part).
+        db: Async Mongo database handle.
+        current_user: Decoded JWT claims (required).
+
+    Returns:
+        ``UserPublic`` reflecting the post-update state.
+
+    Raises:
+        HTTPException: 404 if the user record has been deleted mid-session,
+            400 if the submitted name exceeds 60 characters.
+
+    Example:
+        >>> # PATCH /api/auth/me
+        >>> # Authorization: Bearer <jwt>
+        >>> # {"name": "Jane Bloggs"}
+
+    @see Story PX-071
+    """
+    user_oid = ObjectId(current_user["id"])
+
+    # Build a minimal $set so we never overwrite fields the client did not
+    # send. The UserUpdate schema only surfaces ``name`` today; future
+    # fields (e.g. display_tz, avatar_url) go through the same pattern.
+    update_fields: dict = {"updated_at": datetime.now(timezone.utc)}
+    payload = body.model_dump(exclude_unset=True)
+    if "name" in payload:
+        raw = payload["name"]
+        normalized = raw.strip() if isinstance(raw, str) else None
+        if normalized and len(normalized) > 60:
+            raise HTTPException(
+                status_code=400, detail="Display name must be 60 characters or fewer"
+            )
+        # WHY: store empty string as None so the display fallback to email
+        # local-part behaves uniformly across read paths.
+        update_fields["name"] = normalized or None
+
+    result = await db.users.find_one_and_update(
+        {"_id": user_oid},
+        {"$set": update_fields},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return _user_to_public(result)

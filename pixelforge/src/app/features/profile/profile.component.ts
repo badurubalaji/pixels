@@ -3,10 +3,15 @@ import {
   Component,
   computed,
   inject,
+  signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRippleModule } from '@angular/material/core';
 
 import { AuthService, AuthUser } from '../../core/services/auth.service';
@@ -34,8 +39,12 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
     MatButtonModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
     MatRippleModule,
     RouterLink,
     UserMenuComponent,
@@ -78,9 +87,69 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
               <dt>Email</dt>
               <dd>{{ u.email }}</dd>
             </div>
-            <div class="profile__meta-row" role="listitem">
+            <div class="profile__meta-row profile__meta-row--editable" role="listitem">
               <dt>Display name</dt>
-              <dd>{{ u.name || '—' }}</dd>
+              <dd>
+                @if (editingName()) {
+                  <form
+                    class="profile__name-form"
+                    (submit)="saveEditName($event)"
+                    (reset)="cancelEditName($event)"
+                  >
+                    <mat-form-field appearance="outline" class="profile__name-field">
+                      <mat-label>Display name</mat-label>
+                      <input
+                        #nameInput
+                        matInput
+                        [ngModel]="nameDraft()"
+                        (ngModelChange)="nameDraft.set($event)"
+                        name="displayName"
+                        maxlength="60"
+                        autocomplete="name"
+                        data-testid="profile-name-input"
+                      />
+                      <mat-hint align="end">{{ nameDraft().length }}/60</mat-hint>
+                    </mat-form-field>
+                    @if (nameError(); as err) {
+                      <p class="profile__name-error" role="alert">{{ err }}</p>
+                    }
+                    <div class="profile__name-actions">
+                      <button
+                        type="submit"
+                        class="profile__name-save"
+                        [disabled]="savingName() || !nameDirty()"
+                        data-testid="profile-name-save"
+                      >
+                        @if (savingName()) {
+                          <mat-spinner diameter="16"></mat-spinner>
+                        } @else {
+                          <span>Save</span>
+                        }
+                      </button>
+                      <button
+                        type="reset"
+                        class="profile__name-cancel"
+                        [disabled]="savingName()"
+                        data-testid="profile-name-cancel"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <span class="profile__name-display">{{ u.name || '—' }}</span>
+                  <button
+                    type="button"
+                    class="profile__name-edit"
+                    matRipple
+                    aria-label="Edit display name"
+                    data-testid="profile-name-edit"
+                    (click)="startEditName()"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </dd>
             </div>
             <div class="profile__meta-row" role="listitem">
               <dt>Member since</dt>
@@ -315,6 +384,123 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
         font-size: 0.95rem;
         word-break: break-word;
       }
+      .profile__meta-row--editable dd {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 40px;
+      }
+
+      .profile__name-display { flex: 1 1 auto; }
+      .profile__name-edit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        background: var(--px-surface);
+        border: 1px solid var(--px-line);
+        color: var(--px-ink-soft);
+        cursor: pointer;
+        transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+      }
+      .profile__name-edit:hover {
+        border-color: rgba(124, 58, 237, 0.4);
+        color: var(--px-violet);
+        background: rgba(124, 58, 237, 0.06);
+      }
+      .profile__name-edit:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
+      }
+      .profile__name-edit mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .profile__name-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+      }
+      .profile__name-field {
+        width: 100%;
+        max-width: 360px;
+      }
+      .profile__name-field ::ng-deep .mdc-text-field--focused .mdc-notched-outline > * {
+        border-color: var(--px-violet) !important;
+      }
+      .profile__name-field ::ng-deep .mdc-floating-label--float-above.mdc-floating-label {
+        color: var(--px-violet) !important;
+      }
+
+      .profile__name-error {
+        margin: 0;
+        padding: 8px 12px;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        max-width: 360px;
+      }
+
+      .profile__name-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .profile__name-save {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 36px;
+        padding: 0 18px;
+        background: linear-gradient(135deg, var(--px-violet) 0%, #a855f7 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+      }
+      .profile__name-save:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(124, 58, 237, 0.32);
+        filter: brightness(1.05);
+      }
+      .profile__name-save:disabled {
+        background: #e2e8f0;
+        color: #94a3b8;
+        cursor: not-allowed;
+      }
+      .profile__name-save ::ng-deep .mat-mdc-progress-spinner circle { stroke: #ffffff; }
+
+      .profile__name-cancel {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 14px;
+        min-height: 36px;
+        background: transparent;
+        border: 1px solid var(--px-line);
+        border-radius: 10px;
+        color: var(--px-ink-soft);
+        font-size: 0.88rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 160ms ease, border-color 160ms ease;
+      }
+      .profile__name-cancel:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+      .profile__name-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
       .profile__meta-mono {
         font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
         font-size: 0.85rem;
@@ -497,5 +683,110 @@ export class ProfileComponent {
   async onSignOut(): Promise<boolean> {
     this.authService.logout();
     return this.router.navigate(['/auth']);
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  //  PX-071 — inline display-name edit
+  // ────────────────────────────────────────────────────────────────
+
+  /** `true` while the display-name field is in edit mode. */
+  readonly editingName = signal<boolean>(false);
+  /** Current draft value of the name input. */
+  readonly nameDraft = signal<string>('');
+  /** `true` while a PATCH is in flight. */
+  readonly savingName = signal<boolean>(false);
+  /** Inline error surfaced below the name input (empty = no error). */
+  readonly nameError = signal<string>('');
+
+  /**
+   * `true` when the draft differs from the persisted value — enables Save.
+   *
+   * @remarks
+   * Trims both sides so pure-whitespace edits (e.g. adding trailing spaces)
+   * don't light up the Save button.
+   */
+  readonly nameDirty = computed<boolean>(() => {
+    const u = this.user();
+    const current = (u?.name ?? '').trim();
+    const draft = this.nameDraft().trim();
+    return draft !== current;
+  });
+
+  /**
+   * Enter display-name edit mode and seed the draft from the current value.
+   *
+   * @remarks
+   * The template's `#nameInput` is focused implicitly on the next paint by
+   * Angular Material's `mat-form-field` — no manual focus call needed in
+   * test harnesses.
+   */
+  startEditName(): void {
+    this.nameDraft.set(this.user()?.name ?? '');
+    this.nameError.set('');
+    this.editingName.set(true);
+  }
+
+  /**
+   * Exit edit mode without persisting. Also suppresses any in-progress
+   * form submission caused by the reset button living inside the form.
+   *
+   * @param event - Optional DOM event (form `reset` or button click).
+   */
+  cancelEditName(event?: Event): void {
+    event?.preventDefault();
+    this.editingName.set(false);
+    this.nameError.set('');
+    this.savingName.set(false);
+  }
+
+  /**
+   * Persist the draft name via `AuthService.updateMe` and exit edit mode
+   * on success.
+   *
+   * @param event - The form `submit` DOM event; default action suppressed.
+   *
+   * @remarks
+   * The empty-string branch is sent as `""` — the backend normalizes it
+   * to `null` server-side (see `update_me` in `auth_routes.py`). This
+   * means "clear the display name" is user-reachable by erasing the
+   * field and pressing Save.
+   */
+  saveEditName(event?: Event): void {
+    event?.preventDefault();
+    if (this.savingName()) return;
+    const draft = this.nameDraft().trim();
+
+    this.savingName.set(true);
+    this.nameError.set('');
+
+    this.authService.updateMe({ name: draft || null }).subscribe({
+      next: () => {
+        this.savingName.set(false);
+        this.editingName.set(false);
+      },
+      error: (err: unknown) => {
+        this.savingName.set(false);
+        const detail = this.extractErrorDetail(err);
+        this.nameError.set(detail || 'Could not save — please try again.');
+      },
+    });
+  }
+
+  /**
+   * Best-effort detail extractor for HttpErrorResponse-like values.
+   *
+   * @param err - Any error surfaced from the `updateMe` observable.
+   * @returns A single readable sentence, or empty string when nothing
+   *   useful can be pulled from the payload.
+   */
+  private extractErrorDetail(err: unknown): string {
+    const anyErr = err as { error?: { detail?: unknown } };
+    const d = anyErr?.error?.detail;
+    if (typeof d === 'string' && d.trim()) return d;
+    if (Array.isArray(d) && d.length > 0) {
+      const first = d[0] as { msg?: unknown };
+      if (typeof first?.msg === 'string') return first.msg;
+    }
+    return '';
   }
 }

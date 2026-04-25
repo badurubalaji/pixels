@@ -32,6 +32,19 @@ class UserPublic(BaseModel):
     created_at: datetime
 
 
+class UserUpdate(BaseModel):
+    """Partial-update payload for the authenticated user's own profile.
+
+    Fields default to ``None`` and are only applied when present in the
+    request body — a ``null`` or empty string clears the field, a missing
+    key leaves it unchanged. PX-071 only surfaces ``name`` because other
+    fields need separate flows (email change = re-verification, password
+    rotation = current-password check).
+    """
+
+    name: Optional[str] = None
+
+
 class AuthResponse(BaseModel):
     token: str
     user: UserPublic
