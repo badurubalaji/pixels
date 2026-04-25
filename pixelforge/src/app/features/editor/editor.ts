@@ -1748,6 +1748,8 @@ export class Editor implements AfterViewInit, OnDestroy {
   private pasteListener: ((e: ClipboardEvent) => void) | null = null;
   private onlineHandler: (() => void) | null = null;
   private offlineHandler: (() => void) | null = null;
+  /** PX-097: document-level deselect bridge (see ngAfterViewInit). */
+  private docDeselectListener: ((e: Event) => void) | null = null;
 
   /**
    * Handle Ctrl/Cmd + wheel as canvas zoom. Plain scroll is ignored so
@@ -1803,6 +1805,38 @@ export class Editor implements AfterViewInit, OnDestroy {
         }
       });
     }
+
+    // PX-097: deselect on clicks outside the canvas + its in-canvas
+    // overlays + the floating toolbars + property panel. Fabric only
+    // fires selection:cleared for events that hit its own canvas; clicks
+    // on the page-bar or sidebar drawer don't reach it, so the floating
+    // toolbar would otherwise stay visible after the user has moved on.
+    // This document-level listener bridges that gap without making the
+    // property-panel itself a deselect surface (users are still allowed
+    // to edit the selected object's properties).
+    const KEEP_SELECTION_INSIDE = [
+      '.canvas-area',
+      '.right-panel',
+      '.ctx-toolbar',
+      '.qa-bar',
+      '.canvas-actions',
+      '.editor-topbar',
+      '.mat-mdc-menu-panel',
+      '.mat-mdc-dialog-container',
+      '.mat-mdc-snack-bar-container',
+      '.cdk-overlay-pane',
+    ].join(',');
+    this.docDeselectListener = (e: Event) => {
+      const target = e.target as Element | null;
+      if (!target || !target.closest) return;
+      if (target.closest(KEEP_SELECTION_INSIDE)) return;
+      const fc = this.canvasService.getCanvas();
+      if (fc?.getActiveObject()) {
+        fc.discardActiveObject();
+        fc.requestRenderAll();
+      }
+    };
+    document.addEventListener('mousedown', this.docDeselectListener, true);
 
     // Apply ?platform=<type> query param (Story PX-020 AC-5). The `custom`
     // preset has 0x0 sentinel dimensions — it means "user-defined, no
@@ -1963,6 +1997,9 @@ export class Editor implements AfterViewInit, OnDestroy {
     }
     if (this.onlineHandler) window.removeEventListener('online', this.onlineHandler);
     if (this.offlineHandler) window.removeEventListener('offline', this.offlineHandler);
+    if (this.docDeselectListener) {
+      document.removeEventListener('mousedown', this.docDeselectListener, true);
+    }
     this.rightClickSub?.unsubscribe();
     if (this.timerHandle) clearInterval(this.timerHandle);
     this.collabService.disconnect();

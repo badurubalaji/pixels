@@ -720,6 +720,7 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     canvas.on('selection:cleared', () => {
       this.resetDragOffset();
       this.selectionType.set('none');
+      this.isPhotoFrame.set(false);
     });
     canvas.on('text:changed', readState);
     canvas.on('object:modified', readState);
@@ -729,6 +730,21 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     canvas.on('object:rotating', reposOnly);
     // Follow zoom/pan
     canvas.on('after:render', reposOnly);
+
+    // PX-097: belt-and-suspenders — after every mouse:up, re-sync the
+    // toolbar's visibility against the canvas's actual active object.
+    // Some fabric paths (programmatic discardActiveObject, file-picker
+    // round-trips, popover overlays from the color picker) can leave
+    // selection:cleared unfired but no active object present — this
+    // catches those cases so the toolbar always hides when nothing is
+    // really selected.
+    const syncOnUp = () => {
+      if (!canvas.getActiveObject()) {
+        this.selectionType.set('none');
+        this.isPhotoFrame.set(false);
+      }
+    };
+    canvas.on('mouse:up', syncOnUp);
 
     this.listeners = [
       () => canvas.off('selection:created', onNewSelection),
@@ -740,6 +756,7 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
       () => canvas.off('object:scaling', reposOnly),
       () => canvas.off('object:rotating', reposOnly),
       () => canvas.off('after:render', reposOnly),
+      () => canvas.off('mouse:up', syncOnUp),
     ];
 
     // Run once in case something is already selected (e.g. after project load)

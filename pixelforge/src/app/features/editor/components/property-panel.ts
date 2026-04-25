@@ -112,50 +112,85 @@ interface ObjectProps {
             </div>
           </mat-expansion-panel>
 
-          @if (isPhotoFrame() && frameFitMode() === 'cover') {
-            <!-- Photo position & zoom inside a cover-mode photo-frame (PX-094) -->
+          @if (isPhotoFrame()) {
+            <!-- Photo in frame — crop / resize / adjust / rotate (PX-094 + PX-095) -->
             <mat-expansion-panel expanded>
               <mat-expansion-panel-header>
-                <mat-panel-title>Photo position</mat-panel-title>
+                <mat-panel-title>Photo in frame</mat-panel-title>
               </mat-expansion-panel-header>
 
-              <div class="slider-row">
-                <span>Horizontal</span>
-                <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
-                  <input
-                    matSliderThumb
-                    [ngModel]="framePanX()"
-                    (ngModelChange)="setFrameView('panX', $event)"
-                    data-testid="frame-pan-x"
-                  />
-                </mat-slider>
-                <span class="slider-value">{{ framePanX().toFixed(2) }}</span>
-              </div>
+              <p class="frame-controls-hint">
+                @if (frameFitMode() === 'cover') {
+                  <strong>Cover mode.</strong> Drag the sliders to pan and
+                  zoom the photo inside the slot. The over-scan crops to
+                  the frame's edges.
+                } @else if (frameFitMode() === 'contain') {
+                  <strong>Contain mode.</strong> Whole photo is visible
+                  (may letterbox). Switch to <em>cover</em> on the
+                  toolbar above to crop and reposition.
+                } @else {
+                  <strong>Fill mode.</strong> Photo stretches to fill the
+                  frame (aspect ratio not preserved). Switch to
+                  <em>cover</em> on the toolbar above to crop instead.
+                }
+              </p>
 
-              <div class="slider-row">
-                <span>Vertical</span>
-                <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
-                  <input
-                    matSliderThumb
-                    [ngModel]="framePanY()"
-                    (ngModelChange)="setFrameView('panY', $event)"
-                    data-testid="frame-pan-y"
-                  />
-                </mat-slider>
-                <span class="slider-value">{{ framePanY().toFixed(2) }}</span>
-              </div>
+              @if (frameFitMode() === 'cover') {
+                <div class="slider-row">
+                  <span>Horizontal</span>
+                  <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
+                    <input
+                      matSliderThumb
+                      [ngModel]="framePanX()"
+                      (ngModelChange)="setFrameView('panX', $event)"
+                      data-testid="frame-pan-x"
+                    />
+                  </mat-slider>
+                  <span class="slider-value">{{ framePanX().toFixed(2) }}</span>
+                </div>
 
+                <div class="slider-row">
+                  <span>Vertical</span>
+                  <mat-slider min="-1" max="1" step="0.05" class="flex-slider">
+                    <input
+                      matSliderThumb
+                      [ngModel]="framePanY()"
+                      (ngModelChange)="setFrameView('panY', $event)"
+                      data-testid="frame-pan-y"
+                    />
+                  </mat-slider>
+                  <span class="slider-value">{{ framePanY().toFixed(2) }}</span>
+                </div>
+
+                <div class="slider-row">
+                  <span>Resize</span>
+                  <mat-slider min="1" max="4" step="0.05" class="flex-slider">
+                    <input
+                      matSliderThumb
+                      [ngModel]="frameZoom()"
+                      (ngModelChange)="setFrameView('zoom', $event)"
+                      data-testid="frame-zoom"
+                    />
+                  </mat-slider>
+                  <span class="slider-value">{{ frameZoom().toFixed(2) }}×</span>
+                </div>
+              }
+
+              <!-- PX-095: rotation — drives frame.angle for precision input.
+                   Independent in-frame photo rotation (without rotating the
+                   slot itself) is a clipPath-restructure follow-up; for
+                   v1 this matches what the rotation handle does. -->
               <div class="slider-row">
-                <span>Zoom</span>
-                <mat-slider min="1" max="4" step="0.05" class="flex-slider">
+                <span>Rotate</span>
+                <mat-slider min="-180" max="180" step="1" class="flex-slider">
                   <input
                     matSliderThumb
-                    [ngModel]="frameZoom()"
-                    (ngModelChange)="setFrameView('zoom', $event)"
-                    data-testid="frame-zoom"
+                    [ngModel]="p.angle"
+                    (ngModelChange)="updateProp('angle', $event)"
+                    data-testid="frame-rotate"
                   />
                 </mat-slider>
-                <span class="slider-value">{{ frameZoom().toFixed(2) }}×</span>
+                <span class="slider-value">{{ (p.angle ?? 0).toFixed(0) }}°</span>
               </div>
 
               <button
@@ -163,9 +198,10 @@ interface ObjectProps {
                 class="frame-reset-btn"
                 data-testid="frame-reset"
                 (click)="resetFrameView()"
+                [disabled]="frameFitMode() !== 'cover'"
               >
                 <mat-icon>restart_alt</mat-icon>
-                Reset to center
+                Reset crop &amp; zoom
               </button>
             </mat-expansion-panel>
           }
@@ -753,6 +789,32 @@ interface ObjectProps {
       .mat-mdc-form-field {
         font-size: 0.85rem;
       }
+    }
+
+    /* PX-094 + PX-095 — photo-frame controls panel */
+    .frame-controls-hint {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      background: rgba(124, 58, 237, 0.06);
+      border: 1px solid rgba(124, 58, 237, 0.18);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: var(--px-ink-soft, #334155);
+    }
+    .frame-controls-hint strong { color: var(--px-ink, #0f172a); }
+    .frame-controls-hint em {
+      font-style: normal;
+      font-weight: 600;
+      color: var(--px-violet, #7c3aed);
+    }
+
+    .frame-reset-btn {
+      width: 100%;
+      margin-top: 6px;
+    }
+    .frame-reset-btn[disabled] {
+      opacity: 0.4;
     }
   `],
 })
