@@ -459,4 +459,31 @@ Sprint-3 ran end-to-end under blanket auto-approve from the user. Five concrete 
 
 Sprint-4 will start with **PX-072** as the highest-user-visibility surface still inconsistent.
 
+## 2026-04-25T09:40:00Z · Sprint-4 close — retrospective
+
+Sprint-4 ran short-and-tight under the now-standing autonomous-mode + push-before-close rhythm. Three concrete commits + one graphify refresh:
+
+| Commit | Story | Scope |
+|---|---|---|
+| `9d27602` | PX-072 | /editor topbar retheme — light surface, gradient brand pattern, gradient Save CTA (with .saved emerald variant), violet hover/active for icon buttons. Override block at the end of editor.ts styles. Body (canvas, sidebar, panels) untouched. |
+| `667edb2` | PX-075 | Password rotation — backend `POST /api/auth/me/password` with current-pw verify (401 on wrong), min-length 6 (400), reject-no-op (400). FastAPI 204 returned via explicit `Response(status_code=204)` because `@router.post(status_code=204)` collides with implied response_model. Frontend service + ProfileComponent collapsible "Security" section + 9 new tests. |
+| *(next)* | chore | Graphify refresh + this retro |
+
+**What went well**
+1. The settings.json broadening (`Bash(git *)`, `Bash(grep *)`, `Bash(podman *)`, etc.) eliminated 90%+ of the per-command approval prompts. The pattern-form gotcha (space before `*` is required, no-space `Bash(grep*)` silently fails) is now memorialized in the chore commit message for future dev-env work.
+2. The override-block-at-end-of-styles pattern (PX-068, PX-069, PX-072) keeps each redesign a small additive diff. Reverting any one is a single file delete-block. Going to keep using this for chrome-only work — it's much friendlier than rewriting 1000+ lines of CSS in place.
+3. PX-075 surfaced a small FastAPI gotcha (`status_code=204` + implicit response_model don't mix) and the explicit `Response(status_code=…)` workaround. Worth remembering when other auth-mutating endpoints land.
+
+**What was hard**
+1. Deferred PX-073 (avatar upload) intentionally — multipart + Pillow verify + asset routing + storage path decisions justify their own focused sprint. Listed as the first story of sprint-5.
+2. Same memory-violation discipline as PX-070 — the editor spec has 3 thin Router mocks that I deliberately did NOT migrate. They work because the editor template doesn't render RouterLink in a MatMenu. If the editor ever embeds the user-menu (e.g. for in-canvas account switching), those tests will fail and PX-070's pattern will need to be applied. Filed as a latent migration debt note, not a current bug.
+
+**Sprint-5 candidates (priority order)**
+- **PX-073** — Avatar upload on `/profile`. Backend `POST /api/auth/me/avatar` (multipart, ≤1MB, MIME sniff, Pillow verify, store under `assets/avatars/{user_id}.{ext}`, return URL). Frontend file picker on the profile avatar; gradient initials chip stays as the empty-state.
+- **PX-074** — Email change with verification. Bigger scope; needs transactional email service. Hold until user prioritizes.
+- **PX-076** — Editor body retheme (canvas surroundings, sidebar drawer chrome, layer panel) — companion to PX-072 chrome-only work. Heaviest visual surface still wearing the Material default theme. Largest scope of the queued items.
+- **PX-077** — Manual end-to-end smoke test of all PX-060/063/064/065/066/068/069/071/072/075 flows in browser. Rule-of-thumb verification that nothing visually regressed across the redesigns.
+
+Sprint-5 starts with **PX-073** under the same autonomous rhythm.
+
 
