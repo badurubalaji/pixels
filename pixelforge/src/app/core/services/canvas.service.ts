@@ -25,6 +25,31 @@ export type FrameFitMode = 'cover' | 'contain' | 'fill';
 const SNAP_THRESHOLD = 6;
 const GUIDE_COLOR = '#ff2d87';
 
+/**
+ * Decide if a hex color reads as "light" — used to pick contrasting fill
+ * for newly-added text so dark page-bg + black text doesn't look like the
+ * text-add button is broken (PX-125).
+ */
+function isLightColor(hex: string): boolean {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex) || /^#([0-9a-f]{3})$/i.exec(hex);
+  if (!m) return true; // unknown colors → assume light, fall back to black text
+  let r: number, g: number, b: number;
+  const h = m[1];
+  if (h.length === 3) {
+    r = parseInt(h[0] + h[0], 16);
+    g = parseInt(h[1] + h[1], 16);
+    b = parseInt(h[2] + h[2], 16);
+  } else {
+    r = parseInt(h.slice(0, 2), 16);
+    g = parseInt(h.slice(2, 4), 16);
+    b = parseInt(h.slice(4, 6), 16);
+  }
+  // Rec.601 luma; threshold 140 (~55%) lands BLACK text on
+  // moderately-light grays and WHITE text on dark/violet backgrounds.
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luma >= 140;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CanvasService {
   private canvas: fabric.Canvas | null = null;
@@ -439,6 +464,13 @@ export class CanvasService {
     const ch = this._canvasHeight();
     const layerId = uuidv4();
 
+    // PX-125 — pick a fill that contrasts the canvas background so the
+    // newly-added text is always visible. Without this, dropping black
+    // text on a dark page-background made the text invisible and looked
+    // like "Add text doesn't work."
+    const bgHex = this._backgroundColor() || '#ffffff';
+    const defaultFill = isLightColor(bgHex) ? '#000000' : '#ffffff';
+
     const textObj = new fabric.IText(text, {
       left: cw / 2,
       top: ch / 2,
@@ -446,7 +478,7 @@ export class CanvasService {
       originY: 'center',
       fontSize: 48,
       fontFamily: 'Roboto',
-      fill: '#000000',
+      fill: defaultFill,
       ...options,
     });
 
