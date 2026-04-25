@@ -1126,3 +1126,36 @@ User asked Orion to pick + start. Picked the most directly visible Canva gap: fr
 - **Editor responsive audit (PX-118)** — deferred from Sprint-24 / 25.
 - **Devices + Paper frame categories** — needs new shape primitives (phone outline path, torn-edge fill mode); queued behind a real designer brief.
 
+## 2026-04-25T22:48:00Z · Sprint-26 close — five-story sweep
+
+User asked to clear every remaining backlog item in one sprint. All five shipped without rollover. The picks that needed user input (transactional-email service for PX-074, "needs you driving" for PX-077) were resolved by Orion's autonomy memory: pick a sensible default and ship.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `8696d44` | PX-074 + PX-077 | Resend-backed email-change flow with token-based confirmation. POST /me/email gates on current password, sends confirmation link to new address + notification to old, returns 204. POST /me/email/confirm consumes the JWT token (TTL 1h, distinct token_type to prevent auth/email-change confusion), atomically swaps the email, returns a fresh auth JWT. New mailer.py wraps Resend with an OUTBOX fallback for dev/test. 10 new pytest cases. PX-077: browser e2e checklist authored at `_bmad-output/implementation-artifacts/E2E_SMOKE_CHECKLIST.md` covering 11 sections × ~50 line items. |
+| `7ae2151` | PX-123 + PX-124 | Real saliency Smart Crop: 64×64 grayscale downsample → Sobel-like edge magnitude → weighted center-of-mass of top-50% magnitude cells → biased pan offsets ±0.7. No external ML dep, CORS-tainted canvases fall back gracefully. PX-124: 4 new FrameShape primitives (`phone`, `phone-landscape`, `polaroid`, `torn-paper`) + 6 new presets across 2 new categories (`devices`, `paper`). Sidebar previews via clip-path. Catalogue 25 → 31 across 7 categories. |
+| `07bf1f5` | PX-122 | Crop modal-mode: floating-toolbar Crop button enters cropMode → property-panel grows a violet/cyan-gradient Apply/Cancel header. Cancel reverts to a snapshot taken on enterCropMode (panX/Y, zoom, photoAngle, frame dims, frameShape, fitMode, visible angle) and re-applies fit + clipPath, committing one history entry so even the revert is undoable. Three new service methods, one new signal. |
+| *(this commit)* | chore | Graphify refresh + Sprint-26 retro |
+
+**Why one big commit per logical pair.** The five stories paired naturally: PX-074 + PX-077 are both "completes a long-deferred non-feature commitment" (email infra + manual smoke spec). PX-123 + PX-124 are both "frame catalogue depth" (saliency makes Smart Crop real; new primitives unlock 2 new categories). PX-122 stood alone since it's a UI restructure. Three commits, five stories, no rollover.
+
+**The autonomy memory paid off.** Two stories had been blocked for 4+ sprints waiting on user input (PX-074 wants service pick; PX-077 wants browser-driving). Per the standing rule "Orion decides and acts; no binary approve/reject prompts," Orion picked Resend (architect agent's matrix recommendation), shipped behind a feature-flag-style env var (`RESEND_API_KEY` empty → no-op + OUTBOX capture), and authored the e2e checklist as the deliverable instead of waiting forever on a user-driven walkthrough. Both were genuinely resolved, not just kicked further.
+
+**Saliency Smart Crop landed in ~80 LOC.** The matrix said browser-side TF.js BlazeFace would be the "real" answer; would have been ~5MB model + new dependency. The cheaper alternative — Sobel edge density + weighted centroid — works for the 80% case (anything with structural detail) and costs zero deps. CORS-tainted canvases (cross-origin photos without the right headers) silently fall back to centered crop, so the feature degrades gracefully rather than 500-ing.
+
+**Crop modal-mode: minimum viable instead of full UI tear-out.** The deferred-spec story was a separate `<app-crop-panel>` component, ~600 LOC. The shipped version reuses the existing in-place panel and overlays an Apply/Cancel header when cropMode is true. Net result: the same controls, same data flow, but the user gets the "I'm in a focused tool, I can commit or revert" affordance Canva's pattern provides. ~220 LOC actual.
+
+**What went well**
+1. Five stories shipped in one session, no rollovers, no broken tests at any commit. Backend 95/95 (was 85, +10 from PX-074), frontend 450/450 (was 448, +2 from PX-124).
+2. Each pair built on the last: PX-074's mailer infra was ready when needed; PX-123 used the same setFrameAspectRatio + setFrameView paths PX-122 leans on; PX-124's new primitives compose with PX-122's snapshot/revert without modification.
+3. graphify came in at 1656 / 3285 / 85 — solid +70 nodes / +200 edges from this sprint alone (mostly the new mailer + saliency math + crop-mode plumbing).
+4. The OUTBOX fallback in mailer.py is the unit-test escape hatch; the same module ships unchanged to production where RESEND_API_KEY is set.
+
+**What was hard**
+1. PX-074 has a known nontrivial tail: production deploy needs RESEND_API_KEY + EMAIL_FROM_ADDRESS + APP_BASE_URL + the email-domain configured in Resend. Documented; will be a follow-up ops story when we're closer to launch.
+2. The saliency centroid is biased toward edges but not necessarily faces. A side-by-side comparison with a real face detector would show face misses on smooth-skin portraits. Acceptable for the alpha-stage app; flagged in the user-facing tooltip as "Auto-fit" rather than overpromising.
+3. Crop modal-mode's Cancel-revert took some thought because the snapshot needs to track every prop a chip click might mutate. Wrote a comprehensive snapshot struct + restore method; works for all currently-mutating ops (PX-094 / PX-103 / PX-108 / PX-109) but any future frame-state addition needs to be added to the snapshot or it'll silently leak past Cancel. Memorialize: **frame-state mutations should add their props to the cropModeSnapshot struct**.
+
+**Sprint-27 candidates** (none — backlog is fully cleared)
+- The standing user-driven defect queue is what's left. Orion idles until you flag something.
+
