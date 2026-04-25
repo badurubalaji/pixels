@@ -784,6 +784,8 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     .editor-body {
       display: flex;
       flex: 1;
+      min-height: 0;
+      min-width: 0;
       overflow: hidden;
     }
 
@@ -862,6 +864,9 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     /* === Canvas Area (Canva-style gray workspace) === */
     .canvas-area {
       flex: 1;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;

@@ -75,8 +75,12 @@ const GUIDE_COLOR = '#06b6d4';
   `,
   styles: [`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
       position: relative;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
       width: 100%;
       height: 100%;
     }
@@ -85,6 +89,10 @@ const GUIDE_COLOR = '#06b6d4';
       position: relative;
       width: 100%;
       height: 100%;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .rulers-container.rulers-visible .rulers-content {
@@ -94,10 +102,17 @@ const GUIDE_COLOR = '#06b6d4';
       height: calc(100% - ${RULER_SIZE}px);
     }
 
+    /* PX-091: rulers-content must be a flex column so its child
+       (.canvas-area with flex:1) can claim the remaining space and
+       its overflow:auto can actually engage on tall canvases. */
     .rulers-content {
+      flex: 1;
+      min-height: 0;
       width: 100%;
       height: 100%;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     .ruler-corner {
