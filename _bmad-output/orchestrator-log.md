@@ -731,4 +731,35 @@ Lossless — only the source-region selector changes; the underlying image bytes
 - **PX-077** — manual e2e smoke (still your call; the API smoke proxy I ran in sprint-12 is green).
 - **PX-074** — email change (held).
 
+## 2026-04-25T11:48:00Z · Sprint-14 close — retrospective
+
+User clarification mid-sprint:
+> *"I am asking crop for image which is in frame, for general outside we have crop right that for generic, to fit image in to frame we need to do resize of image, crop, adjust and rotate the image which is in frame"*
+
+And a separate UX bug:
+> *"the toolbar for select image or text is visible, when we click outside, the toolbar is not hiding, when ever we select that only tool bar for respective image must be shown"*
+
+Two-fix sprint, shipped together.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `3e3f50d` | PX-095 + PX-097 | Property-panel "Photo in frame" panel reframed: shows in all fit modes (cover/contain/fill); pan + zoom only render in cover mode (where they apply); rotation always renders. New hint paragraph explains what the current fit mode does. Renamed sliders to user-vocabulary ("Zoom" → "Resize", "Reset to center" → "Reset crop & zoom"). New rotation slider drives `frame.angle` directly. Plus the toolbar-hide bug: text-toolbar adds a `mouse:up` re-sync, and editor binds a document-level mousedown listener that calls `discardActiveObject` when click target falls outside an allowlisted "keep selection" set (canvas-area, right-panel, ctx-toolbar, qa-bar, canvas-actions, editor-topbar, all CDK overlay panes). |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The vocabulary lesson (PX-095).** When the user said "crop / resize / adjust / rotate", they were thinking of the standard image-editing primitives. The PX-094 sliders technically *implement* all of those for cover mode (zoom = resize, pan = adjust + crop the over-scan, mode toggle = fit), but the labels said "Photo position" / "Zoom" — which read as "move the photo around" rather than "edit the image inside the slot." Renaming + the explanatory hint paragraph closed the gap. **Lesson:** when shipping new affordances, label them with the user's existing mental model first, not the implementation's terminology.
+
+**Allowlist design for PX-097.** The deselect-on-outside-click bridge has to balance two competing needs:
+- ✅ Click on sidebar-drawer to switch tabs / start adding a new element → **deselect** (current selection is no longer relevant).
+- ✅ Click on property-panel to edit the selected object's properties → **keep selection** (user is mid-edit).
+- ✅ Click on canvas-area's empty padding → fabric handles it (already worked; fabric fires `selection:cleared` for in-canvas events).
+- ✅ Click on a Material menu / dialog / snackbar → keep selection (overlay was triggered by something acting on the selection).
+
+The allowlist takes the second + third + fourth cases and lets only sidebar-drawer + page-bar + browser chrome trigger deselect. The mouse:up sync in the toolbar itself is a defensive net for any remaining path the document listener doesn't catch.
+
+**Sprint-15 candidates**
+- **PX-096** — Independent in-frame photo rotation (rotate the photo *without* rotating the slot itself). Requires restructuring the frame from a flat FabricImage to a Group with a clipPath rect + inner Image, so the inner image can carry its own angle. Bigger scope than PX-095 — about 80–120 LOC across CanvasService.
+- **PX-098** — Direct-manipulation drag-to-pan inside frames (alternative to the sliders for users who want touch/mouse drag). Detect drag-on-photo-frame in cover mode, translate to `framePanX/Y` updates. Probably 60–80 LOC.
+- **PX-077** — Manual e2e smoke (still your call).
+- **PX-074** — Email change (held).
+
 
