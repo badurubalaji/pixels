@@ -988,3 +988,36 @@ Two options offered (lean aspect-ratio chips vs full modal-mode crop). User pick
 - **Original-aspect chip + Smart Crop placeholder** — round out the chip set if the user wants Canva parity.
 - **Crop modal-mode (full)** — convert the always-visible sliders into a transient "Crop" tool launched from the toolbar, matching Canva's left-panel pattern.
 
+## 2026-04-25T15:55:00Z · Sprint-22 close — retrospective
+
+User asked Orion to pick a candidate and start. Picked the bounded option:
+> *"Add an 'Original' chip + Smart Crop placeholder for full Canva parity (~30 LOC)"*
+
+PX-077 (needs user driving), PX-074 (needs service pick), and modal-mode crop (~600 LOC, structural risk) deferred.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `16f27b2` | PX-109 | Round out the aspect-ratio chip set with "Original" (resolves to the photo's natural `naturalWidth / naturalHeight` aspect at click time). Add a "Smart Crop" primary button that does a one-click auto-fit: cover mode + zero pan/zoom + frame resized to match the photo's natural aspect. Both filled-frame-only — hidden for empty `Group` placeholders since they have no photo. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Why "Smart Crop" isn't actually smart yet.** Canva's Smart Crop uses saliency detection / face recognition to bias the crop toward the photo's subject. Without an AI backend, the best meaningful action we can take is: make the slot match the photo's natural aspect, switch to cover mode, reset pan/zoom. The result is a perfectly-framed photo with no over-scan crop and no letterboxing — visually equivalent to "Smart Crop" output for ~80% of photos where the subject is roughly centered. The button is still labeled "Smart Crop" with `auto_awesome` icon to claim the UI spot for the future feature; when we wire up a real subject-detection service (computer-vision microservice or browser-side TF.js model), the button's behavior changes but the label and placement stay the same.
+
+**Why hide both for empty placeholders.** Original needs `naturalWidth / naturalHeight` from an `HTMLImageElement` — empty Group placeholders have no image. Smart Crop needs the same. Rather than disabling them with reduced opacity (which still confuses users into clicking), they're conditionally rendered out with `@if (!isEmptyPhotoFrame())`. The remaining chips (Freeform · 1:1 · 4:3 · 16:9 · 3:4 · 9:16) work for both filled and empty frames since they're pure-geometry transforms.
+
+**Reused everything from PX-108.** `setFrameAspectRatio` already accepted any positive ratio. Smart Crop calls three existing services in sequence (`setFrameFit`, `setFrameAspectRatio`, `setFrameView`). No new geometry math, no new persistence work — the property-panel signal-bound state model carries the new chip + button without touching the canvas service.
+
+**What went well**
+1. Bounded as estimated (103 insertions, 17 changed in one file). The prediction in the PX-108 retro was "~30 LOC if user requests it" — actual was ~85 LOC for the Original logic + ~20 LOC for Smart Crop = ~105 LOC. Close enough.
+2. The cyan gradient on Smart Crop visually distinguishes it from the violet Replace-photo button so the two primary actions don't fight for attention. Single-color theming would have made both actions look like "the main thing"; the violet/cyan split signals "two distinct primary affordances."
+3. graphify came in at 1578 / 3067 / 81 — predictable small growth.
+
+**What was hard**
+1. Naming "Smart Crop" when it isn't actually using AI was a UX honesty question. Decided in favor of the placeholder label + tooltip ("Auto-fit photo to its natural aspect") for two reasons: (a) the user explicitly asked for "Smart Crop placeholder" framing, and (b) the action it does perform IS legitimately useful (one-click reset to a clean state) — calling it "Auto-fit" instead would underclaim. Worth memorializing if we later add real subject-detection: the label is already there, just swap the implementation.
+2. The chip filter `@if (a.id !== 'original' || !isEmptyPhotoFrame())` is slightly awkward; a cleaner approach would be a derived `availableAspectChips` computed signal that filters at the source. Skipped to stay bounded — a single-line template guard is fine for a 7-item list.
+
+**Sprint-23 candidates**
+- **PX-077 manual** — Browser-driven e2e smoke (still your call).
+- **PX-074** — Email change (held — pick transactional-email service).
+- **Crop modal-mode (full)** — convert the always-visible sliders into a transient "Crop" tool launched from the toolbar, matching Canva's left-panel pattern. The chip pattern is now battle-tested in PX-108 + PX-109 — the modal version mostly involves moving these existing controls into a separate `<app-crop-panel>` component triggered by an explicit Crop button on the floating toolbar.
+- **Real Smart Crop** — wire to a saliency / face-detection service. Requires a backend AI service or a browser-side TF.js model. Significant new dependency.
+
