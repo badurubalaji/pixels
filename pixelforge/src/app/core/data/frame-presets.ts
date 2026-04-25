@@ -10,6 +10,24 @@
  * @see Story PX-090
  */
 
+/**
+ * Shape of the frame's clip mask (PX-102).
+ *
+ * @remarks
+ * Each shape draws the frame's outline as a placeholder and clips the
+ * filled photo to the same shape. Sized to fit the slot's bounding
+ * rectangle (`width × height`) — the shape's intrinsic aspect ratio is
+ * preserved by centering / contain-fitting within that box.
+ *
+ * - `rect` — default; rectangular slot (matches PX-090/091/094 behavior).
+ * - `rounded` — rectangle with rx/ry = min(w,h)*0.12 corner radius.
+ * - `circle` — ellipse fitting the bounding rectangle (circle when w==h).
+ * - `hexagon` — regular hexagon, point-up.
+ * - `star` — 5-pointed star inscribed in the bounding rectangle.
+ * - `heart` — heart silhouette (SVG path) sized to the bounding box.
+ */
+export type FrameShape = 'rect' | 'rounded' | 'circle' | 'hexagon' | 'star' | 'heart';
+
 export interface FrameSlot {
   /** X of the slot's top-left, normalized to canvas width (0..1). */
   x: number;
@@ -21,6 +39,8 @@ export interface FrameSlot {
   h: number;
   /** Optional rotation in degrees (defaults to 0). Used by polaroid scatter. */
   rotation?: number;
+  /** Optional clip shape; defaults to `'rect'` when omitted (PX-102). */
+  shape?: FrameShape;
 }
 
 export interface FramePreset {
@@ -126,6 +146,41 @@ export const FRAME_PRESETS: ReadonlyArray<FramePreset> = [
       { x: (1 - 2 * GAP) / 3 + GAP, y: 0.30, w: (1 - 2 * GAP) / 3, h: 0.40 },
       { x: 2 * (1 - 2 * GAP) / 3 + 2 * GAP, y: 0.30, w: (1 - 2 * GAP) / 3, h: 0.40 },
     ],
+  },
+
+  // PX-102 — single-frame "shape" presets for collage composition.
+  // Each adds one frame at the canvas center with a non-rectangular
+  // clip shape. Designers stack these manually to build custom
+  // collages from individual shaped frames.
+  {
+    id: 'single-circle',
+    name: 'Circle',
+    icon: 'circle',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'circle' }],
+  },
+  {
+    id: 'single-rounded',
+    name: 'Rounded square',
+    icon: 'crop_5_4',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'rounded' }],
+  },
+  {
+    id: 'single-hexagon',
+    name: 'Hexagon',
+    icon: 'hexagon',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'hexagon' }],
+  },
+  {
+    id: 'single-star',
+    name: 'Star',
+    icon: 'star',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'star' }],
+  },
+  {
+    id: 'single-heart',
+    name: 'Heart',
+    icon: 'favorite',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'heart' }],
   },
 ];
 

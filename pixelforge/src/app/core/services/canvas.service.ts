@@ -2,7 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Subject } from 'rxjs';
 import * as fabric from 'fabric';
 import { Layer, LayerType } from '../models/project.model';
-import { FramePreset } from '../data/frame-presets';
+import { FramePreset, FrameShape } from '../data/frame-presets';
 import { v4 as uuidv4 } from 'uuid';
 
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star' | 'polygon' | 'diamond' | 'hexagon' | 'arrow' | 'line';
@@ -545,9 +545,11 @@ export class CanvasService {
       const top = offsetY + slot.y * targetH;
       const width = slot.w * targetW;
       const height = slot.h * targetH;
-      const group = this.buildEmptyFrame(left, top, width, height, slot.rotation ?? 0);
+      const shape: FrameShape = slot.shape ?? 'rect';
+      const group = this.buildEmptyFrame(left, top, width, height, slot.rotation ?? 0, shape);
       const layerId = uuidv4();
       (group as any).layerId = layerId;
+      (group as any).frameShape = shape;
       this.canvas.add(group);
       this.addLayer({
         id: layerId,
@@ -561,6 +563,119 @@ export class CanvasService {
       });
     }
     this.canvas.renderAll();
+  }
+
+  /**
+   * Build a clip-path / outline shape sized to fit (width × height)
+   * (PX-102).
+   *
+   * @param shape - Which clip-shape variant.
+   * @param width - Bounding-box width in canvas-local pixels.
+   * @param height - Bounding-box height in canvas-local pixels.
+   * @param withStrokeStyle - If `true`, the returned shape carries a
+   *   dashed-violet stroke + violet-tinted fill suitable for an empty
+   *   placeholder. If `false`, the shape is returned unstyled (used as
+   *   a clip-path mask on a filled FabricImage).
+   * @returns A `fabric.FabricObject` positioned at `(0, 0)` with origin
+   *   `top-left`.
+   *
+   * @remarks
+   * All shapes inscribe within the bounding rectangle. The star and
+   * heart use polygons / paths sized so their visual extent matches
+   * the bounds; circles use ellipses so non-square frame slots get a
+   * matching ellipse (visually circular only when w == h).
+   */
+  private buildFrameShape(
+    shape: FrameShape,
+    width: number,
+    height: number,
+    withStrokeStyle: boolean,
+  ): fabric.FabricObject {
+    const styleProps = withStrokeStyle
+      ? {
+          fill: 'rgba(124, 58, 237, 0.06)',
+          stroke: '#7c3aed',
+          strokeWidth: 2,
+          strokeDashArray: [8, 6] as number[],
+          strokeUniform: true,
+        }
+      : {
+          fill: 'rgba(0,0,0,1)',
+          stroke: '',
+          strokeWidth: 0,
+        };
+    const common = { left: 0, top: 0, originX: 'left' as const, originY: 'top' as const };
+
+    if (shape === 'rect') {
+      return new fabric.Rect({ ...common, width, height, ...styleProps });
+    }
+    if (shape === 'rounded') {
+      const radius = Math.min(width, height) * 0.12;
+      return new fabric.Rect({
+        ...common,
+        width,
+        height,
+        rx: radius,
+        ry: radius,
+        ...styleProps,
+      });
+    }
+    if (shape === 'circle') {
+      // Ellipse fills the whole bounding box; visually circular when w==h.
+      return new fabric.Ellipse({
+        ...common,
+        rx: width / 2,
+        ry: height / 2,
+        ...styleProps,
+      });
+    }
+    if (shape === 'hexagon') {
+      const cx = width / 2;
+      const cy = height / 2;
+      const rx = width / 2;
+      const ry = height / 2;
+      // Point-up hexagon: 6 vertices spaced 60° apart, top vertex first.
+      const pts: { x: number; y: number }[] = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = -Math.PI / 2 + (i * Math.PI) / 3;
+        pts.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) });
+      }
+      return new fabric.Polygon(pts, { ...common, ...styleProps });
+    }
+    if (shape === 'star') {
+      const cx = width / 2;
+      const cy = height / 2;
+      const outerR = Math.min(width, height) / 2;
+      const innerR = outerR * 0.4;
+      const pts: { x: number; y: number }[] = [];
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return new fabric.Polygon(pts, { ...common, ...styleProps });
+    }
+    if (shape === 'heart') {
+      // SVG-style heart path; the path is sized for a 1×1 box and
+      // scaled via fabric's path-bounds → object-bounds projection.
+      const path =
+        'M 0.5,0.93 ' +
+        'C 0.5,0.93 0.04,0.67 0.04,0.34 ' +
+        'C 0.04,0.16 0.17,0.05 0.30,0.05 ' +
+        'C 0.39,0.05 0.46,0.10 0.50,0.20 ' +
+        'C 0.54,0.10 0.61,0.05 0.70,0.05 ' +
+        'C 0.83,0.05 0.96,0.16 0.96,0.34 ' +
+        'C 0.96,0.67 0.50,0.93 0.50,0.93 Z';
+      const heart = new fabric.Path(path, { ...common, ...styleProps });
+      // Path is sized 0..1; fabric reports its bounds as 0..1. Scale
+      // to the requested width/height.
+      heart.scaleX = width;
+      heart.scaleY = height;
+      return heart;
+    }
+
+    // Fallback: rectangle.
+    return new fabric.Rect({ ...common, width, height, ...styleProps });
   }
 
   /**
@@ -579,20 +694,9 @@ export class CanvasService {
     width: number,
     height: number,
     rotation: number,
+    shape: FrameShape = 'rect',
   ): fabric.FabricObject {
-    const rect = new fabric.Rect({
-      left: 0,
-      top: 0,
-      width,
-      height,
-      fill: 'rgba(124, 58, 237, 0.06)',
-      stroke: '#7c3aed',
-      strokeWidth: 2,
-      strokeDashArray: [8, 6],
-      strokeUniform: true,
-      originX: 'left',
-      originY: 'top',
-    });
+    const outline = this.buildFrameShape(shape, width, height, true);
     const plus = new fabric.Textbox('+', {
       left: width / 2,
       top: height / 2,
@@ -606,7 +710,7 @@ export class CanvasService {
       selectable: false,
       evented: false,
     });
-    const group = new fabric.Group([rect, plus], {
+    const group = new fabric.Group([outline, plus], {
       left,
       top,
       angle: rotation,
@@ -614,6 +718,7 @@ export class CanvasService {
       originY: 'top',
     });
     (group as any).customType = 'photo-frame';
+    (group as any).frameShape = shape;
     return group;
   }
 
@@ -662,6 +767,28 @@ export class CanvasService {
         const fabricImg = new fabric.FabricImage(imgEl);
         this.applyFrameFit(fabricImg, imgEl, left, top, fw, fh, angle, fitMode);
 
+        // PX-102 — preserve the frame's shape across replacement and
+        // apply it as a clipPath so the image renders inside the
+        // shape's silhouette (circle, hexagon, star, etc.) instead of
+        // the default rectangle.
+        const shape: FrameShape = (frame as any).frameShape ?? 'rect';
+        if (shape !== 'rect') {
+          const clipShape = this.buildFrameShape(shape, fw, fh, false);
+          // Center the clip in the image's local space. The image
+          // applies clipPath relative to its own (left, top), so we
+          // need the clip's origin to align with the image's
+          // top-left in canvas coords.
+          (clipShape as any).left = -fabricImg.width! * fabricImg.scaleX! / 2;
+          (clipShape as any).top = -fabricImg.height! * fabricImg.scaleY! / 2;
+          // Re-position more reliably: use absolutePositioned so the
+          // clip is in canvas coords, matching the frame's bounds.
+          (clipShape as any).left = left;
+          (clipShape as any).top = top;
+          (clipShape as any).angle = angle;
+          (clipShape as any).absolutePositioned = true;
+          (fabricImg as any).clipPath = clipShape;
+        }
+
         // Persist so subsequent setFrameFit calls (and resize-then-fit)
         // can recompute without losing the original frame target dims.
         (fabricImg as any).layerId = layerId;
@@ -669,6 +796,7 @@ export class CanvasService {
         (fabricImg as any).frameWidth = fw;
         (fabricImg as any).frameHeight = fh;
         (fabricImg as any).fitMode = fitMode;
+        (fabricImg as any).frameShape = shape;
 
         const idx = canvas.getObjects().indexOf(frame);
         canvas.remove(frame);
@@ -741,6 +869,47 @@ export class CanvasService {
     (frame as any).framePanX = px;
     (frame as any).framePanY = py;
     (frame as any).frameZoom = z;
+
+    this.canvas.renderAll();
+  }
+
+  /**
+   * Convert a regular `FabricImage` into a photo-frame (PX-102 recovery).
+   *
+   * @param obj - Any selected `FabricImage` on the canvas. No-op for
+   *   non-image objects or images that are already photo-frames.
+   *
+   * @remarks
+   * Bridge for two scenarios: (1) recovering filled photo-frames from
+   * pre-PX-101 saves whose `customType` flag was stripped by the old
+   * serializer, and (2) intentionally promoting any imported image
+   * to a frame so users can apply pan / zoom / shape edits to it.
+   *
+   * The current image's drawn bounds become the frame's logical
+   * `frameWidth × frameHeight`. `fitMode` defaults to `'cover'` and
+   * `framePanX/Y/Zoom` to `(0, 0, 1)`. `frameShape` defaults to
+   * `'rect'` (no clipPath applied) — user can switch shape via the
+   * property-panel after conversion.
+   *
+   * After conversion, click-to-fill / right-click Replace / property-
+   * panel pan-zoom controls all light up against the converted image.
+   */
+  convertImageToFrame(obj: fabric.FabricObject): void {
+    if (!this.canvas) return;
+    if (!(obj instanceof fabric.FabricImage)) return;
+    if ((obj as any).customType === 'photo-frame') return;
+
+    const fw = (obj.width ?? 100) * (obj.scaleX ?? 1);
+    const fh = (obj.height ?? 100) * (obj.scaleY ?? 1);
+
+    (obj as any).customType = 'photo-frame';
+    (obj as any).frameWidth = fw;
+    (obj as any).frameHeight = fh;
+    (obj as any).fitMode = 'cover';
+    (obj as any).framePanX = 0;
+    (obj as any).framePanY = 0;
+    (obj as any).frameZoom = 1;
+    (obj as any).frameShape = 'rect';
 
     this.canvas.renderAll();
   }
@@ -1877,6 +2046,7 @@ export class CanvasService {
       'layerId',
       'frameWidth',
       'frameHeight',
+      'frameShape',
       'fitMode',
       'framePanX',
       'framePanY',

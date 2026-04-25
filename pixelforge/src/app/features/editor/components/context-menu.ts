@@ -202,9 +202,17 @@ export class ContextMenuComponent {
     const isImage = active instanceof fabric.FabricImage;
     const hasStyle = this.clipboardService.hasStyle();
 
-    // PX-100: photo-frame quick actions sit at the top so they're the
-    // first thing the user sees when right-clicking a frame.
+    // PX-100/102: photo-frame quick actions sit at the top so they're
+    // the first thing the user sees when right-clicking a frame.
+    // Regular images also get a "Make photo frame" promote action — both
+    // for recovery of pre-PX-101 saves whose customType was stripped
+    // and for intentionally converting any imported image into a frame.
     const isPhotoFrame = hasSelection && (active as any)?.customType === 'photo-frame';
+    const isPlainImage =
+      hasSelection &&
+      isImage &&
+      (active as any)?.customType !== 'photo-frame';
+
     const frameItems: MenuItem[] = isPhotoFrame
       ? [
           {
@@ -221,7 +229,17 @@ export class ContextMenuComponent {
             dividerAfter: true,
           },
         ]
-      : [];
+      : isPlainImage
+        ? [
+            {
+              label: 'Make photo frame',
+              icon: 'collections',
+              action: 'image-to-frame',
+              disabled: false,
+              dividerAfter: true,
+            },
+          ]
+        : [];
 
     const items: MenuItem[] = [
       ...frameItems,
@@ -319,6 +337,11 @@ export class ContextMenuComponent {
       case 'frame-reset-view':
         if (active && (active as any).customType === 'photo-frame') {
           this.canvasService.setFrameView(active, 0, 0, 1);
+        }
+        break;
+      case 'image-to-frame':
+        if (active) {
+          this.canvasService.convertImageToFrame(active);
         }
         break;
       case 'copy':

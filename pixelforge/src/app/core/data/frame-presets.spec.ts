@@ -3,8 +3,26 @@ import { describe, it, expect } from 'vitest';
 import { FRAME_PRESETS, getFramePreset } from './frame-presets';
 
 describe('FRAME_PRESETS — PX-090', () => {
-  it('ships exactly the 8 MVP presets', () => {
-    expect(FRAME_PRESETS).toHaveLength(8);
+  it('ships the 8 MVP collage presets + 5 single-shape presets (PX-102)', () => {
+    expect(FRAME_PRESETS).toHaveLength(13);
+  });
+
+  it('includes single-shape presets for circle / rounded / hexagon / star / heart', () => {
+    const ids = FRAME_PRESETS.map(p => p.id);
+    expect(ids).toContain('single-circle');
+    expect(ids).toContain('single-rounded');
+    expect(ids).toContain('single-hexagon');
+    expect(ids).toContain('single-star');
+    expect(ids).toContain('single-heart');
+  });
+
+  it('every single-shape preset has its slot shape set', () => {
+    const singles = FRAME_PRESETS.filter(p => p.id.startsWith('single-'));
+    for (const p of singles) {
+      expect(p.slots.length).toBe(1);
+      expect(p.slots[0].shape).toBeDefined();
+      expect(p.slots[0].shape).not.toBe('rect');
+    }
   });
 
   it('every preset has a non-empty slots array', () => {

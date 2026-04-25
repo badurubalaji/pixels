@@ -237,6 +237,7 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                       @for (slot of preset.slots; track $index) {
                         <span
                           class="frame-slot"
+                          [class]="'frame-slot--' + (slot.shape || 'rect')"
                           [style.left.%]="slot.x * 100"
                           [style.top.%]="slot.y * 100"
                           [style.width.%]="slot.w * 100"
@@ -1138,6 +1139,23 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       border-radius: 3px;
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
       transform-origin: center;
+    }
+    /* PX-102 — shape-aware previews using clip-path */
+    .frame-slot--rounded { border-radius: 18%; }
+    .frame-slot--circle { border-radius: 50%; }
+    .frame-slot--hexagon {
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      border-radius: 0;
+    }
+    .frame-slot--star {
+      clip-path: polygon(
+        50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%,
+        50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      border-radius: 0;
+    }
+    .frame-slot--heart {
+      clip-path: path('M 50,90 C 50,90 4,67 4,34 C 4,16 17,5 30,5 C 39,5 46,10 50,20 C 54,10 61,5 70,5 C 83,5 96,16 96,34 C 96,67 50,90 50,90 Z');
+      border-radius: 0;
     }
 
     .frame-name {
