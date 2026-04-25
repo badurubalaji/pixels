@@ -746,6 +746,60 @@ export class CanvasService {
   }
 
   /**
+   * Apply a canvas-pixel delta to a photo-frame's pan offset (PX-099).
+   *
+   * @param frame - A `customType: 'photo-frame'` `FabricImage` in cover
+   *   mode. No-op for placeholders, contain, or fill.
+   * @param deltaCanvasX - Cursor X displacement in canvas pixels since
+   *   the last call. Positive = cursor moved right.
+   * @param deltaCanvasY - Cursor Y displacement.
+   *
+   * @remarks
+   * Used by the editor's Shift+drag pan flow. Reads the current
+   * `framePanX`/`framePanY`/`frameZoom`, converts the canvas-pixel
+   * delta into a normalized pan delta (`-1..1` range), and calls
+   * {@link setFrameView}. The conversion accounts for the current
+   * zoom — at higher zooms a single canvas pixel corresponds to
+   * fewer source pixels, so the same drag distance produces a
+   * smaller pan delta.
+   *
+   * @see Story PX-099 AC-3.
+   */
+  applyFramePanDelta(
+    frame: fabric.FabricObject,
+    deltaCanvasX: number,
+    deltaCanvasY: number,
+  ): void {
+    if ((frame as any).fitMode && (frame as any).fitMode !== 'cover') return;
+    if (!(frame instanceof fabric.FabricImage)) return;
+    const imgEl = (frame as any).getElement?.() as HTMLImageElement | undefined;
+    if (!imgEl) return;
+    const iw = imgEl.naturalWidth || imgEl.width;
+    const ih = imgEl.naturalHeight || imgEl.height;
+    if (!iw || !ih) return;
+
+    const fw = (frame as any).frameWidth ?? 100;
+    const fh = (frame as any).frameHeight ?? 100;
+    const z = (frame as any).frameZoom ?? 1;
+    const baseScale = Math.max(fw / iw, fh / ih);
+    const effective = baseScale * z;
+    const srcW = fw / effective;
+    const srcH = fh / effective;
+    const maxPanX = (iw - srcW) / 2;
+    const maxPanY = (ih - srcH) / 2;
+
+    const oldPanX = (frame as any).framePanX ?? 0;
+    const oldPanY = (frame as any).framePanY ?? 0;
+    // WHY: dragging the cursor right shows more of the LEFT side of
+    // the source — pan moves OPPOSITE to cursor for a "pull the photo"
+    // gesture (matches how Maps / Photos pan).
+    const dPanX = maxPanX > 0 ? -deltaCanvasX / effective / maxPanX : 0;
+    const dPanY = maxPanY > 0 ? -deltaCanvasY / effective / maxPanY : 0;
+
+    this.setFrameView(frame, oldPanX + dPanX, oldPanY + dPanY, z);
+  }
+
+  /**
    * Switch a filled photo-frame between cover / contain / fill (PX-091).
    *
    * @param frame - A `customType: 'photo-frame'` `fabric.FabricImage`
@@ -1797,10 +1851,40 @@ export class CanvasService {
 
   /**
    * Serialize the full canvas state to JSON string.
+   *
+   * @remarks
+   * fabric's default `toObject` only writes built-in properties, so
+   * any custom data we attach via `(obj as any).foo = ...` is lost
+   * on round-trip. The list below explicitly opts every property the
+   * editor depends on into the serializer (PX-101 fix). When you add
+   * a new custom prop on a fabric object, add it here too — otherwise
+   * the prop will silently disappear on save/reload.
+   *
+   *   - `customType`: discriminator for photo-frame click-to-fill +
+   *     property-panel branches (PX-090).
+   *   - `layerId`: stable id linking fabric objects to {@link Layer}
+   *     entries.
+   *   - `frameWidth`/`frameHeight`/`fitMode`: photo-frame target
+   *     dimensions + cover/contain/fill mode (PX-091).
+   *   - `framePanX`/`framePanY`/`frameZoom`: in-frame photo crop
+   *     state (PX-094).
+   *   - `_locked`/`_isGuideline`: editor-internal flags.
    */
   getCanvasJSON(): string {
     if (!this.canvas) return '{}';
-    return JSON.stringify(this.canvas.toJSON());
+    const PERSISTED_CUSTOM_PROPS = [
+      'customType',
+      'layerId',
+      'frameWidth',
+      'frameHeight',
+      'fitMode',
+      'framePanX',
+      'framePanY',
+      'frameZoom',
+      '_locked',
+      '_isGuideline',
+    ];
+    return JSON.stringify(this.canvas.toJSON(PERSISTED_CUSTOM_PROPS));
   }
 
   /**
@@ -1820,6 +1904,36 @@ export class CanvasService {
     try {
       const parsed = JSON.parse(json);
       await this.canvas.loadFromJSON(parsed);
+
+      // PX-101 — projects saved before the toJSON fix lost their
+      // photo-frame customType flag. Detect empty placeholders by
+      // structure (Group with a dashed-stroke Rect + a "+" Textbox)
+      // and re-flag them so click-to-fill, the property-panel
+      // controls, and the right-click menu light up again.
+      // Filled FabricImages that lost the flag can't be reliably
+      // recovered (they look like normal images); users will need to
+      // re-drop a photo into them.
+      for (const obj of this.canvas.getObjects()) {
+        if ((obj as any).customType === 'photo-frame') continue;
+        if (!(obj instanceof fabric.Group)) continue;
+        const children = (obj as fabric.Group).getObjects();
+        if (children.length !== 2) continue;
+        const hasDashedRect = children.some(
+          (c: fabric.FabricObject) =>
+            c instanceof fabric.Rect &&
+            Array.isArray((c as fabric.Rect).strokeDashArray) &&
+            ((c as fabric.Rect).strokeDashArray as number[]).length > 0,
+        );
+        const hasPlusText = children.some(
+          (c: fabric.FabricObject) =>
+            c instanceof fabric.Textbox &&
+            (c as fabric.Textbox).text === '+',
+        );
+        if (hasDashedRect && hasPlusText) {
+          (obj as any).customType = 'photo-frame';
+        }
+      }
+
       this.canvas.renderAll();
 
       // Rebuild layers from canvas objects

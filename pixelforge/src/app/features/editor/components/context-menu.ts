@@ -202,7 +202,29 @@ export class ContextMenuComponent {
     const isImage = active instanceof fabric.FabricImage;
     const hasStyle = this.clipboardService.hasStyle();
 
+    // PX-100: photo-frame quick actions sit at the top so they're the
+    // first thing the user sees when right-clicking a frame.
+    const isPhotoFrame = hasSelection && (active as any)?.customType === 'photo-frame';
+    const frameItems: MenuItem[] = isPhotoFrame
+      ? [
+          {
+            label: 'Replace photo',
+            icon: 'swap_horiz',
+            action: 'frame-replace',
+            disabled: false,
+          },
+          {
+            label: 'Reset crop & zoom',
+            icon: 'restart_alt',
+            action: 'frame-reset-view',
+            disabled: (active as any).fitMode !== 'cover',
+            dividerAfter: true,
+          },
+        ]
+      : [];
+
     const items: MenuItem[] = [
+      ...frameItems,
       // Clipboard
       { label: 'Copy', icon: 'content_copy', action: 'copy', shortcut: 'Ctrl+C', disabled: !hasSelection },
       { label: 'Copy style', icon: 'palette', action: 'copy-style', shortcut: 'Ctrl+Alt+C', disabled: !hasSelection },
@@ -287,6 +309,18 @@ export class ContextMenuComponent {
     const active = canvas.getActiveObject();
 
     switch (action) {
+      // PX-100 — photo-frame quick actions
+      case 'frame-replace':
+        // Same path as the property-panel button: editor host listens
+        // for this CustomEvent on document and triggers the hidden
+        // file input.
+        document.dispatchEvent(new CustomEvent('pf:request-frame-replace'));
+        break;
+      case 'frame-reset-view':
+        if (active && (active as any).customType === 'photo-frame') {
+          this.canvasService.setFrameView(active, 0, 0, 1);
+        }
+        break;
       case 'copy':
         this.clipboardService.copy();
         break;

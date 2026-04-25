@@ -1799,6 +1799,16 @@ export class Editor implements AfterViewInit, OnDestroy {
       let downX = 0,
         downY = 0,
         downHadTarget: fabric.FabricObject | null = null;
+      // PX-099 Shift+drag-to-pan state. When active, each mouse:move
+      // accumulates canvas-pixel deltas and dispatches them to
+      // CanvasService.applyFramePanDelta. lockMovementX/Y on the frame
+      // disables fabric's normal drag during the pan gesture.
+      let panState: {
+        frame: fabric.FabricObject;
+        lastX: number;
+        lastY: number;
+      } | null = null;
+
       fabricCanvas.on(
         'mouse:down',
         (opt: { e?: MouseEvent | TouchEvent; target?: fabric.FabricObject | null }) => {
@@ -1806,19 +1816,49 @@ export class Editor implements AfterViewInit, OnDestroy {
           downX = e?.clientX ?? 0;
           downY = e?.clientY ?? 0;
           downHadTarget = opt.target ?? null;
+
+          // Engage Shift+drag pan if conditions match.
+          const isShift = (e as MouseEvent | undefined)?.shiftKey === true;
+          const target = opt.target;
+          const isFrame = target && (target as any).customType === 'photo-frame';
+          const inCover =
+            isFrame &&
+            ((target as any).fitMode === 'cover' || !(target as any).fitMode);
+          if (isShift && isFrame && inCover && opt.e) {
+            const ptr = fabricCanvas.getPointer(opt.e as Event);
+            panState = { frame: target!, lastX: ptr.x, lastY: ptr.y };
+            target!.set({ lockMovementX: true, lockMovementY: true });
+          }
         },
       );
+
+      fabricCanvas.on('mouse:move', (opt: { e?: Event }) => {
+        if (!panState) return;
+        if (!opt.e) return;
+        const ptr = fabricCanvas.getPointer(opt.e as Event);
+        const dx = ptr.x - panState.lastX;
+        const dy = ptr.y - panState.lastY;
+        panState.lastX = ptr.x;
+        panState.lastY = ptr.y;
+        this.canvasService.applyFramePanDelta(panState.frame, dx, dy);
+      });
+
       fabricCanvas.on(
         'mouse:up',
         (opt: { e?: MouseEvent | TouchEvent; target?: fabric.FabricObject | null }) => {
+          // Wind down the pan gesture if active.
+          if (panState) {
+            panState.frame.set({ lockMovementX: false, lockMovementY: false });
+            panState = null;
+            return; // Pan release isn't a click — skip click-to-fill.
+          }
+
           const e = opt.e as MouseEvent | undefined;
           const dx = (e?.clientX ?? 0) - downX;
           const dy = (e?.clientY ?? 0) - downY;
           const movedSqr = dx * dx + dy * dy;
           // Click ≠ drag: pixel distance < ~6px is treated as a tap.
           if (movedSqr > 36) return;
-          // Click-to-fill operates on the down-target so a brief mouse
-          // move during a fabric "select" gesture doesn't lose the frame.
           this.maybeOpenFrameFiller(opt.target ?? downHadTarget);
         },
       );
