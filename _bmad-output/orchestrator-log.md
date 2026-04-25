@@ -1093,3 +1093,36 @@ User opened with multiple drive-by reports across one session. Original Sprint-2
 - **Frames sub-categories** — Canva-style 30+ frame variants per category (Basic shapes, Film & photo, Devices, Paper, Flowers); content-authoring scope.
 - **Editor responsive audit (PX-118)** — narrow viewport, mobile, tablet pass; deferred from Sprint-24 due to scope.
 
+## 2026-04-25T22:25:00Z · Sprint-25 close — frames catalogue + sub-categories (PX-121)
+
+User asked Orion to pick + start. Picked the most directly visible Canva gap: frames catalogue depth.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `3c776ca` | PX-121 | Frames catalogue 13 → 25 across 5 sub-categories. New `category` field on FramePreset; new `FRAME_CATEGORY_LABELS` constant + `getFramePresetsByCategory()` helper. 12 new presets: split-3-v, grid-2x3, grid-3x3, magazine-1-plus-3, quad-l (grids); strip-2-h, strip-4-h, strip-3-v, strip-4-v (strips); polaroid-row, polaroid-stack (polaroid); mosaic-feature (featured). Sidebar Frames panel renders a category-section header above each grid. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The catalogue layout vs. Canva's depth.** Canva's Frames category in the Elements panel has 5 sub-categories (Basic shapes, Film and photo, Devices, Paper, Flowers) each with ~20–30 variants — hundreds of options total. PX-121 ships 25 across 5 categories named differently (grids / strips / polaroid / featured / shapes). The category names map to PIXELFORGE's design model (we don't have stock-imagery-styled "Basic shapes" backgrounds, just raw geometry). This is the right starting point for our 4-week MVP cycle; deeper expansion (especially Devices and Paper/torn-edge) needs new shape types and is queued as future content-authoring stories.
+
+**Programmatic-first stayed bounded.** Every new preset is pure normalized-coordinate slot geometry. No new shape types, no asset uploads, no stock imagery dependency. Each preset reuses the existing render pipeline (frame-slot CSS class for the panel preview; setFrameShape + buildFrameShape for the canvas render). Net result: 12 new presets in ~150 LOC of declarative data.
+
+**Why a `getFramePresetsByCategory()` helper instead of a computed signal.** The frame catalogue is a compile-time constant — categories never change at runtime. A pure function returning frozen sections is cheaper (no signal subscription) and tree-shakable. Sidebar binds the result to a `readonly` field; Angular's @for/track key handles the rendering.
+
+**What went well**
+1. Bounded as estimated — ~200 LOC including styles + tests, fully data-driven additions, zero touch to canvas.service.ts. The infrastructure from PX-090/094/102 absorbed the new presets without modification.
+2. The category-section UI in the sidebar (`.frame-cat-label` headers above each grid) reuses the existing `.section-label` visual language. Discoverable without adding a new affordance.
+3. 5 new tests added; total suite went 443 → 448 passing.
+4. graphify came in at 1587 / 3091 / 82 — small steady growth.
+
+**What was hard**
+1. Picking 12 specific layouts from a near-infinite combinatorial space. The criterion was "could a magazine designer / Instagram creator reach for this in the first 30 seconds of a session?" — split-3-v, grid-3x3, strip-4-h, mosaic-feature all passed. Skipped exotic asymmetric layouts (slanted strips, irregular tessellations) until user demand surfaces them.
+2. Deciding NOT to add new shape types for Devices / Paper categories. Tempting because the user shared canva3 / canva4 reference screenshots, but those need either masking SVGs (license-flagged stock) or new low-level shape primitives — out of bounded sprint scope. Documented as deferred.
+
+**Sprint-26 candidates** (remaining backlog after PX-121)
+- **Crop modal-mode (full)** — still queued.
+- **Real Smart Crop** — still queued (TF.js BlazeFace or backend microservice).
+- **PX-077 manual** — your call (browser e2e).
+- **PX-074** — email change with Resend (awaiting service confirmation).
+- **Editor responsive audit (PX-118)** — deferred from Sprint-24 / 25.
+- **Devices + Paper frame categories** — needs new shape primitives (phone outline path, torn-edge fill mode); queued behind a real designer brief.
+
