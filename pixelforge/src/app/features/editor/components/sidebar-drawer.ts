@@ -20,6 +20,12 @@ import { BackgroundRemovalService } from '../../../core/services/background-remo
 import { ProjectService } from '../../../core/services/project.service';
 import { ApiService } from '../../../core/services/api.service';
 import { STOCK_ICONS, ICON_CATEGORIES } from '../../../core/data/stock-icons';
+import {
+  GRAPHIC_ELEMENTS,
+  GRAPHIC_ELEMENT_CATEGORY_LABELS,
+  getGraphicElementsByCategory,
+  type GraphicElement,
+} from '../../../core/data/graphic-elements';
 import { AiBackgroundService } from '../../../core/services/ai-background.service';
 import { BrandKitService, BrandLogo } from '../../../core/services/brand-kit.service';
 import { FontService } from '../../../core/services/font.service';
@@ -303,6 +309,24 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   </button>
                 }
               </div>
+
+              <!-- PX-126 — Graphic elements (license-clean, hand-authored) -->
+              <div class="section-label">Graphic elements</div>
+              @for (gcat of graphicElementCategories; track gcat.id) {
+                @if (gcat.items.length > 0) {
+                  <div class="frame-cat-label" [attr.data-graphic-cat]="gcat.id">{{ gcat.label }}</div>
+                  <div class="icon-grid" [attr.data-testid]="'graphic-elements-' + gcat.id">
+                    @for (gel of gcat.items; track gel.name) {
+                      <button
+                        class="icon-btn graphic-el"
+                        [matTooltip]="gel.name"
+                        [innerHTML]="trustSvg(gel.svg)"
+                        (click)="addGraphicElementToCanvas(gel)"
+                      ></button>
+                    }
+                  </div>
+                }
+              }
             }
 
             <!-- TEXT TAB -->
@@ -1324,6 +1348,19 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       &.decor svg {
         width: 32px;
         height: 32px;
+      }
+
+      /* PX-126 — graphic elements need more pixel real estate to read */
+      &.graphic-el {
+        padding: 4px;
+        background: rgba(124, 58, 237, 0.04);
+        border-color: rgba(124, 58, 237, 0.12);
+      }
+      &.graphic-el svg {
+        width: 100%;
+        height: 100%;
+        max-width: 56px;
+        max-height: 56px;
       }
     }
 
@@ -2524,6 +2561,8 @@ export class SidebarDrawerComponent {
   readonly framePresets = FRAME_PRESETS;
   /** PX-121 — grouped variant for the sub-category sections. */
   readonly frameCategories = getFramePresetsByCategory();
+  /** PX-126 — license-clean graphic elements (modern, Indian, flowers, animals). */
+  readonly graphicElementCategories = getGraphicElementsByCategory();
 
   readonly basicShapes: { type: ShapeType; name: string; icon: string }[] = [
     { type: 'rect', name: 'Rectangle', icon: 'rectangle' },
@@ -2623,6 +2662,15 @@ export class SidebarDrawerComponent {
 
   trustSvg(svg: string): any {
     return this.sanitizer.bypassSecurityTrustHtml(svg);
+  }
+
+  /**
+   * Drop a hand-authored graphic element onto the canvas (PX-126).
+   *
+   * @param el - One of the {@link GRAPHIC_ELEMENTS}.
+   */
+  addGraphicElementToCanvas(el: GraphicElement): void {
+    this.canvasService.addSvg(el.svg);
   }
 
   addStockIconToCanvas(icon: { name: string; svg: string }): void {
