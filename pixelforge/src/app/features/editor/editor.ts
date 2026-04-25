@@ -857,7 +857,18 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       pointer-events: none;
     }
 
-    /* Mobile / tablet responsive */
+    /* PX-118 — tablet breakpoint: narrow the right panel but keep it visible
+       so designers on iPads / small laptops still have property editing. */
+    @media (max-width: 1100px) {
+      .right-panel {
+        width: 240px;
+      }
+    }
+
+    /* PX-118 — mobile breakpoint: right panel becomes a slide-over from the
+       right edge instead of disappearing entirely (the old behavior left
+       designers on tablets unable to edit any object property). The
+       sidebar already collapses to a bottom sheet at this width. */
     @media (max-width: 768px) {
       .topbar-center {
         display: none;
@@ -866,7 +877,24 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
         display: none;
       }
       .right-panel {
-        display: none !important;
+        position: fixed;
+        top: 56px;             /* below the topbar */
+        right: 0;
+        bottom: 56px;          /* above the sidebar bottom rail */
+        width: min(320px, 92vw);
+        z-index: 90;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45);
+        transform: translateX(0);
+        transition: transform 0.22s ease;
+      }
+      .right-panel.collapsed {
+        width: min(320px, 92vw) !important;
+        transform: translateX(100%);
+        border-left: none;
+        overflow: hidden;
+      }
+      .panels-edge-toggle {
+        right: 0 !important;
       }
       .page-bar {
         padding: 4px 8px !important;
@@ -884,6 +912,9 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
 
     @media (max-width: 480px) {
       .home-btn {
+        display: none;
+      }
+      .topbar-right .topbar-icon-btn[matTooltip*="Share"] {
         display: none;
       }
     }
@@ -1525,9 +1556,16 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       border-color: transparent !important;
     }
 
-    /* Mobile responsive — canvas area can be more compact */
+    /* Mobile responsive — canvas area can be more compact, plus bottom-pad
+       to clear the sidebar bottom rail (PX-118). */
     @media (max-width: 768px) {
-      .canvas-area { padding: 16px !important; }
+      .canvas-area {
+        padding: 16px !important;
+        padding-bottom: 80px !important;
+      }
+      .page-bar {
+        margin-bottom: 56px;
+      }
     }
   `],
 })
