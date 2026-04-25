@@ -1057,3 +1057,39 @@ Backend logs surfaced the smoking gun: `pymongo.errors.DocumentTooLarge: 'findAn
 - **PX-077 manual** — Browser-driven e2e smoke (still needs you driving).
 - **PX-074** — Email change with Resend (research already done by an agent earlier this sprint; ready to execute the moment you commit on the email service).
 
+## 2026-04-25T22:00:00Z · Sprint-24 close — retrospective (user-driven defect + parity sprint)
+
+User opened with multiple drive-by reports across one session. Original Sprint-24 candidates (modal-mode crop, real Smart Crop, PX-077, PX-074) all deferred again — the user kept surfacing concrete UX defects that took priority. Six small-to-medium stories shipped instead.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `b7d0948` | PX-115 | Canvas-background opacity slider (0–100%) in the property panel. New `_backgroundOpacity` signal + `setBackgroundOpacity(alpha)` on CanvasService composes hex + alpha into rgba. Mode toggles (white / transparent / custom) reset the opacity signal so the slider reflects current state. |
+| `2f3402c` | PX-116 + PX-117 + PX-119 | (a) Page-background expansion panel always reachable — added a collapsed Background section at the end of the props content (alongside Transform / Appearance) so users don't have to deselect to recolor the page; the empty-state version (PX-113) stays as a shortcut. (b) Sidebar Grayscale / Sepia / Invert filter buttons no longer overflow — switched the toggle row to a 3-column grid with min-width: 0, smaller font + icon, ellipsis. (c) Recent-projects thumbnails on /hub now sharp — bumped getThumbnail() from PNG@multiplier 0.25 to WebP@quality 0.85, multiplier 0.6. ~480×360 for an 800×600 canvas, retina-sharp; WebP compresses ~3× better than PNG so storage is similar to the old fuzzy version. |
+| `7b3e9f9` | PX-120 | Platform-presets catalogue 6 → 19. Mirrored TS + Python with Instagram (post/story/reel), Facebook (post/cover), Twitter (post/header), LinkedIn (post/banner), YouTube (thumbnail/channel-art), TikTok video, Pinterest pin, Presentation 16:9, A4, US Letter, business card, logo. Hub auto-generates tiles from PLATFORM_PRESETS minus `custom` and `logo` (hardcoded mode-chooser tile keeps the special /logo/mode-chooser route). Backend parity test passes; tile-count assertion updated 6 → 18. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The "always-reachable Background panel" tradeoff.** PX-113 surfaced bg controls in the empty state only. User flagged: "if we select outside canvas background should select and apply what ever required" — i.e., they wanted bg controls accessible while an object is selected, without having to deselect first. Could have shipped a "Background" tab in the property panel header (more discoverable but fights for tab space) or added a collapsed expansion panel at the end of the existing controls (lower visibility but doesn't fight the existing UI). Picked the expansion panel: zero new top-level affordance, available everywhere, stays out of the way until the user expands it. Empty-state version still acts as the fast path when nothing's selected.
+
+**Why bumped thumbnail multiplier 0.25 → 0.6 (WebP).** Previous setting produced ~200×150 PNG thumbs. Hub cards render ~280px wide. On retina (2× DPR) that's a 2.8× upscale → blurry. Multiplier 0.6 gives ~480×360, sharp at 2× DPR, even reasonable at 3× DPR. WebP @ q 0.85 compresses ~3× better than PNG, so the stored bytes per project are roughly the same. Migration concern: existing projects' stored PNG thumbnails keep working (it's just a string field in Mongo); next save overwrites with WebP.
+
+**Catalogue expansion stayed bounded.** Was tempted to also build out Canva-style sub-categories (Frames > Basic shapes / Film and photo / Devices / Paper / Flowers — see canva3.png and Screenshot from 2026-04-25 21-17-53.png). That's a content-authoring story (~30+ frame variants needing programmatic generation per ARD §8.1's license-safe rule). Scoped to just the platform-preset list; the frame catalogue is queued as a separate Sprint-25 candidate if user wants it.
+
+**Pre-existing test brittleness uncovered.** PX-120 broke 5 tests because `hub.component.spec.ts` and `platform-presets.spec.ts` had hardcoded "exactly 6 presets" + per-tile-position assertions. Updated both — the spec now spot-checks specific platform tiles by id rather than asserting positional order for all 17. Memorialize: **catalogue tests should be additive** (verify presence of expected entries) **rather than exhaustive** (assert exact count + order), unless order is genuinely load-bearing.
+
+**What went well**
+1. Six stories in one sprint without rolling any forward (PX-115/116/117/119/120 + PX-114 frame undo from earlier session). Net diff across the day was ~330 lines insertion / ~125 deletion.
+2. The PX-114 root-cause analysis (toJSON ignoring args in fabric 7) was a one-line fix that probably resolved the user's actual undo experience for everything custom-prop-shaped, not just frames. Same allowlist now used in three places: project save, history snapshot, project load.
+3. graphify came in at 1586 / 3090 / 85 — small steady growth across the sprint.
+
+**What was hard**
+1. The toJSON-vs-toObject confusion took two passes (PX-101 wrote it incorrectly, PX-114 fixed history but not the underlying confusion). The fabric 7 source confirmation (`toJSON() { return this.toObject(); }`) made it certain.
+2. The user surfaced 6 separate defects across one session, several inter-related (PX-113 → PX-115 → PX-116 all touching the same Background editing surface). Tempting to rush; chose to ship each as a discrete commit with focused scope so retro cause-and-effect stays readable. Worth the extra commits.
+
+**Sprint-25 candidates** (remaining backlog)
+- **Crop modal-mode (full)** — still queued.
+- **Real Smart Crop** — still queued.
+- **PX-077 manual** — still your call.
+- **PX-074** — Email change with Resend (research done; awaiting service confirmation).
+- **Frames sub-categories** — Canva-style 30+ frame variants per category (Basic shapes, Film & photo, Devices, Paper, Flowers); content-authoring scope.
+- **Editor responsive audit (PX-118)** — narrow viewport, mobile, tablet pass; deferred from Sprint-24 due to scope.
+
