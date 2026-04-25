@@ -130,6 +130,31 @@ interface ObjectProps {
               </button>
             </div>
 
+            <!-- PX-122 — crop modal-mode header. When the user has entered
+                 crop mode via the toolbar's Crop button, surface Apply /
+                 Cancel as a focused affordance at the top of the section. -->
+            @if (canvasService.cropMode()) {
+              <div class="crop-mode-bar">
+                <span class="crop-mode-label"><mat-icon>crop</mat-icon> Crop mode</span>
+                <span class="crop-mode-spacer"></span>
+                <button
+                  mat-stroked-button
+                  data-testid="crop-cancel"
+                  (click)="cancelCropMode()"
+                >
+                  Cancel
+                </button>
+                <button
+                  mat-flat-button
+                  class="crop-apply-btn"
+                  data-testid="crop-apply"
+                  (click)="applyCropMode()"
+                >
+                  <mat-icon>check</mat-icon> Apply
+                </button>
+              </div>
+            }
+
             <!-- Photo in frame — crop / resize / adjust / rotate (PX-094 + PX-095) -->
             <mat-expansion-panel expanded>
               <mat-expansion-panel-header>
@@ -1104,6 +1129,40 @@ interface ObjectProps {
       font-weight: 600 !important;
     }
 
+    /* PX-122 — crop modal-mode bar */
+    .crop-mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(6, 182, 212, 0.08));
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      border-radius: 10px;
+    }
+    .crop-mode-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--px-violet, #7c3aed);
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+    .crop-mode-spacer {
+      flex: 1;
+    }
+    .crop-apply-btn {
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed), #a855f7) !important;
+      color: #ffffff !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+    }
+
     /* PX-113 — Background editing affordance in the empty-selection state */
     .bg-panel-header {
       display: flex;
@@ -1208,6 +1267,16 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   /** PX-115 — drive the canvas-background opacity slider in the empty state. */
   setBackgroundOpacity(alpha: number): void {
     this.canvasService.setBackgroundOpacity(alpha);
+  }
+
+  /** PX-122 — commit the crop and exit modal-mode. */
+  applyCropMode(): void {
+    this.canvasService.applyCropMode();
+  }
+
+  /** PX-122 — revert to the snapshot taken on enterCropMode and exit. */
+  cancelCropMode(): void {
+    this.canvasService.cancelCropMode();
   }
 
   readonly props = signal<ObjectProps | null>(null);

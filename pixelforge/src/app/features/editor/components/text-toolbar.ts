@@ -222,6 +222,19 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
                 <mat-icon>crop_free</mat-icon>
               </mat-button-toggle>
             </mat-button-toggle-group>
+
+            <!-- PX-122 — modal-mode Crop button. Enters cropMode and the
+                 right property panel switches to a focused Crop UI with
+                 chips + sliders + Smart Crop + Apply/Cancel. -->
+            <span class="tb-sep"></span>
+            <button
+              mat-flat-button
+              class="tb-btn primary"
+              data-testid="frame-crop-mode"
+              (click)="onEnterCropMode()"
+            >
+              <mat-icon>crop</mat-icon> Crop
+            </button>
           }
         }
 
@@ -1192,6 +1205,11 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     this.canvasService.setFrameFit(obj, mode);
     this.frameFit.set(mode);
     this.canvasService.commitChange(obj);
+  }
+
+  /** PX-122 — enter modal-mode crop on the active photo-frame. */
+  onEnterCropMode(): void {
+    this.canvasService.enterCropMode();
   }
 
   // ========== SHAPE METHODS ==========

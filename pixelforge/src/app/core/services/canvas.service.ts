@@ -39,6 +39,32 @@ export class CanvasService {
   private readonly _backgroundColor = signal('#ffffff');
   /** PX-115 — alpha 0..1 applied to `_backgroundColor` for the rendered canvas. */
   private readonly _backgroundOpacity = signal<number>(1);
+
+  /**
+   * PX-122 — modal-mode crop signal. When `true`, the property-panel
+   * collapses to a focused Crop UI and other sections hide. Toggled by
+   * the floating text-toolbar's Crop button + the in-panel Apply/Cancel.
+   */
+  private readonly _cropMode = signal<boolean>(false);
+  /**
+   * PX-122 — snapshot of the frame's mutable state at the moment the
+   * user entered crop mode. Used by Cancel to revert when the user
+   * backs out without applying.
+   */
+  private cropModeSnapshot: {
+    objId: any;
+    framePanX: number;
+    framePanY: number;
+    frameZoom: number;
+    photoAngle: number;
+    frameWidth: number;
+    frameHeight: number;
+    frameLeft: number;
+    frameTop: number;
+    frameShape: FrameShape;
+    fitMode: FrameFitMode;
+    angle: number;
+  } | null = null;
   private readonly _isPanning = signal(false);
   private readonly _showGrid = signal(false);
   private readonly _snapToGrid = signal(false);
@@ -75,6 +101,8 @@ export class CanvasService {
   readonly backgroundColor = this._backgroundColor.asReadonly();
   /** PX-115 — exposed read-only so the property panel can drive an opacity slider. */
   readonly backgroundOpacity = this._backgroundOpacity.asReadonly();
+  /** PX-122 — `true` while the user is in modal-mode crop. */
+  readonly cropMode = this._cropMode.asReadonly();
 
   readonly activeLayer = computed(() => {
     const id = this._activeLayerId();
@@ -3112,6 +3140,114 @@ export class CanvasService {
     } else {
       this.clearGrid();
     }
+  }
+
+  /**
+   * Enter modal-mode crop on the active photo-frame (PX-122).
+   *
+   * @remarks
+   * Captures the frame's mutable state in {@link cropModeSnapshot} so
+   * Cancel can revert. Sets {@link cropMode} = true; the property-panel
+   * watches that signal and switches to a focused Crop UI. Apply / Cancel
+   * exit the mode; Cancel additionally restores from the snapshot.
+   *
+   * No-op if no frame is selected.
+   */
+  enterCropMode(): void {
+    const obj = this.canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    if (!(obj instanceof fabric.FabricImage)) return;
+
+    this.cropModeSnapshot = {
+      objId: obj,
+      framePanX: (obj as any).framePanX ?? 0,
+      framePanY: (obj as any).framePanY ?? 0,
+      frameZoom: (obj as any).frameZoom ?? 1,
+      photoAngle: (obj as any).photoAngle ?? 0,
+      frameWidth: (obj as any).frameWidth ?? obj.width ?? 0,
+      frameHeight: (obj as any).frameHeight ?? obj.height ?? 0,
+      frameLeft: (obj as any).frameLeft ?? obj.left ?? 0,
+      frameTop: (obj as any).frameTop ?? obj.top ?? 0,
+      frameShape: ((obj as any).frameShape ?? 'rect') as FrameShape,
+      fitMode: ((obj as any).fitMode ?? 'cover') as FrameFitMode,
+      angle: obj.angle ?? 0,
+    };
+    this._cropMode.set(true);
+  }
+
+  /**
+   * Commit the current crop and exit modal-mode (PX-122).
+   *
+   * @remarks
+   * Mutations applied during crop mode (chip clicks, slider drags,
+   * Smart Crop) committed to history along the way via the existing
+   * commitChange paths. Apply just discards the snapshot and exits.
+   */
+  applyCropMode(): void {
+    this.cropModeSnapshot = null;
+    this._cropMode.set(false);
+  }
+
+  /**
+   * Cancel modal-mode crop and revert to the snapshot (PX-122).
+   *
+   * @remarks
+   * Restores every tracked frame prop to the values captured by
+   * {@link enterCropMode}. Re-fits the photo to the restored bounds and
+   * commits a single history entry so the user can undo the revert.
+   */
+  cancelCropMode(): void {
+    const snap = this.cropModeSnapshot;
+    this.cropModeSnapshot = null;
+    this._cropMode.set(false);
+    if (!snap || !this.canvas) return;
+    const obj = snap.objId as fabric.FabricObject;
+    if (!(obj instanceof fabric.FabricImage)) return;
+
+    // Restore custom props.
+    (obj as any).framePanX = snap.framePanX;
+    (obj as any).framePanY = snap.framePanY;
+    (obj as any).frameZoom = snap.frameZoom;
+    (obj as any).photoAngle = snap.photoAngle;
+    (obj as any).frameWidth = snap.frameWidth;
+    (obj as any).frameHeight = snap.frameHeight;
+    (obj as any).frameLeft = snap.frameLeft;
+    (obj as any).frameTop = snap.frameTop;
+    (obj as any).frameShape = snap.frameShape;
+    (obj as any).fitMode = snap.fitMode;
+
+    // Restore visible angle (combined slot + photo).
+    obj.set({ angle: snap.angle });
+
+    // Re-apply fit so cropX/cropY/scale reflect the restored bounds.
+    const imgEl = (obj as any).getElement?.() as HTMLImageElement | undefined;
+    if (imgEl) {
+      this.applyFrameFit(
+        obj as fabric.FabricImage,
+        imgEl,
+        snap.frameLeft,
+        snap.frameTop,
+        snap.frameWidth,
+        snap.frameHeight,
+        snap.angle,
+        snap.fitMode,
+      );
+    }
+
+    // Rebuild clipPath if a non-rect shape was active.
+    if (snap.frameShape !== 'rect') {
+      const clip = this.buildFrameShape(snap.frameShape, snap.frameWidth, snap.frameHeight, false);
+      (clip as any).left = snap.frameLeft;
+      (clip as any).top = snap.frameTop;
+      (clip as any).angle = snap.angle;
+      (clip as any).absolutePositioned = true;
+      (obj as any).clipPath = clip;
+    } else {
+      (obj as any).clipPath = undefined;
+    }
+
+    this.canvas.renderAll();
+    this.commitChange(obj);
   }
 
   /** Toggle snap-to-grid for object movement. */
