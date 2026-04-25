@@ -693,4 +693,42 @@ All 11 green. Confirms the auth + projects + templates + avatar API surface is h
 - **PX-094** — in-frame photo manipulation: pan / zoom / rotate the photo *within* a frame (not just the frame in the canvas). PX-090 + PX-091 cover the frame's bounding box; PX-094 lets the user choose **which part** of an over-scan photo shows in cover mode (drag to pan; scroll/pinch to zoom).
 - **PX-074** — Email change. Held; needs your pick on a transactional email service (SES / SendGrid / Postmark / Resend).
 
+## 2026-04-25T11:38:00Z · Sprint-13 close — retrospective
+
+User asked for two specific features mid-flow:
+> *"allow to hide and unhide properties sidebar in editor, how to crop the photo and adjust like rotate and resize the photo in frames?"*
+
+The "rotate and resize" parts already work via the frame's normal selection handles — that came with PX-090. The missing piece was choosing **which part** of an over-scan photo shows in cover mode. Shipped both as PX-093 + PX-094 in one commit since they're independent additions.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `886c6b9` | PX-093 + PX-094 | Properties-sidebar hide/unhide toggle (topbar button + edge re-open chevron) AND in-frame photo pan/zoom (CanvasService.setFrameView + property-panel sliders for Horizontal / Vertical / Zoom + Reset). |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Math note for PX-094.** The cover crop window is derived from `(panX, panY, zoom)`:
+
+```
+baseScale     = max(fw/iw, fh/ih)
+effectiveScale = baseScale * zoom        // zoom ≥ 1
+srcW          = fw / effectiveScale
+srcH          = fh / effectiveScale
+cropX         = (iw - srcW)/2 + panX * (iw - srcW)/2
+cropY         = (ih - srcH)/2 + panY * (ih - srcH)/2
+```
+
+Lossless — only the source-region selector changes; the underlying image bytes never get resampled. Users can pan, zoom, rotate (via frame handles), reset, and re-pick a fit mode in any order without quality loss.
+
+**What went well**
+1. Both features layered on top of the existing PX-090/091 plumbing without changing any behavior they shipped. `customType: 'photo-frame'` continues to be the right join key — the property-panel reads it the same way the click-to-fill listener does.
+2. The edge chevron when the panel is hidden (PX-093) is a small UX detail that prevents the "where did my panel go" disorientation. Same idiom Notion / Figma use.
+
+**What was hard**
+1. PX-094 alternative considered: drag-to-pan + scroll-to-zoom directly on the canvas image. Cleaner direct-manipulation but needed editor-level mouse handlers fighting fabric's own object-drag, plus pinch-zoom support across input devices. Sliders are precise, accessible, and discoverable — going to revisit direct-manipulation only if the user flags it.
+
+**Sprint-14 candidates**
+- **PX-095** — direct-manipulation pan inside a photo-frame (drag the photo within the frame's bounds with shift held, or in an "edit" mode entered by double-click). Stretch enhancement on PX-094.
+- **PX-096** — rotate the photo *inside* the frame (independent of frame rotation). Today the frame's angle rotates the entire group; users sometimes want a slightly tilted photo within an upright frame for visual interest.
+- **PX-077** — manual e2e smoke (still your call; the API smoke proxy I ran in sprint-12 is green).
+- **PX-074** — email change (held).
+
 

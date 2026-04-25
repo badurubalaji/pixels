@@ -1,24 +1,24 @@
 # Graph Report - /home/ashulabs/workspace/pixels/pixelforge  (2026-04-25)
 
 ## Corpus Check
-- 1599 files · ~99,999 words
+- 1602 files · ~99,999 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1599 nodes · 2964 edges · 57 communities detected
-- Extraction: 62% EXTRACTED · 38% INFERRED · 0% AMBIGUOUS · INFERRED: 1116 edges (avg confidence: 0.76)
+- 1602 nodes · 2977 edges · 56 communities detected
+- Extraction: 62% EXTRACTED · 38% INFERRED · 0% AMBIGUOUS · INFERRED: 1125 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Animation Service|Animation Service]]
-- [[_COMMUNITY_Canvas Service Core (PX-090091 frames)|Canvas Service Core (PX-090/091 frames)]]
+- [[_COMMUNITY_Canvas Service Core (PX-090091094 frames)|Canvas Service Core (PX-090/091/094 frames)]]
 - [[_COMMUNITY_Project Models & Routes|Project Models & Routes]]
 - [[_COMMUNITY_Seed & Migrations|Seed & Migrations]]
 - [[_COMMUNITY_Brand Kit Service|Brand Kit Service]]
 - [[_COMMUNITY_Community 5|Community 5]]
 - [[_COMMUNITY_ApiService|ApiService]]
 - [[_COMMUNITY_Auth Core + Profile (PX-071073075)|Auth Core + Profile (PX-071/073/075)]]
-- [[_COMMUNITY_Editor (PX-072076082092)|Editor (PX-072/076/082/092)]]
+- [[_COMMUNITY_Editor (PX-072076082092093)|Editor (PX-072/076/082/092/093)]]
 - [[_COMMUNITY_AI Background Service|AI Background Service]]
 - [[_COMMUNITY_Database + FastAPI Bootstrap|Database + FastAPI Bootstrap]]
 - [[_COMMUNITY_Community 11|Community 11]]
@@ -59,21 +59,20 @@
 - [[_COMMUNITY_Community 48|Community 48]]
 - [[_COMMUNITY_Community 49|Community 49]]
 - [[_COMMUNITY_Community 50|Community 50]]
-- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 53|Community 53]]
 - [[_COMMUNITY_Community 54|Community 54]]
 - [[_COMMUNITY_Community 55|Community 55]]
-- [[_COMMUNITY_Community 56|Community 56]]
-- [[_COMMUNITY_Community 58|Community 58]]
-- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 69|Community 69]]
 - [[_COMMUNITY_Community 70|Community 70]]
-- [[_COMMUNITY_Community 71|Community 71]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `CanvasService` - 76 edges
+1. `CanvasService` - 77 edges
 2. `Editor` - 58 edges
 3. `SidebarDrawerComponent` - 49 edges
 4. `TextToolbarComponent` - 45 edges
-5. `PropertyPanelComponent` - 42 edges
+5. `PropertyPanelComponent` - 44 edges
 6. `Dashboard` - 33 edges
 7. `ApiService` - 30 edges
 8. `Canvas` - 28 edges
@@ -96,43 +95,43 @@
 
 ### Community 0 - "Animation Service"
 Cohesion: 0.03
-Nodes (8): AnimationService, ClipboardService, ColorPalettePanelComponent, ContextMenuComponent, LayerPanelComponent, PropertyPanelComponent, QuickActionBar, TextToolbarComponent
+Nodes (7): ClipboardService, ColorPalettePanelComponent, ContextMenuComponent, ImageFiltersPanelComponent, PropertyPanelComponent, QuickActionBar, TextToolbarComponent
 
-### Community 1 - "Canvas Service Core (PX-090/091 frames)"
-Cohesion: 0.03
-Nodes (92): ApiService, ConnectionManager, project_collab_socket(), Real-time collaboration via WebSocket.  Each project has a "room". Connected cli, Tracks active websocket connections per project room., ProjectCreate, ProjectDetailResponse, ProjectResponse (+84 more)
+### Community 1 - "Canvas Service Core (PX-090/091/094 frames)"
+Cohesion: 0.04
+Nodes (6): CanvasService, Canvas, LayerPanelComponent, ResizeDialog, StyleVariationsService, TemplateService
 
 ### Community 2 - "Project Models & Routes"
 Cohesion: 0.03
-Nodes (10): BackgroundPanelComponent, Editor, setup(), StaticCanvas, templateFactory(), KeyboardService, normalizeHex(), remapObject() (+2 more)
+Nodes (11): BackgroundPanelComponent, Editor, setup(), StaticCanvas, templateFactory(), HistoryService, KeyboardService, normalizeHex() (+3 more)
 
 ### Community 3 - "Seed & Migrations"
+Cohesion: 0.04
+Nodes (89): ConnectionManager, project_collab_socket(), Real-time collaboration via WebSocket.  Each project has a "room". Connected cli, Tracks active websocket connections per project room., ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate (+81 more)
+
+### Community 4 - "Brand Kit Service"
 Cohesion: 0.03
 Nodes (77): _infer_platform(), migrate(), Migration 0001 — backfill the ``platform`` field on legacy project rows.  Backgr, Reverse-lookup the platform id that matches ``width`` × ``height``.      Args:, # WHY: `custom` itself has 0x0 sentinel dims — skip it in the reverse, Backfill ``platform`` on every project row that lacks it.      Args:         db:, Protocol, PaletteSlot (+69 more)
 
-### Community 4 - "Brand Kit Service"
-Cohesion: 0.04
-Nodes (5): CanvasService, Canvas, ResizeDialog, TemplateService, ThemeService
-
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (71): AuthResponse, create_token(), decode_token(), get_current_user(), hash_password(), PasswordChange, Requires authenticated user or raises 401., Partial-update payload for the authenticated user's own profile.      Fields def (+63 more)
+Cohesion: 0.06
+Nodes (73): AuthResponse, create_token(), decode_token(), get_current_user(), hash_password(), PasswordChange, Requires authenticated user or raises 401., Partial-update payload for the authenticated user's own profile.      Fields def (+65 more)
 
 ### Community 6 - "ApiService"
-Cohesion: 0.04
-Nodes (4): AiBackgroundService, AiDesignService, DesignHelperService, SidebarDrawerComponent
+Cohesion: 0.03
+Nodes (6): ApiService, BrandKitApplyService, CommentsOverlay, CommentsService, ShareDialog, VersionsDialog
 
 ### Community 7 - "Auth Core + Profile (PX-071/073/075)"
 Cohesion: 0.03
 Nodes (18): ActiveSelection, Canvas, Circle, EventEmitter, FabricImage, FabricObject, FabricText, FakeImage (+10 more)
 
-### Community 8 - "Editor (PX-072/076/082/092)"
-Cohesion: 0.05
-Nodes (2): Dashboard, ProjectService
+### Community 8 - "Editor (PX-072/076/082/092/093)"
+Cohesion: 0.04
+Nodes (4): AiBackgroundService, AiDesignService, DesignHelperService, SidebarDrawerComponent
 
 ### Community 9 - "AI Background Service"
 Cohesion: 0.05
-Nodes (5): AuditDialog, CanvasRulersComponent, CollaborationService, CommandPalette, NewProjectDialog
+Nodes (2): Dashboard, ProjectService
 
 ### Community 10 - "Database + FastAPI Bootstrap"
 Cohesion: 0.05
@@ -140,11 +139,11 @@ Nodes (45): _png_bytes(), Happy-path coverage for auth_routes endpoints after th
 
 ### Community 11 - "Community 11"
 Cohesion: 0.06
-Nodes (3): CommentsOverlay, CommentsService, FontService
+Nodes (31): close_db(), connect_db(), get_db(), is_connected(), Connect to MongoDB. Non-fatal if unavailable — endpoints that     require the DB, Return the MongoDB database handle.      Raises a clear error if the DB is not c, lifespan(), FastAPI lifespan: open/close Mongo and optionally seed starter templates.      A (+23 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.05
-Nodes (33): close_db(), connect_db(), get_db(), is_connected(), Connect to MongoDB. Non-fatal if unavailable — endpoints that     require the DB, Return the MongoDB database handle.      Raises a clear error if the DB is not c, lifespan(), FastAPI lifespan: open/close Mongo and optionally seed starter templates.      A (+25 more)
+Cohesion: 0.07
+Nodes (4): CanvasRulersComponent, CollaborationService, CommandPalette, NewProjectDialog
 
 ### Community 13 - "Community 13"
 Cohesion: 0.06
@@ -159,28 +158,28 @@ Cohesion: 0.11
 Nodes (3): ExportDialog, ExportService, getPlatformPreset()
 
 ### Community 16 - "Dashboard (PX-068/069)"
+Cohesion: 0.13
+Nodes (3): AccessibilityService, AuditDialog, QualityScoreService
+
+### Community 17 - "Community 17"
 Cohesion: 0.1
 Nodes (22): Angular Logo SVG, Angular @for control flow block, Pill link group (Angular docs links), App Root Template (Angular placeholder), router-outlet, title() signal binding, app-root mount point, Positioning: Free Canva alternative with AI tools (+14 more)
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.13
 Nodes (21): author_all(), _build_canvas_json(), _fabric_circle(), _fabric_rect(), _fabric_text(), _load_default_font(), _pick(), Programmatic authoring of 20 starter templates (PX-022b).  This module is an *au (+13 more)
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.2
 Nodes (5): BrandKitService, decodeSvgDataUrl(), encodeSvgToDataUrl(), isSvgDataUrl(), sanitizeSvg()
 
-### Community 19 - "Community 19"
+### Community 20 - "Template Authoring"
 Cohesion: 0.1
 Nodes (19): Happy-path coverage for asset_routes endpoints after the Depends refactor.  Exte, PX-003 AC-7: SVG with relative-fragment href (#id) passes validation., PX-003 AC-7: SVG with on* attributes is rejected., GET /api/assets returns [] when none uploaded., PX-003 AC-7: malformed XML is rejected before any other processing., POST /api/assets/upload then DELETE /api/assets/{id} round-trip., PX-003 AC-6: a clean, well-formed SVG uploads successfully., PX-003 AC-7: <script> in uploaded SVG is rejected (400). (+11 more)
 
-### Community 20 - "Template Authoring"
-Cohesion: 0.18
-Nodes (1): ImageFiltersPanelComponent
-
 ### Community 21 - "Brand Kit Apply (PX-060)"
-Cohesion: 0.18
-Nodes (2): BrandKitApplyService, HistoryService
+Cohesion: 0.11
+Nodes (2): AnimationService, AnimationTimeline
 
 ### Community 22 - "Community 22"
 Cohesion: 0.12
@@ -199,36 +198,36 @@ Cohesion: 0.21
 Nodes (1): GradientPanelComponent
 
 ### Community 26 - "Community 26"
-Cohesion: 0.23
-Nodes (2): AccessibilityService, QualityScoreService
-
-### Community 27 - "Auth Page (PX-063)"
 Cohesion: 0.24
 Nodes (13): aiofiles 24.1.0, Pixelforge Backend (Python), bcrypt 4.2.1, FastAPI 0.115.12, motor 3.7.0 (async MongoDB), onnxruntime 1.21.1, passlib[bcrypt] 1.7.4, Pillow 11.2.1 (+5 more)
 
-### Community 28 - "Community 28"
+### Community 27 - "Auth Page (PX-063)"
 Cohesion: 0.15
 Nodes (12): Happy-path coverage for comments_routes endpoints after the Depends refactor., POST a comment then GET surfaces it by projectId + text., # NOTE: list_comments re-derives ``id`` from ``_id`` when Mongo auto-assigns, PATCH toggles resolved flag., DELETE removes the comment., POST /{id}/replies appends a reply., GET /api/projects/{pid}/comments returns [] when none exist., test_add_reply() (+4 more)
 
-### Community 29 - "Community 29"
+### Community 28 - "Community 28"
 Cohesion: 0.2
 Nodes (11): _parse_frontend_presets(), Parity guard: the FE and BE platform-preset lists must stay in sync.  ARD §7.1 m, The FE constants file must exist at the canonical path., FE and BE must declare the same number of presets., Every (id, label, width, height, aspect) tuple must match position-for-position., The ``custom`` preset is the user-defined sentinel at 0x0., Parse the FE TS constants file into a list of tuples.      Returns:         One, test_custom_sentinel_dimensions() (+3 more)
 
-### Community 30 - "Community 30"
+### Community 29 - "Community 29"
 Cohesion: 0.17
 Nodes (11): auth_headers(), auth_token(), auth_user(), client(), mock_db(), Pytest fixtures for the pixelforge backend test harness.  This module wires an `, Return a bearer JWT for the seeded test user.      Returns:         Encoded JWT, Return an Authorization header dict for authenticated requests.      Returns: (+3 more)
+
+### Community 30 - "Community 30"
+Cohesion: 0.26
+Nodes (1): FontService
 
 ### Community 31 - "Community 31"
 Cohesion: 0.42
 Nodes (1): MagicWriteService
 
 ### Community 32 - "Community 32"
-Cohesion: 0.2
-Nodes (1): AnimationTimeline
-
-### Community 33 - "Hub (PX-064)"
 Cohesion: 0.42
 Nodes (1): ColorPickerComponent
+
+### Community 33 - "Hub (PX-064)"
+Cohesion: 0.36
+Nodes (1): BackgroundRemovalService
 
 ### Community 34 - "Community 34"
 Cohesion: 0.22
@@ -240,11 +239,11 @@ Nodes (1): AlignmentPanelComponent
 
 ### Community 36 - "Community 36"
 Cohesion: 0.29
-Nodes (2): authGuard(), FakeAuthService
+Nodes (1): ThemeService
 
 ### Community 37 - "Community 37"
-Cohesion: 0.52
-Nodes (1): BackgroundRemovalService
+Cohesion: 0.29
+Nodes (2): authGuard(), FakeAuthService
 
 ### Community 38 - "Community 38"
 Cohesion: 0.29
@@ -290,66 +289,60 @@ Nodes (3): Smoke test: confirm the FastAPI test harness boots and /health answer
 Cohesion: 0.5
 Nodes (1): Pydantic v2 schemas for request/response DTOs and domain documents.  Sub-modules
 
-### Community 51 - "Community 51"
-Cohesion: 0.67
-Nodes (1): StyleVariationsService
-
-### Community 54 - "Community 54"
+### Community 53 - "Community 53"
 Cohesion: 1.0
 Nodes (1): Development server entry point.  Usage:     python run.py     # or     uvicorn a
 
-### Community 55 - "Community 55"
+### Community 54 - "Community 54"
 Cohesion: 1.0
 Nodes (1): TestRootModule
 
-### Community 56 - "Community 56"
+### Community 55 - "Community 55"
 Cohesion: 1.0
 Nodes (1): GIF
 
-### Community 58 - "Community 58"
+### Community 57 - "Community 57"
 Cohesion: 1.0
 Nodes (1): App
 
-### Community 63 - "Community 63"
+### Community 62 - "Community 62"
 Cohesion: 1.0
 Nodes (1): ShortcutsDialog
 
-### Community 70 - "Community 70"
+### Community 69 - "Community 69"
 Cohesion: 1.0
 Nodes (1): Require a leading ``#`` followed by 3 or 6 hex digits.          Args:
 
-### Community 71 - "Community 71"
+### Community 70 - "Community 70"
 Cohesion: 1.0
 Nodes (1): Require ``thumbnail_data_url`` to start with ``data:image/``.          Args:
 
 ## Knowledge Gaps
 - **219 isolated node(s):** `Brand kit API: per-user saved colors, fonts, and logos.`, `Comments API: per-project annotation threads with replies.`, `ng serve (dev server)`, `ng generate (scaffolding)`, `ng build` (+214 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Editor (PX-072/076/082/092)`** (58 nodes): `.createProject()`, `.healthCheck()`, `.listPublicTemplates()`, `Dashboard`, `.clearTemplateFilters()`, `.constructor()`, `.createFromCategory()`, `.createFromPreset()`, `.createFromTemplate()`, `.deleteProject()`, `.duplicateProject()`, `.editTags()`, `.emptyTrash()`, `.filterByTag()`, `.formatDate()`, `.formatRelativeTime()`, `.generateAiDesign()`, `.getPresetIcon()`, `.goToLogin()`, `.goToTab()`, `.loadGallery()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onGalleryClick()`, `.onGallerySearch()`, `.onHomeUpload()`, `.openNewProjectDialog()`, `.permanentDelete()`, `.restoreProject()`, `.setGalleryCategory()`, `.triggerHomeUpload()`, `.useSuggestion()`, `.fileMakeCopy()`, `ProjectService`, `.addUploadedImage()`, `.checkBackend()`, `.constructor()`, `.createProject()`, `.deleteProject()`, `.duplicateProject()`, `.emptyTrash()`, `.getUploadedImages()`, `.loadProjects()`, `.loadUploads()`, `.mergeProjects()`, `.permanentlyDelete()`, `.persistProjects()`, `.persistUploads()`, `.purgeOldTrash()`, `.removeUploadedImage()`, `.restoreProject()`, `.saveCanvasState()`, `.setTags()`, `.updateProject()`, `.removeUpload()`, `project.service.ts`, `dashboard.ts`
+- **Thin community `AI Background Service`** (60 nodes): `.createProject()`, `.getPublicTemplate()`, `.healthCheck()`, `.listPublicTemplates()`, `Dashboard`, `.clearTemplateFilters()`, `.constructor()`, `.createFromCategory()`, `.createFromPreset()`, `.createFromTemplate()`, `.deleteProject()`, `.duplicateProject()`, `.editTags()`, `.emptyTrash()`, `.filterByTag()`, `.formatDate()`, `.formatRelativeTime()`, `.generateAiDesign()`, `.getPresetIcon()`, `.goToLogin()`, `.goToTab()`, `.loadGallery()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onGalleryClick()`, `.onGallerySearch()`, `.onHomeUpload()`, `.openNewProjectDialog()`, `.permanentDelete()`, `.restoreProject()`, `.setGalleryCategory()`, `.triggerHomeUpload()`, `.useGalleryTemplate()`, `.useSuggestion()`, `.fileMakeCopy()`, `ProjectService`, `.addUploadedImage()`, `.checkBackend()`, `.constructor()`, `.createProject()`, `.deleteProject()`, `.duplicateProject()`, `.emptyTrash()`, `.getUploadedImages()`, `.loadProjects()`, `.loadUploads()`, `.mergeProjects()`, `.permanentlyDelete()`, `.persistProjects()`, `.persistUploads()`, `.purgeOldTrash()`, `.removeUploadedImage()`, `.restoreProject()`, `.saveCanvasState()`, `.setTags()`, `.updateProject()`, `.removeUpload()`, `project.service.ts`, `dashboard.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Template Authoring`** (19 nodes): `ImageFiltersPanelComponent`, `.applyFilters()`, `.applyPreset()`, `.attachWhenReady()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onBlurChange()`, `.onBrightnessChange()`, `.onContrastChange()`, `.onHueRotationChange()`, `.onNoiseChange()`, `.onPixelateChange()`, `.onSaturationChange()`, `.resetFilters()`, `.toggleGrayscale()`, `.toggleInvert()`, `.toggleSepia()`, `.triggerReplace()`, `image-filters-panel.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Brand Kit Apply (PX-060)`** (18 nodes): `.updateProject()`, `BrandKitApplyService`, `._buildSubstitutionMap()`, `.clearMarker()`, `._clearMarkerServerSide()`, `._revertObjectColors()`, `.revertToTemplateDefaults()`, `.finishNameEdit()`, `HistoryService`, `.clear()`, `.init()`, `.redo()`, `.restoreState()`, `.saveState()`, `.undo()`, `.updateCounts()`, `brand-kit-apply.service.ts`, `history.service.ts`
+- **Thin community `Brand Kit Apply (PX-060)`** (20 nodes): `AnimationService`, `.animate()`, `.applyStartState()`, `.easeOutBounce()`, `.easeOutCubic()`, `.getAnimation()`, `.playAll()`, `.resetAll()`, `.setAnimation()`, `.snapshot()`, `AnimationTimeline`, `.attachWhenReady()`, `.getAnimIcon()`, `.getAnimLabel()`, `.msToPixels()`, `.ngOnDestroy()`, `.ngOnInit()`, `.quickAddAnim()`, `animation.service.ts`, `animation-timeline.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Gallery + Auth Interceptor`** (15 nodes): `Canvas`, `.dispose()`, `.getObjects()`, `.getZoom()`, `.off()`, `.on()`, `.renderAll()`, `.requestRenderAll()`, `.setDimensions()`, `.setViewportTransform()`, `.setZoom()`, `constructor()`, `FabricObject`, `getObjects()`, `export.service.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 25`** (15 nodes): `GradientPanelComponent`, `.addStop()`, `.applyGradient()`, `.applyPreset()`, `.attachWhenReady()`, `.getPresetGradientCSS()`, `.ngOnDestroy()`, `.ngOnInit()`, `.removeStop()`, `.setAngle()`, `.setFillType()`, `.startEyedropper()`, `.updateStopColor()`, `.updateStopOffset()`, `gradient-panel.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 26`** (14 nodes): `AccessibilityService`, `.contrastRatio()`, `.hexToRgb()`, `.relativeLuminance()`, `QualityScoreService`, `.calculate()`, `.evaluateAlignment()`, `.evaluateColorHarmony()`, `.evaluateContrast()`, `.evaluateFontVariety()`, `.evaluateWhiteSpace()`, `.scoreToGrade()`, `accessibility.service.ts`, `quality-score.service.ts`
+- **Thin community `Community 30`** (12 nodes): `FontService`, `.constructor()`, `.fileToDataUrl()`, `.getAllFontFamilies()`, `.getGoogleFonts()`, `.loadCustomFonts()`, `.persistCustomFonts()`, `.preloadPopularFonts()`, `.registerFont()`, `.removeCustomFont()`, `.uploadCustomFont()`, `font.service.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 31`** (11 nodes): `MagicWriteService`, `.applySwaps()`, `.generateVariants()`, `.makeLonger()`, `.makeShorter()`, `.removeFillers()`, `.sentenceCase()`, `.titleCase()`, `.toHeadline()`, `.transform()`, `magic-write.service.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 32`** (11 nodes): `AnimationTimeline`, `.attachWhenReady()`, `.getAnimIcon()`, `.getAnimLabel()`, `.msToPixels()`, `.ngOnDestroy()`, `.ngOnInit()`, `.playAll()`, `.quickAddAnim()`, `.previewAnimation()`, `animation-timeline.ts`
+- **Thin community `Community 32`** (10 nodes): `ColorPickerComponent`, `.commitHexInput()`, `.composeHex()`, `.emitChange()`, `.onAlphaChange()`, `.onHexChange()`, `.onHexInputChange()`, `.parseColor()`, `.value()`, `color-picker.component.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Hub (PX-064)`** (10 nodes): `ColorPickerComponent`, `.commitHexInput()`, `.composeHex()`, `.emitChange()`, `.onAlphaChange()`, `.onHexChange()`, `.onHexInputChange()`, `.parseColor()`, `.value()`, `color-picker.component.ts`
+- **Thin community `Hub (PX-064)`** (9 nodes): `BackgroundRemovalService`, `.dataURLToBlob()`, `.removeBackground()`, `.removeClientSide()`, `.removeFromDataURL()`, `.removeServerSide()`, `.reset()`, `.triggerBgRemoveUpload()`, `background-removal.service.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 34`** (9 nodes): `HubComponent`, `.buildTiles()`, `.ngOnInit()`, `.onProjectActivate()`, `.onStartFromScratch()`, `.onTileActivate()`, `.trackProjectById()`, `.trackTileById()`, `hub.component.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 35`** (8 nodes): `AlignmentPanelComponent`, `.align()`, `.attachWhenReady()`, `.autoArrange()`, `.constructor()`, `.distribute()`, `.fixOverlaps()`, `alignment-panel.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 36`** (7 nodes): `authGuard()`, `FakeAuthService`, `.isAuthenticated()`, `.setAuthenticated()`, `runGuard()`, `auth.guard.spec.ts`, `auth.guard.ts`
+- **Thin community `Community 36`** (7 nodes): `theme.service.ts`, `ThemeService`, `.applyTheme()`, `.constructor()`, `.loadTheme()`, `.setTheme()`, `.toggleTheme()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 37`** (7 nodes): `BackgroundRemovalService`, `.dataURLToBlob()`, `.removeBackground()`, `.removeClientSide()`, `.removeFromDataURL()`, `.removeServerSide()`, `background-removal.service.ts`
+- **Thin community `Community 37`** (7 nodes): `authGuard()`, `FakeAuthService`, `.isAuthenticated()`, `.setAuthenticated()`, `runGuard()`, `auth.guard.spec.ts`, `auth.guard.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 38`** (7 nodes): `template-thumbnail.service.spec.ts`, `StaticCanvas`, `.constructor()`, `.dispose()`, `.loadFromJSON()`, `.renderAll()`, `.toDataURL()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -363,37 +356,35 @@ Nodes (1): Require ``thumbnail_data_url`` to start with ``data:image/``.        
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 50`** (4 nodes): `__init__.py`, `__init__.py`, `__init__.py`, `Pydantic v2 schemas for request/response DTOs and domain documents.  Sub-modules`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (3 nodes): `style-variations.service.ts`, `StyleVariationsService`, `.getAllStyles()`
+- **Thin community `Community 53`** (2 nodes): `run.py`, `Development server entry point.  Usage:     python run.py     # or     uvicorn a`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `run.py`, `Development server entry point.  Usage:     python run.py     # or     uvicorn a`
+- **Thin community `Community 54`** (2 nodes): `test-setup.ts`, `TestRootModule`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `test-setup.ts`, `TestRootModule`
+- **Thin community `Community 55`** (2 nodes): `types.d.ts`, `GIF`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `types.d.ts`, `GIF`
+- **Thin community `Community 57`** (2 nodes): `App`, `app.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (2 nodes): `App`, `app.ts`
+- **Thin community `Community 62`** (2 nodes): `ShortcutsDialog`, `shortcuts-dialog.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (2 nodes): `ShortcutsDialog`, `shortcuts-dialog.ts`
+- **Thin community `Community 69`** (1 nodes): `Require a leading ``#`` followed by 3 or 6 hex digits.          Args:`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `Require a leading ``#`` followed by 3 or 6 hex digits.          Args:`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `Require ``thumbnail_data_url`` to start with ``data:image/``.          Args:`
+- **Thin community `Community 70`** (1 nodes): `Require ``thumbnail_data_url`` to start with ``data:image/``.          Args:`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `author_all()` connect `Community 17` to `Animation Service`, `Brand Kit Service`?**
+- **Why does `author_all()` connect `Community 18` to `Animation Service`, `Canvas Service Core (PX-090/091/094 frames)`?**
   _High betweenness centrality (0.048) - this node is a cross-community bridge._
-- **Why does `seed_templates()` connect `Seed & Migrations` to `Canvas Service Core (PX-090/091 frames)`, `Community 12`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `test_each_doc_meets_palette_and_tag_requirements()` connect `Seed & Migrations` to `Animation Service`?**
+- **Why does `seed_templates()` connect `Brand Kit Service` to `Seed & Migrations`, `Community 11`?**
   _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `test_each_doc_meets_palette_and_tag_requirements()` connect `Brand Kit Service` to `Animation Service`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **What connects `Brand kit API: per-user saved colors, fonts, and logos.`, `Comments API: per-project annotation threads with replies.`, `ng serve (dev server)` to the rest of the system?**
   _219 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Animation Service` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Canvas Service Core (PX-090/091 frames)` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+- **Should `Canvas Service Core (PX-090/091/094 frames)` be split into smaller, more focused modules?**
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Project Models & Routes` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
