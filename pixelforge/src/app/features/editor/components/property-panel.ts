@@ -16,6 +16,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatChipsModule } from '@angular/material/chips';
 import { AlignmentPanelComponent } from './alignment-panel';
 import { GradientPanelComponent } from './gradient-panel';
+import { BackgroundPanelComponent } from './background-panel';
 import { GOOGLE_FONTS, SYSTEM_FONTS, FontEntry } from '../../../core/services/font.service';
 import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../core/services/animation.service';
 import { AccessibilityService, ContrastResult } from '../../../core/services/accessibility.service';
@@ -64,6 +65,7 @@ interface ObjectProps {
     MatAutocompleteModule,
     MatChipsModule,
     ColorPickerComponent,
+    BackgroundPanelComponent,
   ],
   template: `
     <aside class="property-panel">
@@ -638,9 +640,36 @@ interface ObjectProps {
           </div>
         </div>
       } @else {
-        <div class="no-selection">
-          <mat-icon>touch_app</mat-icon>
-          <p>Select an object to edit its properties</p>
+        <!-- PX-113 — when nothing on the canvas is selected, treat the
+             "no-selection" state as "page / background selected" so the
+             user can recolor the canvas without hunting through the sidebar.
+             Mirrors Canva's pattern (clicking the empty canvas surfaces
+             the page-level color tools). -->
+        <div class="panel-content">
+          <div class="bg-panel-header">
+            <mat-icon>crop_landscape</mat-icon>
+            <span>Page background</span>
+          </div>
+
+          <app-background-panel />
+
+          <div class="bg-quick-swatches">
+            <span class="bg-quick-label">Quick colors</span>
+            <div class="bg-swatch-row">
+              @for (c of bgQuickSwatches; track c) {
+                <button
+                  type="button"
+                  class="bg-swatch"
+                  [style.background]="c"
+                  [class.active]="canvasService.backgroundColor() === c"
+                  [attr.data-color]="c"
+                  (click)="setBackgroundColor(c)"
+                ></button>
+              }
+            </div>
+          </div>
+
+          <p class="bg-hint">Tip: click any object on the canvas to edit it instead.</p>
         </div>
       }
     </aside>
@@ -1020,10 +1049,79 @@ interface ObjectProps {
       border-radius: 10px !important;
       font-weight: 600 !important;
     }
+
+    /* PX-113 — Background editing affordance in the empty-selection state */
+    .bg-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 12px 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--px-ink-soft, #334155);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--px-violet, #7c3aed);
+      }
+    }
+    .bg-quick-swatches {
+      padding: 0 12px 12px;
+    }
+    .bg-quick-label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--px-ink-soft, #334155);
+      margin: 8px 0 6px;
+      opacity: 0.7;
+    }
+    .bg-swatch-row {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+    }
+    .bg-swatch {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      cursor: pointer;
+      padding: 0;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .bg-swatch:hover {
+      transform: scale(1.1);
+      border-color: var(--px-violet, #7c3aed);
+    }
+    .bg-swatch.active {
+      border: 2px solid var(--px-violet, #7c3aed);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+    .bg-hint {
+      padding: 0 12px 12px;
+      font-size: 0.72rem;
+      color: var(--px-ink-soft, #334155);
+      opacity: 0.6;
+      margin: 0;
+    }
   `],
 })
 export class PropertyPanelComponent implements OnInit, OnDestroy {
-  private readonly canvasService = inject(CanvasService);
+  readonly canvasService = inject(CanvasService);
+
+  /** PX-113 — quick palette shown in the empty-state Background panel. */
+  readonly bgQuickSwatches = [
+    '#ffffff', '#f8fafc', '#fef3c7', '#fee2e2', '#fce7f3',
+    '#dbeafe', '#dcfce7', '#1e293b', '#0f172a', '#7c3aed',
+  ];
+
+  /** PX-113 — set the canvas background color from a quick-swatch click. */
+  setBackgroundColor(color: string): void {
+    this.canvasService.setBackgroundMode('custom', color);
+  }
 
   readonly props = signal<ObjectProps | null>(null);
   private readonly _isText = signal(false);
