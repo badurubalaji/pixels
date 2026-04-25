@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest';
 
-import { FRAME_PRESETS, getFramePreset } from './frame-presets';
+import {
+  FRAME_PRESETS,
+  FRAME_CATEGORY_LABELS,
+  getFramePreset,
+  getFramePresetsByCategory,
+} from './frame-presets';
 
-describe('FRAME_PRESETS — PX-090', () => {
-  it('ships the 8 MVP collage presets + 5 single-shape presets (PX-102)', () => {
-    expect(FRAME_PRESETS).toHaveLength(13);
+describe('FRAME_PRESETS — PX-090 / PX-121', () => {
+  it('ships the curated MVP catalogue (25 presets across 5 categories)', () => {
+    // PX-090: 8 collage + PX-102: 5 shapes + PX-121: 12 new = 25.
+    expect(FRAME_PRESETS).toHaveLength(25);
   });
 
   it('includes single-shape presets for circle / rounded / hexagon / star / heart', () => {
@@ -71,5 +77,49 @@ describe('FRAME_PRESETS — PX-090', () => {
 
   it('getFramePreset returns undefined for unknown id', () => {
     expect(getFramePreset('not-a-real-preset')).toBeUndefined();
+  });
+
+  // PX-121 — sub-categories
+  it('every preset declares a category from the canonical list', () => {
+    const validIds = new Set(FRAME_CATEGORY_LABELS.map(c => c.id));
+    for (const p of FRAME_PRESETS) {
+      expect(validIds.has(p.category)).toBe(true);
+    }
+  });
+
+  it('getFramePresetsByCategory returns all 5 categories non-empty', () => {
+    const grouped = getFramePresetsByCategory();
+    expect(grouped).toHaveLength(5);
+    for (const section of grouped) {
+      expect(section.presets.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('grids category contains the multi-slot rectangular layouts', () => {
+    const grouped = getFramePresetsByCategory();
+    const grids = grouped.find(g => g.id === 'grids');
+    const ids = grids!.presets.map(p => p.id);
+    expect(ids).toContain('split-2-h');
+    expect(ids).toContain('grid-2x2');
+    expect(ids).toContain('grid-3x3');
+    expect(ids).toContain('magazine-1-plus-3');
+    expect(ids).toContain('quad-l');
+  });
+
+  it('strips category contains the filmstrip variants (horizontal + vertical)', () => {
+    const grouped = getFramePresetsByCategory();
+    const strips = grouped.find(g => g.id === 'strips');
+    const ids = strips!.presets.map(p => p.id);
+    expect(ids).toContain('strip-2-h');
+    expect(ids).toContain('strip-3-h');
+    expect(ids).toContain('strip-4-h');
+    expect(ids).toContain('strip-3-v');
+    expect(ids).toContain('strip-4-v');
+  });
+
+  it('polaroid category contains scattered + row + stack variants', () => {
+    const grouped = getFramePresetsByCategory();
+    const ids = grouped.find(g => g.id === 'polaroid')!.presets.map(p => p.id);
+    expect(ids).toEqual(expect.arrayContaining(['polaroid-scatter', 'polaroid-row', 'polaroid-stack']));
   });
 });

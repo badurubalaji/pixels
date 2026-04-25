@@ -12,7 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSelectModule } from '@angular/material/select';
 import { ShapeType } from '../../../core/services/canvas.service';
-import { FRAME_PRESETS, FramePreset } from '../../../core/data/frame-presets';
+import { FRAME_PRESETS, FramePreset, getFramePresetsByCategory } from '../../../core/data/frame-presets';
 import { TemplateService, LOGO_TEMPLATES, LogoTemplate } from '../../../core/services/template.service';
 import { BRAND_PALETTES } from '../../../core/models/color-palettes';
 import { CanvasService, BackgroundMode } from '../../../core/services/canvas.service';
@@ -220,37 +220,42 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                 </button>
               </div>
 
-              <!-- Photo frames / collage (PX-090) -->
+              <!-- Photo frames / collage (PX-090 + PX-121 sub-categories) -->
               <div class="section-label">Photo frames</div>
               <p class="frames-hint">
                 Drop a layout, then click any empty slot to add a photo.
               </p>
-              <div class="frame-grid" data-testid="frame-presets">
-                @for (preset of framePresets; track preset.id) {
-                  <button
-                    type="button"
-                    class="frame-card"
-                    [attr.data-preset-id]="preset.id"
-                    [matTooltip]="preset.name"
-                    (click)="addFrameLayout.emit(preset)"
-                  >
-                    <span class="frame-preview" aria-hidden="true">
-                      @for (slot of preset.slots; track $index) {
-                        <span
-                          class="frame-slot"
-                          [class]="'frame-slot--' + (slot.shape || 'rect')"
-                          [style.left.%]="slot.x * 100"
-                          [style.top.%]="slot.y * 100"
-                          [style.width.%]="slot.w * 100"
-                          [style.height.%]="slot.h * 100"
-                          [style.transform]="'rotate(' + (slot.rotation || 0) + 'deg)'"
-                        ></span>
-                      }
-                    </span>
-                    <span class="frame-name">{{ preset.name }}</span>
-                  </button>
+              @for (cat of frameCategories; track cat.id) {
+                @if (cat.presets.length > 0) {
+                  <div class="frame-cat-label" [attr.data-frame-cat]="cat.id">{{ cat.label }}</div>
+                  <div class="frame-grid" [attr.data-testid]="'frame-presets-' + cat.id">
+                    @for (preset of cat.presets; track preset.id) {
+                      <button
+                        type="button"
+                        class="frame-card"
+                        [attr.data-preset-id]="preset.id"
+                        [matTooltip]="preset.name"
+                        (click)="addFrameLayout.emit(preset)"
+                      >
+                        <span class="frame-preview" aria-hidden="true">
+                          @for (slot of preset.slots; track $index) {
+                            <span
+                              class="frame-slot"
+                              [class]="'frame-slot--' + (slot.shape || 'rect')"
+                              [style.left.%]="slot.x * 100"
+                              [style.top.%]="slot.y * 100"
+                              [style.width.%]="slot.w * 100"
+                              [style.height.%]="slot.h * 100"
+                              [style.transform]="'rotate(' + (slot.rotation || 0) + 'deg)'"
+                            ></span>
+                          }
+                        </span>
+                        <span class="frame-name">{{ preset.name }}</span>
+                      </button>
+                    }
+                  </div>
                 }
-              </div>
+              }
 
               <!-- Stock Icons -->
               <div class="section-label">Icons</div>
@@ -1099,6 +1104,20 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
+      margin-bottom: 14px;
+    }
+    /* PX-121 — sub-category section header above each grid. */
+    .frame-cat-label {
+      margin: 12px 0 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--px-ink-soft, #334155);
+      opacity: 0.72;
+    }
+    .frame-cat-label:first-of-type {
+      margin-top: 4px;
     }
 
     .frame-card {
@@ -2483,6 +2502,8 @@ export class SidebarDrawerComponent {
 
   /** All collage presets — bound to the Frames drawer panel grid. */
   readonly framePresets = FRAME_PRESETS;
+  /** PX-121 — grouped variant for the sub-category sections. */
+  readonly frameCategories = getFramePresetsByCategory();
 
   readonly basicShapes: { type: ShapeType; name: string; icon: string }[] = [
     { type: 'rect', name: 'Rectangle', icon: 'rectangle' },
