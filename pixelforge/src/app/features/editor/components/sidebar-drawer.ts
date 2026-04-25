@@ -877,11 +877,12 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       align-items: center;
       width: 76px;
       padding: 12px 0;
-      background: #0f0f11;
-      border-right: 1px solid #27272a;
+      background: var(--px-surface, #ffffff);
+      border-right: 1px solid var(--px-line, #e2e8f0);
       gap: 2px;
       z-index: 2;
       overflow-y: auto;
+      box-shadow: 1px 0 3px rgba(15, 23, 42, 0.04);
     }
 
     /* Mobile: rail becomes horizontal bottom bar, drawer becomes bottom sheet */
@@ -903,7 +904,7 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
         height: 56px;
         padding: 0 8px;
         border-right: none;
-        border-top: 1px solid #27272a;
+        border-top: 1px solid var(--px-line, #e2e8f0);
         overflow-x: auto;
         overflow-y: hidden;
         gap: 4px;
@@ -928,14 +929,14 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       gap: 2px;
       background: none;
       border: none;
-      color: var(--mat-sys-on-surface);
+      color: var(--px-ink-soft, #334155);
       cursor: pointer;
       padding: 10px 4px;
-      border-radius: 8px;
+      border-radius: 10px;
       width: 64px;
-      opacity: 0.7;
       transition: all 0.15s;
       font-size: 0.65rem;
+      font-weight: 500;
 
       mat-icon {
         font-size: 22px;
@@ -944,22 +945,21 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       }
 
       &:hover {
-        opacity: 1;
-        background: rgba(128, 128, 128, 0.12);
+        background: rgba(124, 58, 237, 0.08);
+        color: var(--px-violet, #7c3aed);
       }
 
       &.active {
-        opacity: 1;
-        background: var(--mat-sys-primary-container);
-        color: var(--mat-sys-on-primary-container);
+        background: rgba(124, 58, 237, 0.12);
+        color: var(--px-violet, #7c3aed);
       }
     }
 
     /* === Drawer Panel === */
     .drawer-panel {
       width: 320px;
-      background: #18181b;
-      border-right: 1px solid #27272a;
+      background: var(--px-surface, #ffffff);
+      border-right: 1px solid var(--px-line, #e2e8f0);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -970,7 +970,7 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--px-line, #e2e8f0);
 
       h3 {
         margin: 0;
@@ -1968,7 +1968,7 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       overflow: hidden;
       cursor: pointer;
       aspect-ratio: 1;
-      background: #27272a;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       border: 2px solid transparent;
       transition: border-color 0.15s, transform 0.15s;
 

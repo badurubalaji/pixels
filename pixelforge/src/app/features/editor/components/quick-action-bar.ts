@@ -83,13 +83,15 @@ import * as fabric from 'fabric';
       align-items: center;
       gap: 2px;
       padding: 4px 6px;
-      background: #1e1e22;
-      border: 1px solid #3f3f46;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
       border-radius: 24px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(15, 23, 42, 0.04);
       pointer-events: auto;
       transform: translateX(-50%);
       transition: top 0.1s ease-out, left 0.1s ease-out;
+      color: var(--px-ink, #0f172a);
 
       button {
         transform: scale(0.85);
@@ -108,14 +110,14 @@ import * as fabric from 'fabric';
       justify-content: center;
       width: 18px;
       height: 28px;
-      color: #71717a;
+      color: var(--px-muted, #64748b);
       cursor: grab;
       border-radius: 14px;
       flex-shrink: 0;
 
       &:hover {
-        color: #a1a1aa;
-        background: #27272a;
+        color: var(--px-ink, #0f172a);
+        background: rgba(124, 58, 237, 0.08);
       }
 
       &:active {
@@ -132,7 +134,7 @@ import * as fabric from 'fabric';
     .qa-sep {
       width: 1px;
       height: 22px;
-      background: #3f3f46;
+      background: var(--px-line, #e2e8f0);
       margin: 0 2px;
     }
 

@@ -328,7 +328,7 @@ interface FilterPreset {
       .slider-label {
         font-size: 0.78rem;
         min-width: 72px;
-        color: #a1a1aa;
+        color: var(--px-ink-soft, #334155);
       }
 
       .slider {
@@ -339,7 +339,7 @@ interface FilterPreset {
         font-size: 0.75rem;
         min-width: 32px;
         text-align: right;
-        color: #71717a;
+        color: var(--px-muted, #64748b);
         font-variant-numeric: tabular-nums;
       }
     }
