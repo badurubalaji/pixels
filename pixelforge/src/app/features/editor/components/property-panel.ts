@@ -19,6 +19,7 @@ import { GradientPanelComponent } from './gradient-panel';
 import { GOOGLE_FONTS, SYSTEM_FONTS, FontEntry } from '../../../core/services/font.service';
 import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../core/services/animation.service';
 import { AccessibilityService, ContrastResult } from '../../../core/services/accessibility.service';
+import { ColorPickerComponent } from '../../../shared/components/color-picker.component';
 import * as fabric from 'fabric';
 
 interface ObjectProps {
@@ -62,6 +63,7 @@ interface ObjectProps {
     GradientPanelComponent,
     MatAutocompleteModule,
     MatChipsModule,
+    ColorPickerComponent,
   ],
   template: `
     <aside class="property-panel">
@@ -120,7 +122,10 @@ interface ObjectProps {
 
             <div class="color-row">
               <label>Stroke</label>
-              <input type="color" [ngModel]="p.stroke || '#000000'" (ngModelChange)="updateProp('stroke', $event)" class="color-input" />
+              <app-color-picker
+                [value]="p.stroke || '#000000'"
+                (valueChange)="updateProp('stroke', $event)"
+              />
               <mat-form-field appearance="outline" class="color-text">
                 <input matInput type="number" [ngModel]="p.strokeWidth" (ngModelChange)="updateProp('strokeWidth', $event)" placeholder="Width" />
               </mat-form-field>
@@ -326,10 +331,10 @@ interface ObjectProps {
 
               <div class="color-row">
                 <label>Color</label>
-                <input type="color" [ngModel]="textStrokeColor()" (ngModelChange)="updateTextStroke('color', $event)" class="color-input" />
-                <mat-form-field appearance="outline" class="color-text">
-                  <input matInput [ngModel]="textStrokeColor()" (ngModelChange)="updateTextStroke('color', $event)" />
-                </mat-form-field>
+                <app-color-picker
+                  [value]="textStrokeColor()"
+                  (valueChange)="updateTextStroke('color', $event)"
+                />
               </div>
               <div class="slider-row">
                 <span>Width</span>
@@ -383,7 +388,10 @@ interface ObjectProps {
             </div>
             <div class="color-row">
               <label>Color</label>
-              <input type="color" [ngModel]="shadowColor()" (ngModelChange)="updateShadow('color', $event)" class="color-input" />
+              <app-color-picker
+                [value]="shadowColor()"
+                (valueChange)="updateShadow('color', $event)"
+              />
             </div>
             <button mat-button (click)="removeShadow()">Remove Shadow</button>
           </mat-expansion-panel>

@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
+import { ColorPickerComponent } from '../../../shared/components/color-picker.component';
 import { CanvasService } from '../../../core/services/canvas.service';
 import { FontService } from '../../../core/services/font.service';
 import { ClipboardService } from '../../../core/services/clipboard.service';
@@ -34,6 +35,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
     MatButtonToggleModule,
     MatMenuModule,
     MatSliderModule,
+    ColorPickerComponent,
   ],
   template: `
     @if (selectionType() !== 'none') {
@@ -74,10 +76,12 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
           <span class="tb-sep"></span>
 
-          <button mat-icon-button matTooltip="Text Color" class="color-wrapper" (click)="textColorInput.click()">
-            <div class="color-swatch" [style.background]="textColor()"></div>
-          </button>
-          <input type="color" #textColorInput hidden [ngModel]="textColor()" (ngModelChange)="setColor($event)" />
+          <app-color-picker
+            [value]="textColor()"
+            (valueChange)="setColor($event)"
+            label=""
+          />
+          <span class="tb-label">Text</span>
 
           <span class="tb-sep"></span>
 
@@ -201,19 +205,19 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
         <!-- SHAPE CONTROLS -->
         @if (selectionType() === 'shape') {
-          <button mat-icon-button matTooltip="Fill Color" class="color-wrapper" (click)="fillColorInput.click()">
-            <div class="color-swatch" [style.background]="fillColor()"></div>
-          </button>
-          <input type="color" #fillColorInput hidden [ngModel]="fillColor()" (ngModelChange)="setFill($event)" />
-
-          <span class="tb-label">Fill</span>
+          <app-color-picker
+            [value]="fillColor()"
+            (valueChange)="setFill($event)"
+            label="Fill"
+          />
 
           <span class="tb-sep"></span>
 
-          <button mat-icon-button matTooltip="Stroke Color" class="color-wrapper" (click)="strokeColorInput.click()">
-            <div class="color-swatch outline" [style.border-color]="strokeColor()"></div>
-          </button>
-          <input type="color" #strokeColorInput hidden [ngModel]="strokeColor()" (ngModelChange)="setStroke($event)" />
+          <app-color-picker
+            [value]="strokeColor()"
+            (valueChange)="setStroke($event)"
+            label="Stroke"
+          />
 
           <button mat-icon-button [matMenuTriggerFor]="strokeMenu" matTooltip="Stroke Width">
             <mat-icon>line_weight</mat-icon>
@@ -315,17 +319,19 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
       align-items: center;
       gap: 2px;
       padding: 6px 10px;
-      background: #1e1e22;
-      border: 1px solid #3f3f46;
-      border-radius: 8px;
-      height: 44px;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 10px;
+      height: 48px;
       max-width: 92vw;
       overflow-x: auto;
       flex-shrink: 0;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(15, 23, 42, 0.04);
       pointer-events: auto;
       transform: translateX(-50%);
       transition: top 0.1s ease-out, left 0.1s ease-out;
+      color: var(--px-ink, #0f172a);
     }
 
     /* Disable smooth transition while user is actively dragging */
@@ -349,7 +355,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
       &:hover {
         color: #a1a1aa;
-        background: #27272a;
+        background: var(--px-line, #e2e8f0);
       }
 
       &:active {
@@ -387,7 +393,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
     .tb-sep {
       width: 1px;
       height: 24px;
-      background: #27272a;
+      background: var(--px-line, #e2e8f0);
       margin: 0 4px;
       flex-shrink: 0;
     }
@@ -415,7 +421,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
     .size-input {
       width: 48px;
       text-align: center;
-      background: #27272a;
+      background: var(--px-line, #e2e8f0);
       border: 1px solid #3f3f46;
       border-radius: 6px;
       color: #fafafa;

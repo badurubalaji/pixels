@@ -6,6 +6,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CanvasService } from '../../../core/services/canvas.service';
+import { ColorPickerComponent } from '../../../shared/components/color-picker.component';
 import * as fabric from 'fabric';
 
 interface GradientStop {
@@ -42,6 +43,7 @@ const GRADIENT_PRESETS: GradientPreset[] = [
     MatSliderModule,
     MatButtonToggleModule,
     MatTooltipModule,
+    ColorPickerComponent,
   ],
   template: `
     <div class="gradient-panel">
@@ -63,8 +65,10 @@ const GRADIENT_PRESETS: GradientPreset[] = [
       @if (fillType() === 'solid') {
         <div class="color-row">
           <label>Fill</label>
-          <input type="color" [ngModel]="solidColor()" (ngModelChange)="applySolidColor($event)" class="color-input" />
-          <input class="hex-text" [ngModel]="solidColor()" (ngModelChange)="applySolidColor($event)" />
+          <app-color-picker
+            [value]="solidColor()"
+            (valueChange)="applySolidColor($event)"
+          />
           <button
             mat-icon-button
             class="eyedropper-btn"
@@ -92,7 +96,10 @@ const GRADIENT_PRESETS: GradientPreset[] = [
           <span class="section-label">Color Stops</span>
           @for (stop of stops(); track $index) {
             <div class="stop-row">
-              <input type="color" [ngModel]="stop.color" (ngModelChange)="updateStopColor($index, $event)" class="color-input" />
+              <app-color-picker
+                [value]="stop.color"
+                (valueChange)="updateStopColor($index, $event)"
+              />
               <mat-slider min="0" max="100" step="1" class="flex-slider">
                 <input matSliderThumb [ngModel]="stop.offset * 100" (ngModelChange)="updateStopOffset($index, $event / 100)" />
               </mat-slider>
