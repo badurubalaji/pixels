@@ -624,4 +624,29 @@ User-flagged: *"unable to scroll the editor, since we have add page option below
 - **PX-083** — Eyedropper wiring (gradient panel stub).
 - **PX-074** — Email change (held).
 
+## 2026-04-25T10:48:00Z · Sprint-11 close — retrospective
+
+User asked: *"add photo frames for collage photos to add. Please check that story is there or not if not please add it."* Wrote the story + shipped the MVP in one sprint.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `d8b57ed` | PX-090 | Photo-frame collage. New `_bmad-output/.../PX-090-photo-frames-collage.md` story; 8-preset registry (`frame-presets.ts`); `CanvasService.addFrameLayout` + `replaceFrameWithImage`; sidebar Elements tab gains a "Photo frames" section with CSS-only layout previews; click-to-fill on photo-frame placeholders via canvas `mouse:up` + hidden file input. 8 new spec cases. FE 419 → 427. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Mid-sprint course correction.** First pass put Frames as a **standalone sidebar tab**. User pushed back: *"frames must be in elements not in sidebar."* Restructured — removed the `'frames'` tab from `SidebarTab`, the rail-button, the dedicated drawer panel, and the `getTitleForTab` case. Re-located the preset grid + hint copy as a "Photo frames" section under the existing Elements tab, alongside Basic Shapes, Logo Shapes, Lines, Icons, QR, and Decorative. Single-pass restructure took ~30 LOC, no test churn since the panel was reachable from the same emit chain.
+
+**What went well**
+1. The `customType: 'photo-frame'` flag on the fabric Group is the cleanest extension point I've seen in this codebase. The click-to-fill listener filters on it without needing to know which preset created the frame; replacement preserves it so re-clicking a filled frame re-opens the picker.
+2. CSS-only layout previews (positioned `<span>`s with `transform: rotate(...)`) made the polaroid scatter card immediately legible — users can pick the right layout without reading the name.
+3. CSS `background-size: cover` semantics for the photo replacement matched what users expect of "drop a photo into a slot." Saves a fit/fill toggle for v1.
+
+**What was hard**
+1. PX-090 AC-7 (clipPath updates with transform) is a refinement still pending. With cover scaling the over-scan extends past the frame's drawn bounding box — visually it sits "outside" the frame slot. Filed as PX-091 below for next sprint, alongside an explicit object-fit toggle (cover / contain / fill).
+2. Story-first vs ship-first tension. User asked "check if story exists" first, so I wrote the story before any code — felt like ceremony at the time, but having the AC list to refer to caught the click-to-fill behavior on filled frames (AC-6) which I'd otherwise have shipped only for placeholders.
+
+**Sprint-12 candidates**
+- **PX-091** — object-fit refinement on filled frames (cover / contain / fill toggle, plus actual `clipPath` so over-scan crops to the frame's drawn bounding box rather than visually bleeding past it). User-visible polish on the new feature.
+- **PX-077** — Manual e2e smoke (still pending; PX-090 + PX-084 + PX-082 + PX-079 stack would all benefit from a real walkthrough).
+- **PX-085** — Sweep for other CLI residue (if any remains).
+
 
