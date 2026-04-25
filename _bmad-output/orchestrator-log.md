@@ -579,4 +579,28 @@ User asked for toolbar consistency *and* alpha (transparency) in every color pic
 
 Sprint-9 starts with **PX-082** unless the user pivots to manual smoke (PX-077).
 
+## 2026-04-25T10:18:00Z · Sprint-9 close — retrospective
+
+User-flagged regression mid-sprint: *"sidebar toolbar not visible in /editor/..."*. Closed the gap.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `79a9844` | PX-082 | Sidebar drawer (icon rail + drawer panel + upload thumb), quick-action-bar, image-filters-panel slider labels — all retoned from hardcoded dark zinc to the violet/cyan light palette. The icon rail had been dark `#0f0f11` with text via `var(--mat-sys-on-surface)`; after PX-079's theme flip, that resolved to dark text → invisible. Same pattern for the drawer panel. Three files touched, ~25 LOC. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**What went well**
+1. The 9-line hex audit (`grep -cE "background.*#(09|18|1e|27|3f|...)"`) surfaced exactly which components still had dark holdouts. Worth repeating on any future theme-switch.
+2. User caught the regression during their own browsing — strong signal that real-world testing (PX-077) shouldn't be deferred indefinitely. This is the second sprint where a real-world report drove the work; the manual smoke would have caught it earlier.
+
+**What was hard**
+1. The icon-rail's text color was the subtle one — easy to miss because `var(--mat-sys-on-surface)` reads "fine" in source but resolves dynamically with theme. Going forward, any toolbar that hardcodes a dark surface needs an explicit override on its inner text colors too, not just inheritance.
+2. Animation timeline + alignment-panel + color-palette-panel + background-panel + toolbar-panel ALL passed the audit (zero hardcoded dark hits) so they were skipped — but I haven't visually verified in-browser. They likely work; PX-077 will tell.
+
+**Sprint-10 candidates**
+- **PX-077** — Manual e2e smoke. Strongly elevated to top priority. Three of the last four sprints have had real-world feedback drive the work; running through the app together will catch anything the audit missed.
+- **PX-083** — Eyedropper "Pick from canvas" (gradient panel stub).
+- **PX-074** — Email change (held).
+
+Per the autonomy rule, sprint-10 starts after this push lands. The genuinely-best-leverage next step is PX-077, which is human-driven — natural pause point.
+
 
