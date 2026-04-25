@@ -45,6 +45,19 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
 
 
+class PasswordChange(BaseModel):
+    """Authenticated password-rotation payload (PX-075).
+
+    Both fields are required. ``current`` is verified against the stored
+    bcrypt hash before ``next`` is hashed-and-persisted, so a leaked JWT
+    alone cannot rotate a password — the caller still needs to know the
+    current password.
+    """
+
+    current: str
+    next: str
+
+
 class AuthResponse(BaseModel):
     token: str
     user: UserPublic

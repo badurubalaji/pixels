@@ -78,6 +78,30 @@ export class AuthService {
       .pipe(tap(user => this.setUserOnly(user)));
   }
 
+  /**
+   * Rotate the authenticated caller's password (PX-075).
+   *
+   * @param current - The current password (verified server-side against
+   *   the stored bcrypt hash).
+   * @param next - The new password (≥ 6 characters; must differ from
+   *   the current).
+   * @returns An `Observable<void>` that completes on HTTP 204. Errors
+   *   surface via the observable's error channel — typical statuses:
+   *   401 (`current` wrong), 400 (`next` too short or unchanged), 401
+   *   (no/expired bearer).
+   *
+   * @remarks
+   * Wraps `POST /api/auth/me/password`. The JWT does NOT change after a
+   * password rotation, and `currentUser()` is unaffected — the caller
+   * remains signed in on the same session.
+   */
+  changePassword(current: string, next: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/api/auth/me/password`, {
+      current,
+      next,
+    });
+  }
+
   private setUserOnly(user: AuthUser): void {
     this._currentUser.set(user);
     localStorage.setItem(USER_KEY, JSON.stringify(user));

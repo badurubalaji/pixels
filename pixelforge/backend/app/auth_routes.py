@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth import (
     AuthResponse,
+    PasswordChange,
     UserLogin,
     UserPublic,
     UserSignup,
@@ -193,3 +194,66 @@ async def update_me(
         raise HTTPException(status_code=404, detail="User not found")
 
     return _user_to_public(result)
+
+
+@auth_router.post("/me/password")
+async def change_password(
+    body: PasswordChange,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+) -> Response:
+    """Rotate the authenticated caller's password (PX-075).
+
+    Args:
+        body: ``PasswordChange`` with ``current`` (must match the stored
+            hash) and ``next`` (≥ 6 characters).
+        db: Async Mongo database handle.
+        current_user: Decoded JWT claims (required).
+
+    Returns:
+        ``None`` — responds with HTTP 204 No Content on success.
+
+    Raises:
+        HTTPException: 401 if ``current`` does not verify, 400 if
+            ``next`` is too short, 404 if the user record was deleted
+            mid-session, 400 if ``next`` is identical to ``current``
+            (we don't want a no-op rotation hiding broken UX).
+
+    Example:
+        >>> # POST /api/auth/me/password
+        >>> # Authorization: Bearer <jwt>
+        >>> # {"current": "old-pw", "next": "new-pw-1234"}
+    """
+    if len(body.next) < 6:
+        raise HTTPException(
+            status_code=400, detail="New password must be at least 6 characters"
+        )
+    if body.next == body.current:
+        raise HTTPException(
+            status_code=400, detail="New password must be different from current"
+        )
+
+    user_oid = ObjectId(current_user["id"])
+    doc = await db.users.find_one({"_id": user_oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(body.current, doc["password_hash"]):
+        # WHY: 401 (not 400) — the caller's claim about the current
+        # password is auth-equivalent. Don't leak whether the user
+        # exists in the message body either.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    await db.users.update_one(
+        {"_id": user_oid},
+        {
+            "$set": {
+                "password_hash": hash_password(body.next),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

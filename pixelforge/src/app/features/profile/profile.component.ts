@@ -161,6 +161,95 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
             </div>
           </dl>
 
+          <section class="profile__security" aria-labelledby="profile-security-heading">
+            <div class="profile__security-head">
+              <h3 id="profile-security-heading" class="profile__security-title">Security</h3>
+              @if (!changingPwd()) {
+                <button
+                  type="button"
+                  class="profile__security-trigger"
+                  matRipple
+                  data-testid="profile-pwd-trigger"
+                  (click)="startChangePwd()"
+                >
+                  <mat-icon aria-hidden="true">lock_reset</mat-icon>
+                  <span>Change password</span>
+                </button>
+              }
+            </div>
+
+            @if (changingPwd()) {
+              <form
+                class="profile__pwd-form"
+                (submit)="saveChangePwd($event)"
+                (reset)="cancelChangePwd($event)"
+              >
+                <mat-form-field appearance="outline" class="profile__pwd-field">
+                  <mat-label>Current password</mat-label>
+                  <input
+                    matInput
+                    type="password"
+                    autocomplete="current-password"
+                    [ngModel]="pwdCurrent()"
+                    (ngModelChange)="pwdCurrent.set($event)"
+                    name="currentPassword"
+                    required
+                    data-testid="profile-pwd-current"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="profile__pwd-field">
+                  <mat-label>New password</mat-label>
+                  <input
+                    matInput
+                    type="password"
+                    autocomplete="new-password"
+                    [ngModel]="pwdNext()"
+                    (ngModelChange)="pwdNext.set($event)"
+                    name="newPassword"
+                    minlength="6"
+                    required
+                    data-testid="profile-pwd-next"
+                  />
+                  <mat-hint>At least 6 characters, different from current</mat-hint>
+                </mat-form-field>
+
+                @if (pwdError(); as err) {
+                  <p class="profile__name-error" role="alert">{{ err }}</p>
+                }
+                @if (pwdSuccess()) {
+                  <p class="profile__pwd-success" role="status">
+                    <mat-icon aria-hidden="true">check_circle</mat-icon>
+                    Password updated.
+                  </p>
+                }
+
+                <div class="profile__name-actions">
+                  <button
+                    type="submit"
+                    class="profile__name-save"
+                    [disabled]="pwdSaving() || !pwdReady()"
+                    data-testid="profile-pwd-save"
+                  >
+                    @if (pwdSaving()) {
+                      <mat-spinner diameter="16"></mat-spinner>
+                    } @else {
+                      <span>Update password</span>
+                    }
+                  </button>
+                  <button
+                    type="reset"
+                    class="profile__name-cancel"
+                    [disabled]="pwdSaving()"
+                    data-testid="profile-pwd-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            }
+          </section>
+
           <div class="profile__actions">
             <button
               type="button"
@@ -501,6 +590,96 @@ import { UserMenuComponent } from '../../shared/components/user-menu.component';
         border-color: #cbd5e1;
       }
       .profile__name-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      /* ── Security section (PX-075) ─────────────────────────────── */
+
+      .profile__security {
+        margin: 28px 0 24px;
+        padding: 22px 22px 18px;
+        background: #f8fafc;
+        border: 1px solid var(--px-line);
+        border-radius: 14px;
+      }
+      .profile__security-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .profile__security-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--px-ink);
+        letter-spacing: -0.005em;
+      }
+      .profile__security-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px 8px 12px;
+        background: var(--px-surface);
+        color: var(--px-ink-soft);
+        border: 1px solid var(--px-line);
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+        transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+      }
+      .profile__security-trigger:hover {
+        border-color: rgba(124, 58, 237, 0.4);
+        color: var(--px-violet);
+        background: rgba(124, 58, 237, 0.06);
+      }
+      .profile__security-trigger:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.45);
+        outline-offset: 3px;
+      }
+      .profile__security-trigger mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .profile__pwd-form {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 16px;
+      }
+      .profile__pwd-field {
+        width: 100%;
+        max-width: 380px;
+      }
+      .profile__pwd-field ::ng-deep .mdc-text-field--focused .mdc-notched-outline > * {
+        border-color: var(--px-violet) !important;
+      }
+      .profile__pwd-field ::ng-deep .mdc-floating-label--float-above.mdc-floating-label {
+        color: var(--px-violet) !important;
+      }
+
+      .profile__pwd-success {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0 8px;
+        padding: 8px 12px;
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      .profile__pwd-success mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #059669;
+      }
       .profile__meta-mono {
         font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
         font-size: 0.85rem;
@@ -788,5 +967,100 @@ export class ProfileComponent {
       if (typeof first?.msg === 'string') return first.msg;
     }
     return '';
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  //  PX-075 — change password
+  // ────────────────────────────────────────────────────────────────
+
+  /** `true` while the change-password section is expanded. */
+  readonly changingPwd = signal<boolean>(false);
+  /** Current-password field value. */
+  readonly pwdCurrent = signal<string>('');
+  /** New-password field value. */
+  readonly pwdNext = signal<string>('');
+  /** `true` while a `POST /api/auth/me/password` is in flight. */
+  readonly pwdSaving = signal<boolean>(false);
+  /** Inline error surfaced under the form (empty = no error). */
+  readonly pwdError = signal<string>('');
+  /** Briefly `true` after a successful rotation to show a confirmation pill. */
+  readonly pwdSuccess = signal<boolean>(false);
+
+  /**
+   * `true` when both fields are filled and `next` is at least 6 chars —
+   * gates the Save button so the disabled state matches the backend's
+   * minimum-length contract.
+   *
+   * @returns `boolean` — `true` only when the form would plausibly succeed.
+   */
+  readonly pwdReady = computed<boolean>(() => {
+    return this.pwdCurrent().length > 0 && this.pwdNext().length >= 6;
+  });
+
+  /**
+   * Open the change-password section and clear any prior state.
+   *
+   * @remarks
+   * Resets all four signals so a previous error or success message
+   * does not leak into the fresh attempt.
+   */
+  startChangePwd(): void {
+    this.pwdCurrent.set('');
+    this.pwdNext.set('');
+    this.pwdError.set('');
+    this.pwdSuccess.set(false);
+    this.changingPwd.set(true);
+  }
+
+  /**
+   * Close the change-password section without persisting.
+   *
+   * @param event - Optional DOM event (form `reset` or button click).
+   */
+  cancelChangePwd(event?: Event): void {
+    event?.preventDefault();
+    this.changingPwd.set(false);
+    this.pwdCurrent.set('');
+    this.pwdNext.set('');
+    this.pwdError.set('');
+    this.pwdSuccess.set(false);
+    this.pwdSaving.set(false);
+  }
+
+  /**
+   * Submit the password rotation. On success: clears the inputs and
+   * briefly surfaces a "Password updated" confirmation. On failure:
+   * surfaces the backend detail (or a generic message) inline.
+   *
+   * @param event - The form `submit` DOM event; default action suppressed.
+   *
+   * @remarks
+   * Stays in edit mode on failure so the user can correct and retry.
+   * On success the form collapses back to the trigger button after
+   * the success pill flashes.
+   */
+  saveChangePwd(event?: Event): void {
+    event?.preventDefault();
+    if (this.pwdSaving() || !this.pwdReady()) return;
+
+    this.pwdSaving.set(true);
+    this.pwdError.set('');
+    this.pwdSuccess.set(false);
+
+    this.authService
+      .changePassword(this.pwdCurrent(), this.pwdNext())
+      .subscribe({
+        next: () => {
+          this.pwdSaving.set(false);
+          this.pwdSuccess.set(true);
+          this.pwdCurrent.set('');
+          this.pwdNext.set('');
+        },
+        error: (err: unknown) => {
+          this.pwdSaving.set(false);
+          const detail = this.extractErrorDetail(err);
+          this.pwdError.set(detail || 'Could not update password — please try again.');
+        },
+      });
   }
 }

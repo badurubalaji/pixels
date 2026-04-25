@@ -83,3 +83,72 @@ async def test_update_me_requires_auth(client: AsyncClient) -> None:
     """PATCH /api/auth/me without a token returns 401 (PX-071)."""
     resp = await client.patch("/api/auth/me", json={"name": "x"})
     assert resp.status_code in (401, 403)
+
+
+async def test_change_password_happy_path(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """POST /api/auth/me/password rotates the password (PX-075)."""
+    resp = await client.post(
+        "/api/auth/me/password",
+        headers=auth_headers,
+        json={"current": "password123", "next": "newPassword456"},
+    )
+    assert resp.status_code == 204
+    # New password works for login.
+    login = await client.post(
+        "/api/auth/login",
+        json={"email": "test@example.com", "password": "newPassword456"},
+    )
+    assert login.status_code == 200
+    # Old password no longer works.
+    old = await client.post(
+        "/api/auth/login",
+        json={"email": "test@example.com", "password": "password123"},
+    )
+    assert old.status_code == 401
+
+
+async def test_change_password_wrong_current_returns_401(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """Wrong ``current`` is rejected with 401 (PX-075)."""
+    resp = await client.post(
+        "/api/auth/me/password",
+        headers=auth_headers,
+        json={"current": "not-the-real-password", "next": "newPassword456"},
+    )
+    assert resp.status_code == 401
+
+
+async def test_change_password_short_next_returns_400(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """``next`` shorter than 6 chars is rejected with 400 (PX-075)."""
+    resp = await client.post(
+        "/api/auth/me/password",
+        headers=auth_headers,
+        json={"current": "password123", "next": "abc"},
+    )
+    assert resp.status_code == 400
+
+
+async def test_change_password_same_as_current_returns_400(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """``next`` identical to ``current`` is rejected (PX-075)."""
+    resp = await client.post(
+        "/api/auth/me/password",
+        headers=auth_headers,
+        json={"current": "password123", "next": "password123"},
+    )
+    assert resp.status_code == 400
+
+
+async def test_change_password_requires_auth(client: AsyncClient) -> None:
+    """POST /api/auth/me/password without a token returns 401 (PX-075)."""
+    resp = await client.post(
+        "/api/auth/me/password",
+        json={"current": "x", "next": "yyyyyy"},
+    )
+    assert resp.status_code in (401, 403)

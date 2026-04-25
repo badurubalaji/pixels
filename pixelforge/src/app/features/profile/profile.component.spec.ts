@@ -22,6 +22,7 @@ describe('ProfileComponent — PX-065', () => {
   let logoutSpy: ReturnType<typeof vi.fn>;
   let navigate: ReturnType<typeof vi.fn>;
   let updateMeSpy: ReturnType<typeof vi.fn>;
+  let changePasswordSpy: ReturnType<typeof vi.fn>;
 
   const mkUser = (overrides: Partial<AuthUser> = {}): AuthUser => ({
     id: 'u-42',
@@ -35,6 +36,7 @@ describe('ProfileComponent — PX-065', () => {
     currentUserSig = signal<AuthUser | null>(user);
     logoutSpy = vi.fn();
     updateMeSpy = vi.fn(patch => of(mkUser({ name: patch.name ?? undefined })));
+    changePasswordSpy = vi.fn(() => of(undefined));
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
@@ -47,6 +49,7 @@ describe('ProfileComponent — PX-065', () => {
             currentUser: currentUserSig,
             logout: logoutSpy,
             updateMe: updateMeSpy,
+            changePassword: changePasswordSpy,
           },
         },
       ],
@@ -231,6 +234,108 @@ describe('ProfileComponent — PX-065', () => {
       expect(component.nameDirty()).toBe(false);
       component.nameDraft.set('Jane');
       expect(component.nameDirty()).toBe(true);
+    });
+  });
+
+  describe('change password (PX-075)', () => {
+    beforeEach(async () => await setup());
+
+    it('starts collapsed with a "Change password" trigger button', () => {
+      expect(component.changingPwd()).toBe(false);
+      const trigger = fixture.nativeElement.querySelector<HTMLButtonElement>(
+        '[data-testid="profile-pwd-trigger"]',
+      );
+      expect(trigger).toBeTruthy();
+    });
+
+    it('startChangePwd opens the section and clears any prior state', () => {
+      component.pwdError.set('stale');
+      component.pwdSuccess.set(true);
+      component.startChangePwd();
+      fixture.detectChanges();
+      expect(component.changingPwd()).toBe(true);
+      expect(component.pwdError()).toBe('');
+      expect(component.pwdSuccess()).toBe(false);
+      const cur = fixture.nativeElement.querySelector(
+        '[data-testid="profile-pwd-current"]',
+      );
+      expect(cur).toBeTruthy();
+    });
+
+    it('pwdReady is false until both fields have content and next ≥ 6 chars', () => {
+      component.startChangePwd();
+      expect(component.pwdReady()).toBe(false);
+      component.pwdCurrent.set('old-pw');
+      component.pwdNext.set('abc');
+      expect(component.pwdReady()).toBe(false);
+      component.pwdNext.set('abcdef');
+      expect(component.pwdReady()).toBe(true);
+    });
+
+    it('Save calls AuthService.changePassword with the typed values', () => {
+      component.startChangePwd();
+      component.pwdCurrent.set('old-password');
+      component.pwdNext.set('new-password');
+      component.saveChangePwd();
+      expect(changePasswordSpy).toHaveBeenCalledWith('old-password', 'new-password');
+    });
+
+    it('on success: clears inputs, shows success pill, stays in section', () => {
+      component.startChangePwd();
+      component.pwdCurrent.set('old-password');
+      component.pwdNext.set('new-password');
+      component.saveChangePwd();
+      expect(component.pwdSuccess()).toBe(true);
+      expect(component.pwdCurrent()).toBe('');
+      expect(component.pwdNext()).toBe('');
+      expect(component.changingPwd()).toBe(true);
+      expect(component.pwdSaving()).toBe(false);
+      expect(component.pwdError()).toBe('');
+    });
+
+    it('Cancel collapses the section without calling the service', () => {
+      component.startChangePwd();
+      component.pwdCurrent.set('discarded');
+      component.pwdNext.set('alsoDiscarded');
+      component.cancelChangePwd();
+      expect(component.changingPwd()).toBe(false);
+      expect(component.pwdCurrent()).toBe('');
+      expect(component.pwdNext()).toBe('');
+      expect(changePasswordSpy).not.toHaveBeenCalled();
+    });
+
+    it('surfaces 401 detail (wrong current) inline + stays in edit mode', () => {
+      changePasswordSpy.mockReturnValueOnce(
+        throwError(() => ({
+          status: 401,
+          error: { detail: 'Current password is incorrect' },
+        })),
+      );
+      component.startChangePwd();
+      component.pwdCurrent.set('wrong');
+      component.pwdNext.set('newPassword');
+      component.saveChangePwd();
+      expect(component.changingPwd()).toBe(true);
+      expect(component.pwdError()).toBe('Current password is incorrect');
+      expect(component.pwdSaving()).toBe(false);
+    });
+
+    it('falls back to a generic error when the backend gives no detail', () => {
+      changePasswordSpy.mockReturnValueOnce(throwError(() => ({ status: 0 })));
+      component.startChangePwd();
+      component.pwdCurrent.set('whatever');
+      component.pwdNext.set('newPassword');
+      component.saveChangePwd();
+      expect(component.pwdError()).toBe(
+        'Could not update password — please try again.',
+      );
+    });
+
+    it('Save is a no-op while pwdReady is false', () => {
+      component.startChangePwd();
+      component.pwdCurrent.set('only-current');
+      component.saveChangePwd();
+      expect(changePasswordSpy).not.toHaveBeenCalled();
     });
   });
 });
