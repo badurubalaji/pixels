@@ -1589,7 +1589,12 @@ export class CanvasService {
 
     const layerId = (active as any).layerId;
     this.canvas.remove(active);
+    // PX-098: fabric does not always fire `selection:cleared` after a
+    // programmatic remove; force-clear the active object so floating
+    // toolbars (text-toolbar, quick-action-bar) hide on delete.
+    this.canvas.discardActiveObject();
     this.canvas.renderAll();
+    this.canvas.fire('selection:cleared');
 
     this._layers.update(layers => layers.filter(l => l.id !== layerId));
     this._activeLayerId.set(null);

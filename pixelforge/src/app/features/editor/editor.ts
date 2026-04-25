@@ -1750,6 +1750,8 @@ export class Editor implements AfterViewInit, OnDestroy {
   private offlineHandler: (() => void) | null = null;
   /** PX-097: document-level deselect bridge (see ngAfterViewInit). */
   private docDeselectListener: ((e: Event) => void) | null = null;
+  /** PX-098: explicit replace-photo handler (see ngAfterViewInit). */
+  private frameReplaceListener: (() => void) | null = null;
 
   /**
    * Handle Ctrl/Cmd + wheel as canvas zoom. Plain scroll is ignored so
@@ -1788,22 +1790,38 @@ export class Editor implements AfterViewInit, OnDestroy {
 
     this.canvasService.initCanvas(this.canvasRef.nativeElement, width, height);
 
-    // PX-090: bind click-to-fill on photo-frame placeholders. Fabric's
-    // mouse:up fires after both clicks and drags; we only filter on
-    // customType === 'photo-frame' so drags on other objects pass.
+    // PX-090 + PX-098: bind click-to-fill on photo-frame placeholders.
+    // Detect a "click" (vs. a drag) by tracking mousedown position and
+    // treating any release within a small movement-threshold as a tap.
+    // Time-only thresholds were too strict — slow taps got rejected.
     const fabricCanvas = this.canvasService.getCanvas();
     if (fabricCanvas) {
-      let downAt = 0;
-      fabricCanvas.on('mouse:down', () => {
-        downAt = Date.now();
-      });
-      fabricCanvas.on('mouse:up', (opt: { target?: fabric.FabricObject | null }) => {
-        // WHY: a brief threshold rejects drag-releases — click-to-fill
-        // only fires on a true tap (down + up within ~300ms).
-        if (Date.now() - downAt < 300) {
-          this.maybeOpenFrameFiller(opt.target ?? null);
-        }
-      });
+      let downX = 0,
+        downY = 0,
+        downHadTarget: fabric.FabricObject | null = null;
+      fabricCanvas.on(
+        'mouse:down',
+        (opt: { e?: MouseEvent | TouchEvent; target?: fabric.FabricObject | null }) => {
+          const e = opt.e as MouseEvent | undefined;
+          downX = e?.clientX ?? 0;
+          downY = e?.clientY ?? 0;
+          downHadTarget = opt.target ?? null;
+        },
+      );
+      fabricCanvas.on(
+        'mouse:up',
+        (opt: { e?: MouseEvent | TouchEvent; target?: fabric.FabricObject | null }) => {
+          const e = opt.e as MouseEvent | undefined;
+          const dx = (e?.clientX ?? 0) - downX;
+          const dy = (e?.clientY ?? 0) - downY;
+          const movedSqr = dx * dx + dy * dy;
+          // Click ≠ drag: pixel distance < ~6px is treated as a tap.
+          if (movedSqr > 36) return;
+          // Click-to-fill operates on the down-target so a brief mouse
+          // move during a fabric "select" gesture doesn't lose the frame.
+          this.maybeOpenFrameFiller(opt.target ?? downHadTarget);
+        },
+      );
     }
 
     // PX-097: deselect on clicks outside the canvas + its in-canvas
@@ -1837,6 +1855,20 @@ export class Editor implements AfterViewInit, OnDestroy {
       }
     };
     document.addEventListener('mousedown', this.docDeselectListener, true);
+
+    // PX-098: explicit "Replace photo" path from the property-panel
+    // button. Bypasses the canvas click-to-fill detector entirely so
+    // users always have a working replace flow regardless of click
+    // sensitivity / drag thresholds. Reads the active object at event
+    // time and routes through the same hidden file input.
+    this.frameReplaceListener = () => {
+      const fc = this.canvasService.getCanvas();
+      const active = fc?.getActiveObject();
+      if (!active || (active as any).customType !== 'photo-frame') return;
+      this.framePendingFill = active;
+      this.frameImageInputRef?.nativeElement.click();
+    };
+    document.addEventListener('pf:request-frame-replace', this.frameReplaceListener);
 
     // Apply ?platform=<type> query param (Story PX-020 AC-5). The `custom`
     // preset has 0x0 sentinel dimensions — it means "user-defined, no
@@ -1999,6 +2031,9 @@ export class Editor implements AfterViewInit, OnDestroy {
     if (this.offlineHandler) window.removeEventListener('offline', this.offlineHandler);
     if (this.docDeselectListener) {
       document.removeEventListener('mousedown', this.docDeselectListener, true);
+    }
+    if (this.frameReplaceListener) {
+      document.removeEventListener('pf:request-frame-replace', this.frameReplaceListener);
     }
     this.rightClickSub?.unsubscribe();
     if (this.timerHandle) clearInterval(this.timerHandle);

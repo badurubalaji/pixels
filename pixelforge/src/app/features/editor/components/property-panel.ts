@@ -203,6 +203,18 @@ interface ObjectProps {
                 <mat-icon>restart_alt</mat-icon>
                 Reset crop &amp; zoom
               </button>
+
+              <!-- PX-098: guaranteed "Replace" path independent of the
+                   canvas click-to-fill detector. -->
+              <button
+                mat-flat-button
+                class="frame-replace-btn"
+                data-testid="frame-replace"
+                (click)="onReplacePhotoClick()"
+              >
+                <mat-icon>swap_horiz</mat-icon>
+                Replace photo
+              </button>
             </mat-expansion-panel>
           }
 
@@ -815,6 +827,13 @@ interface ObjectProps {
     }
     .frame-reset-btn[disabled] {
       opacity: 0.4;
+    }
+    .frame-replace-btn {
+      width: 100%;
+      margin-top: 8px;
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
+      color: #ffffff !important;
+      border-radius: 10px !important;
     }
   `],
 })
@@ -1469,5 +1488,19 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this.framePanY.set(0);
     this.frameZoom.set(1);
     this.canvasService.setFrameView(obj, 0, 0, 1);
+  }
+
+  /**
+   * Trigger a global custom event so the editor host can open its
+   * hidden frame-image file input for the active photo-frame (PX-098).
+   *
+   * @remarks
+   * The event-driven path keeps the property-panel decoupled from the
+   * editor's `<input #frameImageInput>` element. The editor listens
+   * once on the document; the active object is whatever is currently
+   * selected so no payload is needed.
+   */
+  onReplacePhotoClick(): void {
+    document.dispatchEvent(new CustomEvent('pf:request-frame-replace'));
   }
 }
