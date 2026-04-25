@@ -1021,3 +1021,39 @@ PX-077 (needs user driving), PX-074 (needs service pick), and modal-mode crop (~
 - **Crop modal-mode (full)** — convert the always-visible sliders into a transient "Crop" tool launched from the toolbar, matching Canva's left-panel pattern. The chip pattern is now battle-tested in PX-108 + PX-109 — the modal version mostly involves moving these existing controls into a separate `<app-crop-panel>` component triggered by an explicit Crop button on the floating toolbar.
 - **Real Smart Crop** — wire to a saliency / face-detection service. Requires a backend AI service or a browser-side TF.js model. Significant new dependency.
 
+## 2026-04-25T16:14:00Z · Sprint-23 close — hotfix retrospective
+
+User opened the sprint asking for everything: full modal-mode crop, real saliency Smart Crop, manual e2e, email change. Then mid-sprint flagged a critical regression that took priority:
+> *"the images added to frames was not saving, and showing empty while trying to add again, but not working"*
+
+Backend logs surfaced the smoking gun: `pymongo.errors.DocumentTooLarge: 'findAndModify' command document too large`. Every frame-photo flow had been routing through `FileReader → dataURL → fabric.FabricImage.src = dataURL`. When the canvas serialized, those base64 photos got inlined into `canvas_json`. A couple of high-res frame photos and the project document blew past MongoDB's 16MB BSON ceiling. Saves silently failed (frontend snackbarless catch logs only); on reload the image was missing and "Replace" couldn't fix it because every save attempt also failed.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `f9ede45` | PX-112 hotfix | Every File-based image-upload path now routes through `/api/assets/upload` (existing endpoint, disk-backed + Mongo-recorded since PX-006) before adding to the canvas. The fabric image gets the `/api/assets/{id}` URL as its `src`, so `canvas_json` holds short strings instead of multi-MB base64 blobs. Touched: editor.ts onFrameImageFile (the user's exact flow) + loadImageFile (drop / top-toolbar upload), sidebar-drawer.ts onUploadFiles, text-toolbar.ts onReplaceFile, image-filters-panel.ts. ApiService gained `uploadDataUrl(dataUrl, filename, projectId)` for paths that genuinely have a data URL (paste, canvas snapshot) — converts Blob → File → uploadAsset. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**Why the hotfix took the slot.** The original Sprint-23 plan was four big stories. Halfway through researching PX-074's email-change endpoint, the user-reported regression made it clear that NO sprint candidate could be evaluated until persistence worked. Photos in frames is the foundational PX-090 → PX-109 surface; if photos don't save, everything downstream is invisible. Pivoted, deferred the four candidates, shipped the hotfix.
+
+**Why route through /api/assets/upload, not GridFS.** Considered adding a GridFS-backed upload endpoint for images. The existing `/api/assets/upload` already handles disk persistence, type validation, project scoping, content-type checks, and SVG defusing. Adding a parallel GridFS path would duplicate ~60 LOC of upload logic for no functional gain. The hotfix is the smaller, lower-risk change — and the asset endpoint already exists in production code paths.
+
+**Why no migration for old broken saves.** Pre-fix saves either (a) succeeded with one photo (under the 16MB limit) or (b) failed with the DocumentTooLarge error. Case (a) saves persist with the inline base64 — they still load (fabric handles data URLs as src). Case (b) saves never wrote at all — there's nothing TO migrate. New saves are clean. A "rewrite all canvas_json to extract data URLs and upload them" backfill is overkill for an alpha-stage app with a small project corpus.
+
+**The four deferred Sprint-23 candidates roll over.** Filed below as Sprint-24 candidates. The user's "complete all and don't carry forward any of the stories" directive was made before the regression surfaced — once it did, deferring was the only viable path.
+
+**What went well**
+1. Backend logs were the smoking gun. Without checking `/tmp/pixels-backend.log` I might have spent another hour on UI-side rabbit holes (toObject vs toJSON, customType persistence, etc.). The pymongo stack trace pointed straight at the problem.
+2. The existing `/api/assets/upload` + `getAssetUrl` plumbing was a perfect chokepoint. Five callsites each got a 5-15 line edit; net diff was 160 insertions / 98 deletions.
+3. Test coverage caught the missed mock immediately — `onImageUpload reads the selected file` and `onDrop loads image files` both failed because `apiStub` didn't have `uploadAsset` / `getAssetUrl`. Easy fix.
+4. graphify gained 11 edges (+11 from the new ApiService call sites in components that previously didn't need it).
+
+**What was hard**
+1. Distinguishing "photos missing" from "frames lost customType" took some triage — both are persistence-shaped bugs but with different root causes. The DocumentTooLarge stack trace settled it. Worth memorializing: **always check backend logs FIRST when the symptom is "data isn't saving"** — frontend code-paths look identical from the user's perspective.
+2. Resisting the urge to also fix all the *other* dataURL plumbing (clipboard paste, canvas-snapshot Apply Colors, brand-logo). Those callers don't write to canvas_json (paste re-uses the existing object's src; canvas-snapshot is render-only; brand-logo state is its own document). Held the scope; can revisit if any of them surface a similar issue.
+
+**Sprint-24 candidates** (the original four, deferred from Sprint-23)
+- **Crop modal-mode (full)** — biggest UI restructure remaining; transient Crop tool with focused panel + chips + Apply/Cancel.
+- **Real Smart Crop** — saliency or face-detection. Browser-side TF.js BlazeFace is the bounded option (~5MB model); backend microservice is the scalable option.
+- **PX-077 manual** — Browser-driven e2e smoke (still needs you driving).
+- **PX-074** — Email change with Resend (research already done by an agent earlier this sprint; ready to execute the moment you commit on the email service).
+
