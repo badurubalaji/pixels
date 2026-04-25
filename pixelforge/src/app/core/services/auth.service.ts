@@ -109,6 +109,47 @@ export class AuthService {
   }
 
   /**
+   * Start an email-change flow (PX-074).
+   *
+   * @param newEmail - The address the user wants to switch to.
+   * @param password - Current password — second factor against a leaked JWT.
+   * @returns Observable that emits void on 204 success.
+   *
+   * @remarks
+   * Wraps `POST /api/auth/me/email`. The change is NOT applied yet; the
+   * backend sends a confirmation link to the new address + a notification
+   * to the old one. Call `confirmEmailChange(token)` from the link target
+   * page to actually swap the email and refresh the session JWT.
+   */
+  requestEmailChange(newEmail: string, password: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/api/auth/me/email`, {
+      new_email: newEmail,
+      password,
+    });
+  }
+
+  /**
+   * Consume an email-change confirmation token (PX-074).
+   *
+   * @param token - Signed JWT from the confirmation link's `?token=` query.
+   * @returns Observable emitting `{ token, user }` on success — the
+   *   refreshed user record + a fresh auth JWT (the email is part of the
+   *   JWT claims, so we re-issue). Caller should persist the new token
+   *   the same way `login` does.
+   *
+   * @remarks
+   * This endpoint is NOT behind the auth interceptor — the user may be
+   * logged out by the time they click the email link, and we want the
+   * change to land regardless. The token itself is the auth.
+   */
+  confirmEmailChange(token: string): Observable<{ token: string; user: AuthUser }> {
+    return this.http.post<{ token: string; user: AuthUser }>(
+      `${this.baseUrl}/api/auth/me/email/confirm`,
+      { token },
+    );
+  }
+
+  /**
    * Upload (or replace) the authenticated caller's avatar (PX-073).
    *
    * @param file - A `File` from a `<input type="file">` change event.

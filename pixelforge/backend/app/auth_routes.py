@@ -21,18 +21,29 @@ from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth import (
+    APP_BASE_URL,
     AuthResponse,
+    EMAIL_CHANGE_TOKEN_TTL_HOURS,
+    EmailChangeConfirm,
+    EmailChangeRequest,
     PasswordChange,
     UserLogin,
     UserPublic,
     UserSignup,
     UserUpdate,
+    create_email_change_token,
     create_token,
+    decode_email_change_token,
     hash_password,
     require_user,
     verify_password,
 )
 from app.database import get_db
+from app.mailer import (
+    render_email_change_confirm_html,
+    render_email_change_notify_html,
+    send_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -446,3 +457,133 @@ async def get_avatar(user_id: str) -> FileResponse:
             )
             return FileResponse(path, media_type=mime)
     raise HTTPException(status_code=404, detail="No avatar")
+
+
+# ── Email change (PX-074) ────────────────────────────────────────────
+
+
+@auth_router.post("/me/email")
+async def request_email_change(
+    body: EmailChangeRequest,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+    current_user: dict = Depends(require_user),
+) -> Response:
+    """Start the email-change flow (PX-074).
+
+    The caller must supply their current password — a leaked JWT alone
+    can't redirect mail. We send the confirmation link to the NEW address
+    (so possession of that mailbox is the second factor) and a
+    notification to the OLD address (so a successful redirect doesn't go
+    silently undetected). The change is committed by the confirmation
+    endpoint, NOT here. Returns 204 once both messages are accepted by
+    the mailer (or captured by the OUTBOX in dev mode).
+    """
+    user_id = current_user["id"]
+    try:
+        user_oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user id")
+
+    user_doc = await db.users.find_one({"_id": user_oid})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(body.password, user_doc["password_hash"]):
+        raise HTTPException(status_code=401, detail="Wrong password")
+
+    new_email = body.new_email.strip().lower()
+    old_email = user_doc.get("email", "").lower()
+    if new_email == old_email:
+        raise HTTPException(status_code=400, detail="New email matches current email")
+
+    # If the new email is already taken, surface a 409 — but stay vague to
+    # avoid leaking the existence of accounts (timing-safe-ish; this is one
+    # query that the caller could have run themselves at signup anyway).
+    existing = await db.users.find_one({"email": new_email})
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
+    token = create_email_change_token(user_id, new_email)
+    confirm_url = f"{APP_BASE_URL}/account/confirm-email?token={token}"
+
+    # Send to the NEW address — this is the actual proof of mailbox ownership.
+    await send_email(
+        to=new_email,
+        subject="Confirm your new pixels account email",
+        html=render_email_change_confirm_html(
+            name=user_doc.get("name") or "",
+            new_email=new_email,
+            confirm_url=confirm_url,
+            ttl_hours=EMAIL_CHANGE_TOKEN_TTL_HOURS,
+        ),
+    )
+
+    # Notify the OLD address so a successful change doesn't go silently.
+    if old_email:
+        await send_email(
+            to=old_email,
+            subject="Email change requested on your pixels account",
+            html=render_email_change_notify_html(
+                name=user_doc.get("name") or "",
+                new_email=new_email,
+            ),
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@auth_router.post("/me/email/confirm")
+async def confirm_email_change(
+    body: EmailChangeConfirm,
+    db: Annotated[AsyncIOMotorDatabase, Depends(get_db)],
+) -> dict:
+    """Consume the email-change token from the confirmation link (PX-074).
+
+    Validates the token, confirms the user still exists, and atomically
+    updates the user's email. Returns the updated user payload + a fresh
+    auth token (the email is part of the JWT claims, so we re-issue).
+
+    Note: this endpoint is intentionally NOT behind ``require_user`` — the
+    user may be logged out by the time they click the email link, and
+    we'd rather complete the change than punt them through login first.
+    The token itself is the auth.
+    """
+    payload = decode_email_change_token(body.token)
+    user_id = payload["sub"]
+    new_email = (payload["new_email"] or "").strip().lower()
+
+    try:
+        user_oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    user_doc = await db.users.find_one({"_id": user_oid})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check the new email is still free at confirm time — the gap between
+    # request and confirm could have allowed another signup to grab it.
+    existing = await db.users.find_one({"email": new_email})
+    if existing and str(existing["_id"]) != user_id:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
+    await db.users.update_one(
+        {"_id": user_oid},
+        {"$set": {"email": new_email, "updated_at": datetime.now(timezone.utc)}},
+    )
+
+    refreshed = await db.users.find_one({"_id": user_oid})
+    if not refreshed:
+        raise HTTPException(status_code=500, detail="User vanished")
+
+    token = create_token(user_id, new_email)
+    return {
+        "token": token,
+        "user": {
+            "id": user_id,
+            "email": new_email,
+            "name": refreshed.get("name"),
+            "avatar_url": refreshed.get("avatar_url"),
+            "created_at": refreshed.get("created_at"),
+        },
+    }
