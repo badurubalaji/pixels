@@ -34,11 +34,17 @@ export class ThemeService {
       if (saved === 'light' || saved === 'dark') return saved;
     } catch {}
 
-    // Use system preference as fallback
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
-      return 'light';
+    // PX-079: brand identity is the light violet/cyan aesthetic across
+    // /auth, /hub, /gallery, /profile, /dashboard, /editor. Default to
+    // light unless the user has an explicit `prefers-color-scheme: dark`
+    // OS setting — opt-in dark, not opt-out.
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    ) {
+      return 'dark';
     }
-    return 'dark';
+    return 'light';
   }
 
   private applyTheme(theme: Theme): void {

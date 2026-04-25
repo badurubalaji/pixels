@@ -42,7 +42,17 @@ html {
 }
 
 body {
-  color-scheme: dark;
+  // PX-079: brand identity is light. Dark stays opt-in via the toggle in
+  // the dashboard top-nav; this default just makes the first paint match
+  // the redesigned routes before ThemeService runs.
+  color-scheme: light;
+  --mat-sys-surface: #ffffff;
+  --mat-sys-surface-container: #f7f7f8;
+  --mat-sys-surface-container-high: #ededee;
+  --mat-sys-surface-container-highest: #e3e3e4;
+  --mat-sys-on-surface: #1a1a1f;
+  --mat-sys-outline-variant: #d4d4d8;
+  --mat-sys-outline: #a1a1aa;
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
@@ -52,20 +62,22 @@ body {
   transition: background-color 0.2s, color 0.2s;
 }
 
-// Light theme overrides
+// theme-light kept as an explicit class so ThemeService.applyTheme()
+// works idempotently — no need to re-declare anything; the body's
+// default IS already light.
 body.theme-light {
   color-scheme: light;
-  --mat-sys-surface: #ffffff;
-  --mat-sys-surface-container: #f7f7f8;
-  --mat-sys-surface-container-high: #ededee;
-  --mat-sys-surface-container-highest: #e3e3e4;
-  --mat-sys-on-surface: #1a1a1f;
-  --mat-sys-outline-variant: #d4d4d8;
-  --mat-sys-outline: #a1a1aa;
 }
 
 body.theme-dark {
   color-scheme: dark;
+  --mat-sys-surface: initial;
+  --mat-sys-surface-container: initial;
+  --mat-sys-surface-container-high: initial;
+  --mat-sys-surface-container-highest: initial;
+  --mat-sys-on-surface: initial;
+  --mat-sys-outline-variant: initial;
+  --mat-sys-outline: initial;
 }
 
 // Accessibility: visible focus indicators for keyboard users
