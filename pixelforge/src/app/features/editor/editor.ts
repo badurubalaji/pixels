@@ -1832,6 +1832,18 @@ export class Editor implements AfterViewInit, OnDestroy {
         },
       );
 
+      // PX-096 — split combined-angle back into frameAngle when the
+      // user drags the rotation handle on a photo-frame. Keeps the
+      // clipPath aligned with the slot regardless of photoAngle.
+      fabricCanvas.on(
+        'object:rotating',
+        (opt: { target?: fabric.FabricObject | null }) => {
+          if (opt.target && (opt.target as any).customType === 'photo-frame') {
+            this.canvasService.syncFrameAngleAfterRotate(opt.target);
+          }
+        },
+      );
+
       fabricCanvas.on('mouse:move', (opt: { e?: Event }) => {
         if (!panState) return;
         if (!opt.e) return;

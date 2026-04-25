@@ -797,6 +797,16 @@ export class CanvasService {
         (fabricImg as any).frameHeight = fh;
         (fabricImg as any).fitMode = fitMode;
         (fabricImg as any).frameShape = shape;
+        // PX-096 — initialize dual-angle tracking. frameAngle is the
+        // slot orientation (matches frame.angle initially); photoAngle
+        // starts at 0 (no in-frame rotation). Preserved on subsequent
+        // replacements via the previous-frame's photoAngle inheritance.
+        const inheritedPhotoAngle = (frame as any).photoAngle ?? 0;
+        (fabricImg as any).frameAngle = angle;
+        (fabricImg as any).photoAngle = inheritedPhotoAngle;
+        if (inheritedPhotoAngle !== 0) {
+          fabricImg.set({ angle: angle + inheritedPhotoAngle });
+        }
 
         const idx = canvas.getObjects().indexOf(frame);
         canvas.remove(frame);
@@ -871,6 +881,140 @@ export class CanvasService {
     (frame as any).frameZoom = z;
 
     this.canvas.renderAll();
+  }
+
+  /**
+   * Change the clip-shape of an existing photo-frame in place (PX-103).
+   *
+   * @param frame - A `customType: 'photo-frame'` object — either an
+   *   empty Group placeholder or a filled FabricImage. No-op on
+   *   anything else.
+   * @param shape - The new {@link FrameShape}.
+   *
+   * @remarks
+   * **Filled FabricImages** swap their `clipPath` to the new shape's
+   * silhouette (or remove it for `'rect'`). Pan / zoom / fit-mode
+   * state is preserved — only the visible silhouette changes.
+   *
+   * **Empty Group placeholders** rebuild in place: a new Group with
+   * the new outline shape replaces the old one at the same canvas
+   * position, preserving `layerId` and the linked layer's metadata.
+   * Fabric Groups don't expose a clean child-replace API, so a fresh
+   * Group is the safer route.
+   */
+  setFrameShape(frame: fabric.FabricObject, shape: FrameShape): void {
+    if (!this.canvas) return;
+    if ((frame as any).customType !== 'photo-frame') return;
+
+    if (frame instanceof fabric.FabricImage) {
+      // Filled frame — swap the clipPath.
+      const left = frame.left ?? 0;
+      const top = frame.top ?? 0;
+      const angle = (frame as any).frameAngle ?? frame.angle ?? 0;
+      const fw = (frame as any).frameWidth ?? 100;
+      const fh = (frame as any).frameHeight ?? 100;
+      if (shape === 'rect') {
+        (frame as any).clipPath = undefined;
+      } else {
+        const clipShape = this.buildFrameShape(shape, fw, fh, false);
+        (clipShape as any).left = left;
+        (clipShape as any).top = top;
+        (clipShape as any).angle = angle;
+        (clipShape as any).absolutePositioned = true;
+        (frame as any).clipPath = clipShape;
+      }
+      (frame as any).frameShape = shape;
+      this.canvas.renderAll();
+      return;
+    }
+
+    if (frame instanceof fabric.Group) {
+      // Empty placeholder — rebuild in place.
+      const left = frame.left ?? 0;
+      const top = frame.top ?? 0;
+      const fw = (frame.width ?? 100) * (frame.scaleX ?? 1);
+      const fh = (frame.height ?? 100) * (frame.scaleY ?? 1);
+      const angle = frame.angle ?? 0;
+      const layerId = (frame as any).layerId;
+      const replacement = this.buildEmptyFrame(left, top, fw, fh, angle, shape);
+      (replacement as any).layerId = layerId;
+      (replacement as any).frameShape = shape;
+
+      const idx = this.canvas.getObjects().indexOf(frame);
+      this.canvas.remove(frame);
+      this.canvas.insertAt(idx >= 0 ? idx : this.canvas.getObjects().length, replacement);
+      this.canvas.setActiveObject(replacement);
+      this.canvas.renderAll();
+    }
+  }
+
+  /**
+   * Rotate the photo *inside* a filled frame, independent of the
+   * frame's slot orientation (PX-096).
+   *
+   * @param frame - A filled `FabricImage` photo-frame.
+   * @param photoAngle - Rotation in degrees, applied to the photo's
+   *   content. The slot itself stays at its current `frameAngle`.
+   *   Range is unconstrained — UI typically caps at ±45°.
+   *
+   * @remarks
+   * Implementation uses fabric's flat-image model with a clipPath
+   * (PX-102) and dual-angle bookkeeping:
+   *
+   *   - `frame.angle` — what fabric uses to render. Set to
+   *     `frameAngle + photoAngle` so the source content rotates by
+   *     `photoAngle` relative to the clipPath.
+   *   - `frameAngle` — slot orientation. Used as the clipPath's angle
+   *     so the clip stays aligned with the slot regardless of photo
+   *     rotation.
+   *   - `photoAngle` — independent photo rotation.
+   *
+   * When the user drags the rotation handle (slot rotation), an
+   * `object:rotating` listener (wired in editor.ts) updates
+   * `frameAngle = frame.angle - photoAngle` and re-aligns the
+   * clipPath. Slot + photo rotate together. Calling this method
+   * with a non-zero `photoAngle` re-introduces the offset.
+   */
+  setFramePhotoAngle(frame: fabric.FabricObject, photoAngle: number): void {
+    if (!this.canvas) return;
+    if ((frame as any).customType !== 'photo-frame') return;
+    if (!(frame instanceof fabric.FabricImage)) return;
+
+    const frameAngle = (frame as any).frameAngle ?? frame.angle ?? 0;
+    const newAngle = frameAngle + photoAngle;
+    frame.set({ angle: newAngle });
+    (frame as any).photoAngle = photoAngle;
+    (frame as any).frameAngle = frameAngle;
+
+    // ClipPath stays aligned with the slot, not the photo.
+    const clip = (frame as any).clipPath;
+    if (clip) {
+      clip.angle = frameAngle;
+    }
+    this.canvas.renderAll();
+  }
+
+  /**
+   * Sync `frameAngle` after the user has dragged the rotation handle
+   * on a photo-frame (PX-096 slot-rotation hook).
+   *
+   * @param frame - A photo-frame whose `.angle` was just modified by
+   *   fabric's rotation interaction.
+   *
+   * @remarks
+   * Call from an `object:rotating` listener. Splits the new combined
+   * angle back into `frameAngle = frame.angle - photoAngle` and
+   * re-aligns the clipPath. Without this hook the clipPath would
+   * stay at the original slot angle while the photo rotated past it,
+   * producing wrong masking.
+   */
+  syncFrameAngleAfterRotate(frame: fabric.FabricObject): void {
+    if ((frame as any).customType !== 'photo-frame') return;
+    const photoAngle = (frame as any).photoAngle ?? 0;
+    const newFrameAngle = (frame.angle ?? 0) - photoAngle;
+    (frame as any).frameAngle = newFrameAngle;
+    const clip = (frame as any).clipPath;
+    if (clip) clip.angle = newFrameAngle;
   }
 
   /**
@@ -2047,6 +2191,8 @@ export class CanvasService {
       'frameWidth',
       'frameHeight',
       'frameShape',
+      'frameAngle',
+      'photoAngle',
       'fitMode',
       'framePanX',
       'framePanY',

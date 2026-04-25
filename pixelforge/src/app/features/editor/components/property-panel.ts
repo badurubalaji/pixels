@@ -176,10 +176,26 @@ interface ObjectProps {
                 </div>
               }
 
-              <!-- PX-095: rotation — drives frame.angle for precision input.
-                   Independent in-frame photo rotation (without rotating the
-                   slot itself) is a clipPath-restructure follow-up; for
-                   v1 this matches what the rotation handle does. -->
+              <!-- PX-103 — switch the frame's clip shape after creation. -->
+              <div class="frame-shape-row">
+                <span class="frame-shape-label">Shape</span>
+                <div class="frame-shape-buttons" data-testid="frame-shape-buttons">
+                  @for (s of frameShapeOptions; track s.id) {
+                    <button
+                      type="button"
+                      class="frame-shape-btn"
+                      [class.active]="frameShape() === s.id"
+                      [matTooltip]="s.label"
+                      [attr.data-shape]="s.id"
+                      (click)="setFrameShape(s.id)"
+                    >
+                      <mat-icon>{{ s.icon }}</mat-icon>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Slot rotation (PX-095) — drives frame.angle directly. -->
               <div class="slider-row">
                 <span>Rotate</span>
                 <mat-slider min="-180" max="180" step="1" class="flex-slider">
@@ -192,6 +208,22 @@ interface ObjectProps {
                 </mat-slider>
                 <span class="slider-value">{{ (p.angle ?? 0).toFixed(0) }}°</span>
               </div>
+
+              <!-- Photo tilt (PX-096) — rotates the photo INSIDE the slot. -->
+              @if (frameFitMode() !== 'fill') {
+                <div class="slider-row">
+                  <span>Photo tilt</span>
+                  <mat-slider min="-45" max="45" step="1" class="flex-slider">
+                    <input
+                      matSliderThumb
+                      [ngModel]="framePhotoAngle()"
+                      (ngModelChange)="setFramePhotoAngle($event)"
+                      data-testid="frame-photo-angle"
+                    />
+                  </mat-slider>
+                  <span class="slider-value">{{ framePhotoAngle().toFixed(0) }}°</span>
+                </div>
+              }
 
               <button
                 mat-button
@@ -835,6 +867,55 @@ interface ObjectProps {
       color: #ffffff !important;
       border-radius: 10px !important;
     }
+
+    /* PX-103 — frame shape selector */
+    .frame-shape-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .frame-shape-label {
+      font-size: 0.78rem;
+      color: var(--px-ink-soft, #334155);
+      flex-shrink: 0;
+      min-width: 60px;
+    }
+    .frame-shape-buttons {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      flex: 1;
+    }
+    .frame-shape-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 8px;
+      color: var(--px-ink-soft, #334155);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease,
+        color 160ms ease;
+    }
+    .frame-shape-btn:hover {
+      border-color: rgba(124, 58, 237, 0.4);
+      color: var(--px-violet, #7c3aed);
+    }
+    .frame-shape-btn.active {
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%);
+      border-color: transparent;
+      color: #ffffff;
+    }
+    .frame-shape-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   `],
 })
 export class PropertyPanelComponent implements OnInit, OnDestroy {
@@ -851,6 +932,19 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   readonly framePanX = signal<number>(0);
   readonly framePanY = signal<number>(0);
   readonly frameZoom = signal<number>(1);
+  /** PX-103: current shape of the active photo-frame (for the shape selector). */
+  readonly frameShape = signal<'rect' | 'rounded' | 'circle' | 'hexagon' | 'star' | 'heart'>('rect');
+  /** PX-096: photo's rotation inside the slot (in degrees). */
+  readonly framePhotoAngle = signal<number>(0);
+  /** PX-103: shape options bound to the selector buttons. */
+  readonly frameShapeOptions = [
+    { id: 'rect' as const, label: 'Rectangle', icon: 'crop_landscape' },
+    { id: 'rounded' as const, label: 'Rounded', icon: 'crop_5_4' },
+    { id: 'circle' as const, label: 'Circle', icon: 'circle' },
+    { id: 'hexagon' as const, label: 'Hexagon', icon: 'hexagon' },
+    { id: 'star' as const, label: 'Star', icon: 'star' },
+    { id: 'heart' as const, label: 'Heart', icon: 'favorite' },
+  ];
 
   readonly shadowBlur = signal(0);
   readonly shadowOffsetX = signal(5);
@@ -1447,6 +1541,8 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
       this.framePanX.set((obj as any).framePanX ?? 0);
       this.framePanY.set((obj as any).framePanY ?? 0);
       this.frameZoom.set((obj as any).frameZoom ?? 1);
+      this.frameShape.set((obj as any).frameShape ?? 'rect');
+      this.framePhotoAngle.set((obj as any).photoAngle ?? 0);
     }
 
     this.props.set(p);
@@ -1488,6 +1584,44 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this.framePanY.set(0);
     this.frameZoom.set(1);
     this.canvasService.setFrameView(obj, 0, 0, 1);
+  }
+
+  /**
+   * Change the active photo-frame's clip shape (PX-103).
+   *
+   * @param shape - The new shape variant.
+   */
+  setFrameShape(
+    shape: 'rect' | 'rounded' | 'circle' | 'hexagon' | 'star' | 'heart',
+  ): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    this.canvasService.setFrameShape(obj, shape);
+    // Empty placeholders rebuild as a NEW Group, so the active object
+    // reference may have changed — re-read from canvas.
+    const newActive = canvas?.getActiveObject();
+    if (newActive && (newActive as any).customType === 'photo-frame') {
+      this.frameShape.set((newActive as any).frameShape ?? shape);
+    } else {
+      this.frameShape.set(shape);
+    }
+  }
+
+  /**
+   * Rotate the photo inside the active frame independent of the slot
+   * (PX-096).
+   *
+   * @param angle - Photo rotation in degrees, clamped to [-180, 180]
+   *   client-side.
+   */
+  setFramePhotoAngle(angle: number): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    const clamped = Math.max(-180, Math.min(180, Number(angle) || 0));
+    this.framePhotoAngle.set(clamped);
+    this.canvasService.setFramePhotoAngle(obj, clamped);
   }
 
   /**
