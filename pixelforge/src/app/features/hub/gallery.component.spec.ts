@@ -75,9 +75,6 @@ describe('GalleryComponent', () => {
     ];
     brandColorsSig = signal<string[]>(params.brandColors ?? []);
 
-    navigate = vi.fn().mockResolvedValue(true);
-    navigateByUrl = vi.fn().mockResolvedValue(true);
-
     api = {
       listTemplates: vi.fn(() => of(templates)),
       createProjectFromTemplate: vi.fn(() =>
@@ -128,12 +125,19 @@ describe('GalleryComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: routeStub },
-        { provide: Router, useValue: { navigate, navigateByUrl } },
         { provide: ApiService, useValue: api },
         { provide: BrandKitService, useValue: brandKitStub },
         { provide: TemplateThumbnailService, useValue: thumbnailStub },
       ],
     }).compileComponents();
+
+    const router = TestBed.inject(Router);
+    navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true) as ReturnType<
+      typeof vi.fn
+    >;
+    navigateByUrl = vi
+      .spyOn(router, 'navigateByUrl')
+      .mockResolvedValue(true) as ReturnType<typeof vi.fn>;
 
     fixture = TestBed.createComponent(GalleryComponent);
     component = fixture.componentInstance;

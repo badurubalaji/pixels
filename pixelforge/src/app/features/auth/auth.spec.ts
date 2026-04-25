@@ -27,8 +27,6 @@ describe('AuthComponent — PX-011 navigation', () => {
   });
 
   const setup = async (overrides: Partial<AuthService> = {}): Promise<void> => {
-    navigate = vi.fn().mockResolvedValue(true);
-
     authServiceStub = {
       login: vi.fn().mockReturnValue(of(mkAuthResponse())),
       signup: vi.fn().mockReturnValue(of(mkAuthResponse())),
@@ -42,9 +40,13 @@ describe('AuthComponent — PX-011 navigation', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authServiceStub },
-        { provide: Router, useValue: { navigate } },
       ],
     }).compileComponents();
+
+    const router = TestBed.inject(Router);
+    navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true) as ReturnType<
+      typeof vi.fn
+    >;
 
     fixture = TestBed.createComponent(AuthComponent);
     component = fixture.componentInstance;
