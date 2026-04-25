@@ -1927,6 +1927,15 @@ export class Editor implements AfterViewInit, OnDestroy {
       '.ctx-toolbar',
       '.canvas-actions',
       '.editor-topbar',
+      // PX-129 — sidebar must keep selection so the text-toolbar stays
+      // alive while the user clicks "Add a heading" / picks an icon.
+      // Without this, mousedown on sidebar discards the active object,
+      // selection:cleared fires, text-toolbar selectionType resets to
+      // 'none', then click adds new text and re-selects — but the racey
+      // ordering on slow devices can land users in the 'none' state.
+      'app-sidebar-drawer',
+      '.sidebar-wrapper',
+      '.drawer-panel',
       '.mat-mdc-menu-panel',
       '.mat-mdc-dialog-container',
       '.mat-mdc-snack-bar-container',
@@ -2366,11 +2375,16 @@ export class Editor implements AfterViewInit, OnDestroy {
    * @param opts - Text content + font overrides.
    */
   addTextWithOptions(opts: { text: string; fontSize: number; fontWeight: string; fontFamily?: string }): void {
-    this.canvasService.addText(opts.text, {
+    // PX-127 — only forward defined fields. Spreading `{ fontFamily: undefined }`
+    // into addText's options object would override the 'Roboto' default to
+    // undefined, which downstream consumers (export, brand-kit, fabric Text)
+    // could choke on when they call `fontFamily.toLowerCase()` on the result.
+    const overrides: Record<string, unknown> = {
       fontSize: opts.fontSize,
-      fontWeight: opts.fontWeight as any,
-      fontFamily: opts.fontFamily,
-    } as any);
+      fontWeight: opts.fontWeight,
+    };
+    if (opts.fontFamily) overrides['fontFamily'] = opts.fontFamily;
+    this.canvasService.addText(opts.text, overrides as any);
   }
 
   /** Programmatically open the hidden file picker. */

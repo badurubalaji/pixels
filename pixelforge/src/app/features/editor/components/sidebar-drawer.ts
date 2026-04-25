@@ -310,13 +310,33 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                 }
               </div>
 
-              <!-- PX-126 — Graphic elements (license-clean, hand-authored) -->
+              <!-- PX-126 / PX-128 — Graphic elements (license-clean, hand-authored).
+                   Each section shows a preview of N items by default; users
+                   click "See all (M)" to expand the full list (PX-128). -->
               <div class="section-label">Graphic elements</div>
               @for (gcat of graphicElementCategories; track gcat.id) {
                 @if (gcat.items.length > 0) {
-                  <div class="frame-cat-label" [attr.data-graphic-cat]="gcat.id">{{ gcat.label }}</div>
+                  <div class="frame-cat-label cat-label-row" [attr.data-graphic-cat]="gcat.id">
+                    <span>{{ gcat.label }}</span>
+                    @if (gcat.items.length > graphicElementsPreviewLimit) {
+                      <button
+                        type="button"
+                        class="cat-see-all-btn"
+                        (click)="toggleGraphicElementSection(gcat.id)"
+                      >
+                        @if (graphicElementsExpanded().has(gcat.id)) {
+                          Show less
+                        } @else {
+                          See all ({{ gcat.items.length }})
+                        }
+                      </button>
+                    }
+                  </div>
                   <div class="icon-grid" [attr.data-testid]="'graphic-elements-' + gcat.id">
-                    @for (gel of gcat.items; track gel.name) {
+                    @for (gel of (graphicElementsExpanded().has(gcat.id)
+                              ? gcat.items
+                              : gcat.items.slice(0, graphicElementsPreviewLimit));
+                          track gel.name) {
                       <button
                         class="icon-btn graphic-el"
                         [matTooltip]="gel.name"
@@ -1142,6 +1162,30 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
     }
     .frame-cat-label:first-of-type {
       margin-top: 4px;
+    }
+
+    /* PX-128 — section header with inline "See all" affordance. */
+    .cat-label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .cat-see-all-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--px-violet, #7c3aed);
+      letter-spacing: 0.3px;
+      text-transform: none;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+    .cat-see-all-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
     }
 
     .frame-card {
@@ -2563,6 +2607,20 @@ export class SidebarDrawerComponent {
   readonly frameCategories = getFramePresetsByCategory();
   /** PX-126 — license-clean graphic elements (modern, Indian, flowers, animals). */
   readonly graphicElementCategories = getGraphicElementsByCategory();
+  /** PX-128 — sections show this many items by default before "See all". */
+  readonly graphicElementsPreviewLimit = 8;
+  /** PX-128 — categories the user has expanded via "See all". */
+  readonly graphicElementsExpanded = signal<Set<string>>(new Set());
+
+  /** PX-128 — toggle the expanded state of a graphic-elements category. */
+  toggleGraphicElementSection(catId: string): void {
+    this.graphicElementsExpanded.update(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return next;
+    });
+  }
 
   readonly basicShapes: { type: ShapeType; name: string; icon: string }[] = [
     { type: 'rect', name: 'Rectangle', icon: 'rectangle' },

@@ -19,7 +19,20 @@
 
 export interface GraphicElement {
   name: string;
-  category: 'modern' | 'indian' | 'flowers' | 'animals';
+  /**
+   * Sub-category for sidebar grouping (PX-126 + PX-128). Indian motifs
+   * split into mandala / mandala-border / mural / mural-border /
+   * indian-motifs after the user asked for more depth in those areas.
+   */
+  category:
+    | 'modern'
+    | 'mandala'
+    | 'mandala-border'
+    | 'mural'
+    | 'mural-border'
+    | 'indian-motifs'
+    | 'flowers'
+    | 'animals';
   svg: string;
 }
 
@@ -96,7 +109,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   // ===========================
   {
     name: 'Mandala',
-    category: 'indian',
+    category: 'mandala',
     svg: wrap(
       '<g fill="none" stroke="#c2410c" stroke-width="1.5">' +
       '<circle cx="50" cy="50" r="45"/>' +
@@ -118,7 +131,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Lotus',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<g fill="#ec4899" opacity="0.85">' +
       '<ellipse cx="50" cy="50" rx="10" ry="35" transform="rotate(-60 50 50)"/>' +
@@ -132,7 +145,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Paisley',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<path d="M30 80 C 20 60 25 30 55 20 C 80 15 85 45 65 60 C 50 70 45 55 55 45 C 60 40 50 35 45 45 C 40 60 50 75 60 75" ' +
       'fill="#9333ea" stroke="#581c87" stroke-width="1.5"/>' +
@@ -141,7 +154,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Diya (oil lamp)',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<path d="M15 65 Q 50 90 85 65 Q 80 75 50 78 Q 20 75 15 65 Z" fill="#b45309"/>' +
       '<path d="M40 65 Q 50 50 60 65 Z" fill="#b45309"/>' +
@@ -151,7 +164,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Om',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<g fill="#c2410c">' +
       // Stylized om character — geometric approximation, not a font glyph
@@ -165,7 +178,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Rangoli star',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<g fill="#dc2626">' +
       '<polygon points="50,10 60,40 90,40 65,60 75,90 50,72 25,90 35,60 10,40 40,40"/>' +
@@ -176,7 +189,7 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
   },
   {
     name: 'Peacock feather',
-    category: 'indian',
+    category: 'indian-motifs',
     svg: wrap(
       '<ellipse cx="50" cy="40" rx="20" ry="30" fill="#0891b2"/>' +
       '<ellipse cx="50" cy="35" rx="15" ry="22" fill="#06b6d4"/>' +
@@ -265,6 +278,303 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
       '<path d="M72 72 Q 62 72 55 55 Q 72 62 72 72 Z"/>' +
       '</g>' +
       '<circle cx="50" cy="50" r="6" fill="#f472b6"/>',
+    ),
+  },
+
+  // ===========================
+  // MANDALA — circular meditation art (PX-128)
+  // ===========================
+  {
+    name: 'Mandala — geometric',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="none" stroke="#7c2d12" stroke-width="1.2">' +
+      '<circle cx="50" cy="50" r="46"/>' +
+      '<circle cx="50" cy="50" r="38"/>' +
+      '<circle cx="50" cy="50" r="28"/>' +
+      '<circle cx="50" cy="50" r="18"/>' +
+      // 12 spokes
+      '<g>' +
+      '<line x1="50" y1="4" x2="50" y2="96"/>' +
+      '<line x1="4" y1="50" x2="96" y2="50"/>' +
+      '<line x1="14" y1="14" x2="86" y2="86"/>' +
+      '<line x1="86" y1="14" x2="14" y2="86"/>' +
+      '<line x1="27" y1="6" x2="73" y2="94"/>' +
+      '<line x1="73" y1="6" x2="27" y2="94"/>' +
+      '<line x1="6" y1="27" x2="94" y2="73"/>' +
+      '<line x1="94" y1="27" x2="6" y2="73"/>' +
+      '</g></g>' +
+      '<circle cx="50" cy="50" r="6" fill="#dc2626"/>' +
+      '<circle cx="50" cy="50" r="2" fill="#fbbf24"/>',
+    ),
+  },
+  {
+    name: 'Mandala — floral',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="#f59e0b" opacity="0.85">' +
+      // 8 outer petals
+      '<ellipse cx="50" cy="20" rx="6" ry="14"/>' +
+      '<ellipse cx="50" cy="80" rx="6" ry="14"/>' +
+      '<ellipse cx="20" cy="50" rx="14" ry="6"/>' +
+      '<ellipse cx="80" cy="50" rx="14" ry="6"/>' +
+      '<ellipse cx="29" cy="29" rx="6" ry="14" transform="rotate(-45 29 29)"/>' +
+      '<ellipse cx="71" cy="29" rx="6" ry="14" transform="rotate(45 71 29)"/>' +
+      '<ellipse cx="29" cy="71" rx="6" ry="14" transform="rotate(45 29 71)"/>' +
+      '<ellipse cx="71" cy="71" rx="6" ry="14" transform="rotate(-45 71 71)"/>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<ellipse cx="50" cy="35" rx="4" ry="10"/>' +
+      '<ellipse cx="50" cy="65" rx="4" ry="10"/>' +
+      '<ellipse cx="35" cy="50" rx="10" ry="4"/>' +
+      '<ellipse cx="65" cy="50" rx="10" ry="4"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="6" fill="#fef3c7"/>' +
+      '<circle cx="50" cy="50" r="2" fill="#7c2d12"/>',
+    ),
+  },
+  {
+    name: 'Mandala — sun rays',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="#fbbf24">' +
+      '<polygon points="50,5 53,30 47,30"/>' +
+      '<polygon points="50,95 53,70 47,70"/>' +
+      '<polygon points="5,50 30,53 30,47"/>' +
+      '<polygon points="95,50 70,53 70,47"/>' +
+      '<polygon points="20,20 38,32 32,38"/>' +
+      '<polygon points="80,20 62,32 68,38"/>' +
+      '<polygon points="20,80 38,68 32,62"/>' +
+      '<polygon points="80,80 62,68 68,62"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="22" fill="#f59e0b"/>' +
+      '<circle cx="50" cy="50" r="14" fill="#fbbf24"/>' +
+      '<circle cx="50" cy="50" r="6" fill="#dc2626"/>',
+    ),
+  },
+  {
+    name: 'Mandala — lotus center',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="none" stroke="#9333ea" stroke-width="1.2">' +
+      '<circle cx="50" cy="50" r="48"/>' +
+      '<circle cx="50" cy="50" r="36"/>' +
+      '<circle cx="50" cy="50" r="22"/>' +
+      '</g>' +
+      '<g fill="#a855f7" opacity="0.85">' +
+      '<ellipse cx="50" cy="50" rx="8" ry="22" transform="rotate(0 50 50)"/>' +
+      '<ellipse cx="50" cy="50" rx="8" ry="22" transform="rotate(45 50 50)"/>' +
+      '<ellipse cx="50" cy="50" rx="8" ry="22" transform="rotate(90 50 50)"/>' +
+      '<ellipse cx="50" cy="50" rx="8" ry="22" transform="rotate(135 50 50)"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="6" fill="#fbbf24"/>',
+    ),
+  },
+  {
+    name: 'Mandala — square frame',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="none" stroke="#0891b2" stroke-width="1.5">' +
+      '<rect x="6" y="6" width="88" height="88" rx="3"/>' +
+      '<rect x="14" y="14" width="72" height="72" rx="2"/>' +
+      '<polygon points="50,18 60,40 82,50 60,60 50,82 40,60 18,50 40,40"/>' +
+      '<circle cx="50" cy="50" r="14"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="6" fill="#06b6d4"/>',
+    ),
+  },
+
+  // ===========================
+  // MANDALA BORDERS — horizontal repeating decorative bands (PX-128)
+  // ===========================
+  {
+    name: 'Mandala border — petals',
+    category: 'mandala-border',
+    svg: wrap(
+      '<g fill="#f59e0b">' +
+      '<circle cx="10" cy="50" r="10"/>' +
+      '<circle cx="30" cy="50" r="10"/>' +
+      '<circle cx="50" cy="50" r="10"/>' +
+      '<circle cx="70" cy="50" r="10"/>' +
+      '<circle cx="90" cy="50" r="10"/>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="10" cy="50" r="4"/>' +
+      '<circle cx="30" cy="50" r="4"/>' +
+      '<circle cx="50" cy="50" r="4"/>' +
+      '<circle cx="70" cy="50" r="4"/>' +
+      '<circle cx="90" cy="50" r="4"/>' +
+      '</g>' +
+      '<line x1="0" y1="35" x2="100" y2="35" stroke="#7c2d12" stroke-width="1.5"/>' +
+      '<line x1="0" y1="65" x2="100" y2="65" stroke="#7c2d12" stroke-width="1.5"/>',
+    ),
+  },
+  {
+    name: 'Mandala border — diamonds',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="40" x2="100" y2="40" stroke="#9333ea" stroke-width="1"/>' +
+      '<line x1="0" y1="60" x2="100" y2="60" stroke="#9333ea" stroke-width="1"/>' +
+      '<g fill="#a855f7">' +
+      '<polygon points="10,30 16,50 10,70 4,50"/>' +
+      '<polygon points="30,30 36,50 30,70 24,50"/>' +
+      '<polygon points="50,30 56,50 50,70 44,50"/>' +
+      '<polygon points="70,30 76,50 70,70 64,50"/>' +
+      '<polygon points="90,30 96,50 90,70 84,50"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mandala border — vines',
+    category: 'mandala-border',
+    svg: wrap(
+      '<path d="M0 50 Q 10 30 20 50 Q 30 70 40 50 Q 50 30 60 50 Q 70 70 80 50 Q 90 30 100 50" ' +
+      'fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="20" cy="50" r="3"/>' +
+      '<circle cx="40" cy="50" r="3"/>' +
+      '<circle cx="60" cy="50" r="3"/>' +
+      '<circle cx="80" cy="50" r="3"/>' +
+      '</g>' +
+      '<g fill="#15803d">' +
+      '<ellipse cx="10" cy="35" rx="4" ry="2" transform="rotate(-30 10 35)"/>' +
+      '<ellipse cx="30" cy="65" rx="4" ry="2" transform="rotate(30 30 65)"/>' +
+      '<ellipse cx="50" cy="35" rx="4" ry="2" transform="rotate(-30 50 35)"/>' +
+      '<ellipse cx="70" cy="65" rx="4" ry="2" transform="rotate(30 70 65)"/>' +
+      '<ellipse cx="90" cy="35" rx="4" ry="2" transform="rotate(-30 90 35)"/>' +
+      '</g>',
+    ),
+  },
+
+  // ===========================
+  // MURAL — figurative folk art (PX-128)
+  // ===========================
+  {
+    name: 'Mural — sun + lotus',
+    category: 'mural',
+    svg: wrap(
+      // Sun
+      '<g fill="#dc2626">' +
+      '<circle cx="50" cy="30" r="14"/>' +
+      '<polygon points="50,5 53,18 47,18"/>' +
+      '<polygon points="78,15 75,28 70,25"/>' +
+      '<polygon points="22,15 25,28 30,25"/>' +
+      '<polygon points="85,40 75,42 78,36"/>' +
+      '<polygon points="15,40 25,42 22,36"/>' +
+      '</g>' +
+      // Lotus base
+      '<g fill="#9333ea">' +
+      '<ellipse cx="50" cy="70" rx="6" ry="20" transform="rotate(-45 50 70)"/>' +
+      '<ellipse cx="50" cy="70" rx="6" ry="20"/>' +
+      '<ellipse cx="50" cy="70" rx="6" ry="20" transform="rotate(45 50 70)"/>' +
+      '</g>' +
+      '<rect x="0" y="92" width="100" height="4" fill="#15803d"/>' +
+      '<rect x="0" y="96" width="100" height="4" fill="#84cc16"/>',
+    ),
+  },
+  {
+    name: 'Mural — peacock motif',
+    category: 'mural',
+    svg: wrap(
+      // Body
+      '<ellipse cx="50" cy="60" rx="14" ry="20" fill="#0891b2"/>' +
+      // Tail feathers
+      '<g fill="#0e7490" stroke="#155e75" stroke-width="1">' +
+      '<path d="M50 60 Q 20 40 8 30"/>' +
+      '<path d="M50 60 Q 30 30 25 12"/>' +
+      '<path d="M50 60 Q 50 25 50 8"/>' +
+      '<path d="M50 60 Q 70 30 75 12"/>' +
+      '<path d="M50 60 Q 80 40 92 30"/>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="8" cy="30" r="4"/>' +
+      '<circle cx="25" cy="12" r="4"/>' +
+      '<circle cx="50" cy="8" r="4"/>' +
+      '<circle cx="75" cy="12" r="4"/>' +
+      '<circle cx="92" cy="30" r="4"/>' +
+      '</g>' +
+      // Beak + eye
+      '<polygon points="50,46 47,40 53,40" fill="#dc2626"/>' +
+      '<circle cx="50" cy="50" r="2" fill="#fff"/>' +
+      '<circle cx="50" cy="50" r="1" fill="#000"/>',
+    ),
+  },
+  {
+    name: 'Mural — fish',
+    category: 'mural',
+    svg: wrap(
+      // Body
+      '<ellipse cx="42" cy="50" rx="32" ry="18" fill="#dc2626"/>' +
+      // Tail
+      '<polygon points="74,50 95,30 88,50 95,70" fill="#7f1d1d"/>' +
+      // Fins
+      '<path d="M42 32 Q 50 18 58 32 Z" fill="#7f1d1d"/>' +
+      '<path d="M42 68 Q 50 82 58 68 Z" fill="#7f1d1d"/>' +
+      // Eye
+      '<circle cx="28" cy="46" r="5" fill="#fef3c7"/>' +
+      '<circle cx="28" cy="46" r="2" fill="#000"/>' +
+      // Scales
+      '<g fill="none" stroke="#fbbf24" stroke-width="1">' +
+      '<path d="M42 38 Q 48 50 42 62 M 50 36 Q 56 50 50 64 M 58 38 Q 64 50 58 62 M 66 40 Q 70 50 66 60"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mural — temple',
+    category: 'mural',
+    svg: wrap(
+      // Roof tiers
+      '<polygon points="50,5 80,20 20,20" fill="#9a3412"/>' +
+      '<polygon points="50,18 78,30 22,30" fill="#7c2d12"/>' +
+      '<polygon points="50,28 76,40 24,40" fill="#9a3412"/>' +
+      // Body
+      '<rect x="22" y="40" width="56" height="50" fill="#fef3c7"/>' +
+      // Doorway
+      '<path d="M40 90 L 40 60 Q 50 50 60 60 L 60 90 Z" fill="#7c2d12"/>' +
+      // Pillars
+      '<rect x="22" y="40" width="6" height="50" fill="#9a3412"/>' +
+      '<rect x="72" y="40" width="6" height="50" fill="#9a3412"/>' +
+      // Finial
+      '<circle cx="50" cy="3" r="3" fill="#fbbf24"/>' +
+      // Base
+      '<rect x="18" y="90" width="64" height="4" fill="#7c2d12"/>',
+    ),
+  },
+
+  // ===========================
+  // MURAL BORDERS (PX-128)
+  // ===========================
+  {
+    name: 'Mural border — diya row',
+    category: 'mural-border',
+    svg: wrap(
+      '<line x1="0" y1="65" x2="100" y2="65" stroke="#7c2d12" stroke-width="1.5"/>' +
+      // Diyas
+      '<g>' +
+      '<path d="M5 65 Q 15 78 25 65 Q 22 70 15 71 Q 8 70 5 65" fill="#b45309"/>' +
+      '<path d="M30 65 Q 40 78 50 65 Q 47 70 40 71 Q 33 70 30 65" fill="#b45309"/>' +
+      '<path d="M55 65 Q 65 78 75 65 Q 72 70 65 71 Q 58 70 55 65" fill="#b45309"/>' +
+      '<path d="M80 65 Q 90 78 100 65 Q 97 70 90 71 Q 83 70 80 65" fill="#b45309"/>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<path d="M14 50 Q 13 60 15 65 Q 17 60 16 50 Q 15 45 14 50 Z"/>' +
+      '<path d="M39 50 Q 38 60 40 65 Q 42 60 41 50 Q 40 45 39 50 Z"/>' +
+      '<path d="M64 50 Q 63 60 65 65 Q 67 60 66 50 Q 65 45 64 50 Z"/>' +
+      '<path d="M89 50 Q 88 60 90 65 Q 92 60 91 50 Q 90 45 89 50 Z"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mural border — paisley chain',
+    category: 'mural-border',
+    svg: wrap(
+      '<line x1="0" y1="50" x2="100" y2="50" stroke="#9333ea" stroke-width="1"/>' +
+      '<g fill="#9333ea">' +
+      '<path d="M5 60 C 0 50 5 35 18 35 C 28 35 28 50 18 50 C 14 48 18 45 18 50 C 18 52 12 55 5 60"/>' +
+      '<path d="M30 60 C 25 50 30 35 43 35 C 53 35 53 50 43 50 C 39 48 43 45 43 50 C 43 52 37 55 30 60"/>' +
+      '<path d="M55 60 C 50 50 55 35 68 35 C 78 35 78 50 68 50 C 64 48 68 45 68 50 C 68 52 62 55 55 60"/>' +
+      '<path d="M80 60 C 75 50 80 35 93 35 C 95 35 95 50 93 50 C 89 48 93 45 93 50 C 93 52 87 55 80 60"/>' +
+      '</g>',
     ),
   },
 
@@ -410,7 +720,11 @@ export const GRAPHIC_ELEMENT_CATEGORY_LABELS: ReadonlyArray<{
   label: string;
 }> = [
   { id: 'modern', label: 'Modern' },
-  { id: 'indian', label: 'Indian traditional' },
+  { id: 'mandala', label: 'Mandala art' },
+  { id: 'mandala-border', label: 'Mandala borders' },
+  { id: 'mural', label: 'Mural art' },
+  { id: 'mural-border', label: 'Mural borders' },
+  { id: 'indian-motifs', label: 'Indian motifs' },
   { id: 'flowers', label: 'Flowers' },
   { id: 'animals', label: 'Animals' },
 ];

@@ -471,6 +471,17 @@ export class CanvasService {
     const bgHex = this._backgroundColor() || '#ffffff';
     const defaultFill = isLightColor(bgHex) ? '#000000' : '#ffffff';
 
+    // PX-127 — strip nullish overrides so a caller passing
+    // `{ fontFamily: undefined }` doesn't blow away the 'Roboto' default and
+    // hand fabric an undefined fontFamily (downstream toLowerCase calls
+    // throw on that).
+    const safeOptions: Record<string, unknown> = {};
+    if (options) {
+      for (const [k, v] of Object.entries(options)) {
+        if (v !== undefined && v !== null) safeOptions[k] = v;
+      }
+    }
+
     const textObj = new fabric.IText(text, {
       left: cw / 2,
       top: ch / 2,
@@ -479,7 +490,7 @@ export class CanvasService {
       fontSize: 48,
       fontFamily: 'Roboto',
       fill: defaultFill,
-      ...options,
+      ...safeOptions,
     });
 
     (textObj as any).layerId = layerId;
