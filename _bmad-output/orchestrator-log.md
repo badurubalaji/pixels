@@ -916,3 +916,40 @@ All three landed in one commit; bounded scope, no spec-deferred work this sprint
 - **PX-074** — Email change (held — still need transactional-email service pick: SES / SendGrid / Postmark / Resend).
 - Possibly: alignment-snap UX polish, multi-frame selection behavior, layer-panel context-menu parity. Nothing pressing on the photo-frames stack — the feature is now coherent end-to-end (insert from preset, swap shape after creation, add/replace photo, pan/zoom/rotate/tilt, persistence, right-click affordances, single floating toolbar).
 
+## 2026-04-25T15:34:00Z · Sprint-20 close — retrospective
+
+Two pieces this turn: a fabric 7 type-fix the user surfaced after Sprint-19, and the PX-107 alignment-snap polish.
+
+User-flagged at the top of the sprint:
+> *"TS2551: Property 'getPointer' does not exist on type 'Canvas'. Did you mean 'getPointerId'? src/app/features/editor/editor.ts:1825"*
+
+| Commit | Story | Scope |
+|---|---|---|
+| `3a7e513` | fix | Replaced both `fabricCanvas.getPointer(opt.e)` callsites in editor.ts with `getScenePoint(opt.e)`. Fabric 7 dropped `getPointer` from its TS declarations in favor of `getScenePoint` (canvas-coord) and `getViewportPoint` (viewport-coord); the Shift+drag-pan math wants scene coords. Build is now error-free for the first time in three sprints (was holding 3 stale `getPointer` errors at 2 callsites + a comment). |
+| `22bc9f0` | PX-107 | Three alignment-snap polish wins. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**PX-107 — three polish wins.**
+
+1. **Zoom-aware snap threshold.** `SNAP_THRESHOLD` was a hard-coded 6 canvas-pixels. At 4× zoom, that's 24 screen-pixels — way too aggressive, the magnet pulls objects from far away. At 0.25× zoom, 1.5 screen-pixels — too tight to engage. Now: `t = SNAP_THRESHOLD / canvas.getZoom()`. The on-screen pull radius stays ~6 screen-pixels at any zoom level. Applied to all snap-comparison expressions (canvas center, thirds, edges, other-object center, equal-spacing). Equal-spacing's stricter `*2` multiplier preserved by passing `t` through.
+
+2. **Alt-to-disable-snap escape hatch.** `e.e?.altKey` short-circuits `handleObjectMoving` after clearing guidelines. Power users now have a momentary "drag without magnet" without toggling a setting. Standard convention (Figma, Sketch, Illustrator). Why Alt and not Cmd/Ctrl: those are reserved for duplicate-on-drag and selection-modification in fabric; Alt is unclaimed during object drag.
+
+3. **Edge-to-edge snap guides.** Pre-PX-107 only center-to-center snap fired against other objects. Designers spend most of their layout time aligning EDGES (left-with-left, right-with-right, top-with-top, bottom-with-bottom), and aligning adjacent edges (left-with-right for "stack against" placements). Added 8 new edge candidates per other-object scan, gated by per-axis `snappedX` / `snappedY` flags so a center-snap on an axis doesn't get overridden by a subsequent edge-snap on the same axis (or vice versa). Net result: dragging an object now produces guides for the most common alignment intents.
+
+**Why per-axis lock matters.** Without `snappedX` / `snappedY` flags, the loop would keep applying snaps from later objects in the iteration, possibly toggling between center-snap and edge-snap on the same axis as the cursor moves. The lock makes the first successful snap on each axis "winner" for that tick, which feels stable. The X axis can still have a center-snap while the Y axis has an edge-snap — they're independent.
+
+**What went well**
+1. Three concrete, bounded polish fixes — all in the same `handleObjectMoving` method. No cross-file ripple, no spec-deferred work. Net 86 LOC added, 15 changed.
+2. The pre-existing `getPointer` build errors have been hanging around for at least three sprints — finally cleared. Build output is now genuinely empty.
+3. graphify came in slightly leaner: 1575 / 3044 / 79 (vs 1574 / 3040 / 80 last sprint). Stable graph shape; edge count grew with the new candidate-array logic.
+
+**What was hard**
+1. `replace_all` mangled indentation when the same code appeared at two sites with different surrounding context. Caught and fixed manually. Lesson: prefer single-target Edit when both occurrences need different surrounding context (here, only one site has a leading `if (isShift && ...)` guard).
+2. Equal-spacing's `* 2` threshold multiplier had to thread through as a parameter rather than a hard-coded `SNAP_THRESHOLD * 2`. A cleaner refactor would have a member-level `currentSnapThreshold` signal but that's over-engineering for the single drag-handler pathway.
+
+**Sprint-21 candidates**
+- **PX-077 manual** — Browser-driven e2e smoke (still your call).
+- **PX-074** — Email change (held — still need transactional-email service pick: SES / SendGrid / Postmark / Resend).
+- Possibly: snap to layer-panel "groups" boundaries, multi-object alignment-while-dragging (currently only single-object drag triggers `handleObjectMoving`), or alignment-toolbar polish in the property-panel.
+
