@@ -1390,6 +1390,74 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       .save-btn, .file-btn, .home-btn { transition: none !important; }
       .save-btn:not(:disabled):hover { transform: none !important; }
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PX-076 — editor body retheme
+       Same final-selector-wins pattern as PX-068/069/072. Retones
+       the canvas workspace + right panel + page bar to the light
+       palette without touching fabric.js logic, layer/property
+       panel internals, or animation timeline behavior.
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* Canvas workspace — Canva-style soft neutral (was #09090b dark) */
+    .canvas-area {
+      background-color: #f1f5f9 !important;
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.06) 1px, transparent 0);
+      background-size: 18px 18px;
+    }
+    .canvas-area.drag-over::after {
+      border-color: var(--px-violet, #7c3aed) !important;
+    }
+
+    /* Right panel (property + layer) — was #18181b */
+    .right-panel {
+      background: var(--px-surface, #ffffff) !important;
+      border-left: 1px solid var(--px-line, #e2e8f0) !important;
+      color: var(--px-ink, #0f172a);
+    }
+
+    /* Bottom page bar — was #18181b */
+    .page-bar {
+      background: rgba(255, 255, 255, 0.92) !important;
+      backdrop-filter: saturate(1.4) blur(8px);
+      border-top: 1px solid var(--px-line, #e2e8f0) !important;
+    }
+    .page-bar button.mat-mdc-icon-button {
+      color: var(--px-ink-soft, #334155);
+    }
+    .page-bar button.mat-mdc-icon-button:not(:disabled):hover {
+      background: rgba(124, 58, 237, 0.08);
+      color: var(--px-violet, #7c3aed);
+    }
+    .page-bar button.mat-mdc-icon-button:disabled {
+      color: rgba(15, 23, 42, 0.25);
+    }
+
+    /* Floating canvas-actions toolbar — was zinc bg + heavy black shadow */
+    .canvas-actions {
+      background: var(--px-surface, #ffffff) !important;
+      border: 1px solid var(--px-line, #e2e8f0);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    /* Floating layers-toggle button (mobile/tablet) */
+    .layers-toggle {
+      background: var(--px-surface, #ffffff) !important;
+      color: var(--px-ink-soft, #334155) !important;
+      border: 1px solid var(--px-line, #e2e8f0);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16) !important;
+    }
+    .layers-toggle.active-toggle {
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
+    }
+
+    /* Mobile responsive — canvas area can be more compact */
+    @media (max-width: 768px) {
+      .canvas-area { padding: 16px !important; }
+    }
   `],
 })
 export class Editor implements AfterViewInit, OnDestroy {
