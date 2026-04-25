@@ -26,7 +26,18 @@
  * - `star` — 5-pointed star inscribed in the bounding rectangle.
  * - `heart` — heart silhouette (SVG path) sized to the bounding box.
  */
-export type FrameShape = 'rect' | 'rounded' | 'circle' | 'hexagon' | 'star' | 'heart';
+export type FrameShape =
+  | 'rect'
+  | 'rounded'
+  | 'circle'
+  | 'hexagon'
+  | 'star'
+  | 'heart'
+  | 'phone'           // PX-124: portrait phone outline with rounded corners
+  | 'phone-landscape' // PX-124: landscape phone outline (laptop-ish, 16:10)
+  | 'polaroid'        // PX-124: thick white border around the photo
+  | 'torn-paper'      // PX-124: irregular bottom edge
+  ;
 
 export interface FrameSlot {
   /** X of the slot's top-left, normalized to canvas width (0..1). */
@@ -54,7 +65,14 @@ export interface FrameSlot {
  * - `featured`  — asymmetric "hero + supporting" arrangements.
  * - `shapes`    — single-slot non-rectangular silhouettes.
  */
-export type FrameCategory = 'grids' | 'strips' | 'polaroid' | 'featured' | 'shapes';
+export type FrameCategory =
+  | 'grids'
+  | 'strips'
+  | 'polaroid'
+  | 'featured'
+  | 'shapes'
+  | 'devices'   // PX-124: phone / laptop outline frames
+  | 'paper';    // PX-124: polaroid card / torn-paper artistic frames
 
 export interface FramePreset {
   /** Stable identifier used in tests, analytics, and DOM `data-` attributes. */
@@ -390,6 +408,63 @@ export const FRAME_PRESETS: ReadonlyArray<FramePreset> = [
     category: 'shapes',
     slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'heart' }],
   },
+
+  // ===========================
+  // Category: devices (PX-124)
+  // ===========================
+  {
+    id: 'device-phone',
+    name: 'Phone (portrait)',
+    icon: 'phone_iphone',
+    category: 'devices',
+    slots: [{ x: 0.30, y: 0.10, w: 0.40, h: 0.80, shape: 'phone' }],
+  },
+  {
+    id: 'device-phone-landscape',
+    name: 'Phone (landscape)',
+    icon: 'phone_android',
+    category: 'devices',
+    slots: [{ x: 0.10, y: 0.30, w: 0.80, h: 0.40, shape: 'phone-landscape' }],
+  },
+  {
+    id: 'device-pair',
+    name: 'Phone pair',
+    icon: 'devices',
+    category: 'devices',
+    slots: [
+      { x: 0.05, y: 0.15, w: 0.40, h: 0.70, shape: 'phone' },
+      { x: 0.55, y: 0.15, w: 0.40, h: 0.70, shape: 'phone' },
+    ],
+  },
+
+  // ===========================
+  // Category: paper (PX-124)
+  // ===========================
+  {
+    id: 'paper-polaroid-single',
+    name: 'Polaroid card',
+    icon: 'photo_camera_front',
+    category: 'paper',
+    slots: [{ x: 0.20, y: 0.10, w: 0.60, h: 0.80, shape: 'polaroid' }],
+  },
+  {
+    id: 'paper-torn-single',
+    name: 'Torn paper',
+    icon: 'description',
+    category: 'paper',
+    slots: [{ x: 0.20, y: 0.20, w: 0.60, h: 0.60, shape: 'torn-paper' }],
+  },
+  {
+    id: 'paper-torn-row',
+    name: 'Torn paper row',
+    icon: 'description',
+    category: 'paper',
+    slots: [
+      { x: 0.04, y: 0.30, w: 0.30, h: 0.50, shape: 'torn-paper' },
+      { x: 0.36, y: 0.30, w: 0.30, h: 0.50, shape: 'torn-paper' },
+      { x: 0.68, y: 0.30, w: 0.30, h: 0.50, shape: 'torn-paper' },
+    ],
+  },
 ];
 
 /**
@@ -404,6 +479,8 @@ export const FRAME_CATEGORY_LABELS: ReadonlyArray<{ id: FrameCategory; label: st
   { id: 'polaroid', label: 'Polaroid' },
   { id: 'featured', label: 'Hero layouts' },
   { id: 'shapes', label: 'Shapes' },
+  { id: 'devices', label: 'Devices' },
+  { id: 'paper', label: 'Paper' },
 ];
 
 /**

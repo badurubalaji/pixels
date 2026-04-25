@@ -671,11 +671,91 @@ export class CanvasService {
         'C 0.83,0.05 0.96,0.16 0.96,0.34 ' +
         'C 0.96,0.67 0.50,0.93 0.50,0.93 Z';
       const heart = new fabric.Path(path, { ...common, ...styleProps });
-      // Path is sized 0..1; fabric reports its bounds as 0..1. Scale
-      // to the requested width/height.
       heart.scaleX = width;
       heart.scaleY = height;
       return heart;
+    }
+    if (shape === 'phone') {
+      // PX-124 — portrait phone outline. Rounded rect with a top notch
+      // cut-out so it reads as a phone rather than a generic rounded
+      // rectangle. Path is normalized 0..1 and scaled.
+      const path =
+        'M 0.10,0.00 ' +
+        'L 0.40,0.00 ' +
+        'L 0.40,0.04 L 0.60,0.04 L 0.60,0.00 ' +    // notch underside
+        'L 0.90,0.00 ' +
+        'C 0.96,0.00 1.00,0.04 1.00,0.10 ' +
+        'L 1.00,0.90 ' +
+        'C 1.00,0.96 0.96,1.00 0.90,1.00 ' +
+        'L 0.10,1.00 ' +
+        'C 0.04,1.00 0.00,0.96 0.00,0.90 ' +
+        'L 0.00,0.10 ' +
+        'C 0.00,0.04 0.04,0.00 0.10,0.00 Z';
+      const phone = new fabric.Path(path, { ...common, ...styleProps });
+      phone.scaleX = width;
+      phone.scaleY = height;
+      return phone;
+    }
+    if (shape === 'phone-landscape') {
+      // PX-124 — landscape device (laptop / wide phone). 16:10 outline
+      // with rounded corners; no notch since landscape orientation.
+      const path =
+        'M 0.06,0.00 ' +
+        'L 0.94,0.00 ' +
+        'C 0.98,0.00 1.00,0.03 1.00,0.07 ' +
+        'L 1.00,0.93 ' +
+        'C 1.00,0.97 0.98,1.00 0.94,1.00 ' +
+        'L 0.06,1.00 ' +
+        'C 0.02,1.00 0.00,0.97 0.00,0.93 ' +
+        'L 0.00,0.07 ' +
+        'C 0.00,0.03 0.02,0.00 0.06,0.00 Z';
+      const dev = new fabric.Path(path, { ...common, ...styleProps });
+      dev.scaleX = width;
+      dev.scaleY = height;
+      return dev;
+    }
+    if (shape === 'polaroid') {
+      // PX-124 — polaroid: an outer rounded-rect that's the WHOLE clip
+      // region. The visible photo area sits in the upper portion (top
+      // 80%); the bottom 20% is the white "caption" area. We render
+      // this as a single shape clip — the white bottom strip will show
+      // the canvas bg through (or stay clipped). Path is the outer
+      // rectangle (full bounding box); the white bottom strip is a
+      // visual cue handled by the SIDEBAR PREVIEW only — actual fabric
+      // clipPath is the rect.
+      const radius = Math.min(width, height) * 0.04;
+      return new fabric.Rect({
+        ...common,
+        width,
+        height,
+        rx: radius,
+        ry: radius,
+        ...styleProps,
+      });
+    }
+    if (shape === 'torn-paper') {
+      // PX-124 — torn-paper bottom edge. Smooth top + sides, irregular
+      // bottom with a ~5-segment jagged path. Deterministic offsets
+      // (not random) so the same preset always renders identically.
+      const path =
+        'M 0.00,0.00 ' +
+        'L 1.00,0.00 ' +
+        'L 1.00,0.85 ' +
+        'L 0.92,0.92 ' +
+        'L 0.84,0.86 ' +
+        'L 0.74,0.94 ' +
+        'L 0.62,0.88 ' +
+        'L 0.52,0.95 ' +
+        'L 0.40,0.86 ' +
+        'L 0.28,0.93 ' +
+        'L 0.18,0.87 ' +
+        'L 0.08,0.94 ' +
+        'L 0.00,0.88 ' +
+        'L 0.00,0.00 Z';
+      const torn = new fabric.Path(path, { ...common, ...styleProps });
+      torn.scaleX = width;
+      torn.scaleY = height;
+      return torn;
     }
 
     // Fallback: rectangle.

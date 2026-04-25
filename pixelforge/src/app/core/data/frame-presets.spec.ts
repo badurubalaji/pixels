@@ -8,9 +8,9 @@ import {
 } from './frame-presets';
 
 describe('FRAME_PRESETS — PX-090 / PX-121', () => {
-  it('ships the curated MVP catalogue (25 presets across 5 categories)', () => {
-    // PX-090: 8 collage + PX-102: 5 shapes + PX-121: 12 new = 25.
-    expect(FRAME_PRESETS).toHaveLength(25);
+  it('ships the curated MVP catalogue (31 presets across 7 categories)', () => {
+    // PX-090: 8 collage + PX-102: 5 shapes + PX-121: 12 new + PX-124: 6 new = 31.
+    expect(FRAME_PRESETS).toHaveLength(31);
   });
 
   it('includes single-shape presets for circle / rounded / hexagon / star / heart', () => {
@@ -87,12 +87,24 @@ describe('FRAME_PRESETS — PX-090 / PX-121', () => {
     }
   });
 
-  it('getFramePresetsByCategory returns all 5 categories non-empty', () => {
+  it('getFramePresetsByCategory returns all 7 categories non-empty', () => {
     const grouped = getFramePresetsByCategory();
-    expect(grouped).toHaveLength(5);
+    expect(grouped).toHaveLength(7);
     for (const section of grouped) {
       expect(section.presets.length).toBeGreaterThan(0);
     }
+  });
+
+  it('devices category contains phone + landscape + pair variants (PX-124)', () => {
+    const grouped = getFramePresetsByCategory();
+    const ids = grouped.find(g => g.id === 'devices')!.presets.map(p => p.id);
+    expect(ids).toEqual(expect.arrayContaining(['device-phone', 'device-phone-landscape', 'device-pair']));
+  });
+
+  it('paper category contains polaroid + torn variants (PX-124)', () => {
+    const grouped = getFramePresetsByCategory();
+    const ids = grouped.find(g => g.id === 'paper')!.presets.map(p => p.id);
+    expect(ids).toEqual(expect.arrayContaining(['paper-polaroid-single', 'paper-torn-single', 'paper-torn-row']));
   });
 
   it('grids category contains the multi-slot rectangular layouts', () => {

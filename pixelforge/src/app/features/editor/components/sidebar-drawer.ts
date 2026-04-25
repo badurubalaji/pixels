@@ -1177,6 +1177,26 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
       clip-path: path('M 50,90 C 50,90 4,67 4,34 C 4,16 17,5 30,5 C 39,5 46,10 50,20 C 54,10 61,5 70,5 C 83,5 96,16 96,34 C 96,67 50,90 50,90 Z');
       border-radius: 0;
     }
+    /* PX-124 — devices + paper previews */
+    .frame-slot--phone {
+      clip-path: path('M 10,0 L 40,0 L 40,4 L 60,4 L 60,0 L 90,0 C 96,0 100,4 100,10 L 100,90 C 100,96 96,100 90,100 L 10,100 C 4,100 0,96 0,90 L 0,10 C 0,4 4,0 10,0 Z');
+      border-radius: 0;
+    }
+    .frame-slot--phone-landscape {
+      clip-path: path('M 6,0 L 94,0 C 98,0 100,3 100,7 L 100,93 C 100,97 98,100 94,100 L 6,100 C 2,100 0,97 0,93 L 0,7 C 0,3 2,0 6,0 Z');
+      border-radius: 0;
+    }
+    .frame-slot--polaroid {
+      /* small inner border via padding effect using box-shadow */
+      border-radius: 4%;
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.6);
+    }
+    .frame-slot--torn-paper {
+      clip-path: polygon(
+        0% 0%, 100% 0%, 100% 85%, 92% 92%, 84% 86%, 74% 94%,
+        62% 88%, 52% 95%, 40% 86%, 28% 93%, 18% 87%, 8% 94%, 0% 88%);
+      border-radius: 0;
+    }
 
     .frame-name {
       font-size: 0.78rem;

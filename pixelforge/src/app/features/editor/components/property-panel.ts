@@ -1947,16 +1947,27 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * "Smart Crop" — one-click auto-fit (PX-109).
+   * "Smart Crop" — one-click auto-fit + saliency-biased pan (PX-109 / PX-123).
    *
    * @remarks
-   * Without a real AI subject-detection backend, this is the best we can
-   * do automatically: switch to cover mode, reset pan/zoom to (0, 0, 1×),
-   * and resize the slot to the photo's natural aspect ratio. The result
-   * is a frame whose bounds match the photo — no over-scan crop, no
-   * letterboxing, photo perfectly centered. Future work can wire this
-   * to a saliency / face-detection service to bias the crop toward the
-   * photo's subject.
+   * Two-step:
+   *
+   * 1. Resize the slot to match the photo's natural aspect ratio in cover
+   *    mode (PX-109 behavior — no over-scan crop, no letterboxing).
+   * 2. Sample a 64×64 grayscale grid from the photo, compute a Sobel-like
+   *    edge-magnitude map, and pick the weighted center-of-mass of
+   *    high-magnitude pixels as the "interesting" region. Convert that
+   *    centroid to normalized `[-1, 1]` pan offsets and apply via
+   *    {@link CanvasService.setFrameView}. The crop window is biased
+   *    toward whatever's structurally busy in the photo — typically the
+   *    subject (faces have edges around eyes/mouth; text has dense edges;
+   *    background sky is smooth).
+   *
+   * No external ML deps. The trade-off vs. proper face-detection: misses
+   * "interesting" regions that are smooth (low contrast portraits, soft
+   * focus). Catches: anything with structural detail. For the median
+   * photo a designer drops into a frame, the saliency centroid is a
+   * meaningful improvement over the "always center" baseline.
    */
   smartCrop(): void {
     const canvas = this.canvasService.getCanvas();
@@ -1972,11 +1983,113 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this.canvasService.setFrameFit(obj, 'cover');
     this.frameFitMode.set('cover');
     this.canvasService.setFrameAspectRatio(obj, iw / ih);
-    this.canvasService.setFrameView(obj, 0, 0, 1);
-    this.framePanX.set(0);
-    this.framePanY.set(0);
+
+    // PX-123 — try to bias the pan toward the saliency centroid.
+    let panX = 0;
+    let panY = 0;
+    try {
+      const centroid = this.computeSaliencyCentroid(el!, iw, ih);
+      if (centroid) {
+        // centroid.x / .y are in [0, 1]; convert to [-1, 1] pan space
+        // (where 0 = centered, ±1 = full edge).
+        panX = (centroid.x - 0.5) * 2;
+        panY = (centroid.y - 0.5) * 2;
+        // Soften the pull so the crop centers ~70% toward the salient
+        // region rather than slamming the edge.
+        panX = Math.max(-1, Math.min(1, panX * 0.7));
+        panY = Math.max(-1, Math.min(1, panY * 0.7));
+      }
+    } catch {
+      /* fall through with pan=0,0 — Smart Crop still does the aspect-fit */
+    }
+
+    this.canvasService.setFrameView(obj, panX, panY, 1);
+    this.framePanX.set(panX);
+    this.framePanY.set(panY);
     this.frameZoom.set(1);
     this.frameAspect.set('original');
+  }
+
+  /**
+   * Edge-density saliency centroid in normalized [0,1] image coords (PX-123).
+   *
+   * Algorithm:
+   *  - Downsample the photo to GRID×GRID grayscale via a hidden canvas.
+   *  - Compute |∂I/∂x| + |∂I/∂y| (cheap Sobel) per cell.
+   *  - Take a weighted center of mass of cells whose magnitude is in the
+   *    top quartile.
+   *
+   * Returns null if the image is too low-detail to produce a meaningful
+   * centroid (or if the canvas read fails for any reason — e.g. tainted
+   * canvas due to crossOrigin mismatch).
+   */
+  private computeSaliencyCentroid(
+    el: HTMLImageElement,
+    iw: number,
+    ih: number,
+  ): { x: number; y: number } | null {
+    const GRID = 64;
+    const tmp = document.createElement('canvas');
+    tmp.width = GRID;
+    tmp.height = GRID;
+    const ctx = tmp.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(el, 0, 0, GRID, GRID);
+
+    let pixels: Uint8ClampedArray;
+    try {
+      pixels = ctx.getImageData(0, 0, GRID, GRID).data;
+    } catch {
+      // CORS-tainted canvas — read blocked. Bail.
+      return null;
+    }
+
+    // Convert to grayscale luminance in a flat GRID*GRID Float32 buffer.
+    const lum = new Float32Array(GRID * GRID);
+    for (let i = 0; i < GRID * GRID; i++) {
+      const r = pixels[i * 4];
+      const g = pixels[i * 4 + 1];
+      const b = pixels[i * 4 + 2];
+      lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+
+    // Edge magnitude: |I[x+1,y] - I[x-1,y]| + |I[x,y+1] - I[x,y-1]|.
+    // 1-pixel border has zero magnitude — fine for a rough centroid.
+    const mag = new Float32Array(GRID * GRID);
+    let maxMag = 0;
+    for (let y = 1; y < GRID - 1; y++) {
+      for (let x = 1; x < GRID - 1; x++) {
+        const i = y * GRID + x;
+        const dx = Math.abs(lum[i + 1] - lum[i - 1]);
+        const dy = Math.abs(lum[i + GRID] - lum[i - GRID]);
+        mag[i] = dx + dy;
+        if (mag[i] > maxMag) maxMag = mag[i];
+      }
+    }
+    if (maxMag <= 1) return null; // image is essentially flat; no signal.
+
+    // Top-quartile threshold so we don't get pulled by noise floors.
+    const threshold = maxMag * 0.5;
+    let sumW = 0;
+    let sumX = 0;
+    let sumY = 0;
+    for (let y = 0; y < GRID; y++) {
+      for (let x = 0; x < GRID; x++) {
+        const i = y * GRID + x;
+        if (mag[i] >= threshold) {
+          const w = mag[i];
+          sumW += w;
+          sumX += w * x;
+          sumY += w * y;
+        }
+      }
+    }
+    if (sumW <= 0) return null;
+
+    return {
+      x: sumX / sumW / (GRID - 1),
+      y: sumY / sumW / (GRID - 1),
+    };
   }
 
   /**
