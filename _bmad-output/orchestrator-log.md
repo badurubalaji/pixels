@@ -603,4 +603,25 @@ User-flagged regression mid-sprint: *"sidebar toolbar not visible in /editor/...
 
 Per the autonomy rule, sprint-10 starts after this push lands. The genuinely-best-leverage next step is PX-077, which is human-driven — natural pause point.
 
+## 2026-04-25T10:35:00Z · Sprint-10 close — retrospective
+
+User-flagged: *"unable to scroll the editor, since we have add page option below canvas, we are not able to view"*. Single-commit sprint to remove a long-standing project-init bug.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `c2685f4` | PX-084 | Strip Angular CLI starter placeholder from `app.html`. The 342-line `<main class="main">` block with the default 'ng new' marketing content + Angular logo had been sitting above `<router-outlet />` since project init, pushing every route below the viewport. Replaced with a single `<router-outlet />` line. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The bug, in one sentence.** Every route was rendering below an invisible 200+ line marketing block left over from `ng new`, and the global `body { overflow: hidden }` + the editor's `.editor-layout { height: 100vh }` combined to clip the editor's bottom (page-bar / add-page button) below the viewport with no way to scroll to it.
+
+**Why it took this long to surface.** The redesigned routes (/auth, /hub, /gallery, /profile, /dashboard) all use `:host { height: 100%; overflow-y: auto }` — that worked around it because their first paint scrolled their content into view. The earlier "unable to scroll /hub" report (sprint-3) was the same bug surfacing through the same workaround. The editor uses a fixed `100vh` shell (correct for a canvas tool — you don't scroll a Canva canvas, you pan inside it), so the workaround couldn't apply, and the clipped page-bar revealed the underlying issue.
+
+**Lesson.** "Strip CLI scaffolding" should be a sprint-0 task whenever the project graduates from `ng new`. Adding it to project-context follow-ups so it's a one-time check on the next greenfield Angular project: open `app.html` and confirm only `<router-outlet />` remains before any route work.
+
+**Sprint-11 candidates**
+- **PX-077** — Manual e2e smoke. The PX-084 fix removed the last suspected obstacle to a clean walkthrough. Top priority.
+- **PX-085** — `app.html` was the obvious offender; sweep for any other CLI-init residue (placeholder logos, `app.scss` decoration, default `app.spec.ts`).
+- **PX-083** — Eyedropper wiring (gradient panel stub).
+- **PX-074** — Email change (held).
+
 
