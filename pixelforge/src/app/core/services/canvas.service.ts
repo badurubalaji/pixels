@@ -1018,6 +1018,98 @@ export class CanvasService {
   }
 
   /**
+   * Resize a photo-frame to a target aspect ratio while keeping the slot's
+   * geometric center fixed (PX-108 — Canva-style crop chip).
+   *
+   * @param frame - A photo-frame `FabricImage` (filled) or empty `Group`
+   *   placeholder. No-op for any non-frame object.
+   * @param ratio - Width / height. Pass `null` to leave the frame's current
+   *   dimensions untouched (no-op — used by the "Freeform" chip).
+   *
+   * @remarks
+   * The new frame box is sized so its longer axis matches the longer axis
+   * of the current frame. Center stays fixed: `newLeft = oldCenterX -
+   * newW/2`, similarly for top. After resizing, the photo (if any) is
+   * refit to the new bounds via {@link setFrameFit} so cover / contain /
+   * fill semantics still hold. The clipPath geometry is rebuilt for the
+   * current `frameShape` so non-rect shapes follow the new bounds.
+   */
+  setFrameAspectRatio(frame: fabric.FabricObject, ratio: number | null): void {
+    if (!this.canvas) return;
+    if ((frame as any).customType !== 'photo-frame') return;
+    if (ratio == null || !isFinite(ratio) || ratio <= 0) return;
+
+    const fw = (frame as any).frameWidth ?? frame.width ?? 100;
+    const fh = (frame as any).frameHeight ?? frame.height ?? 100;
+    const cx = (frame.left ?? 0) + fw / 2;
+    const cy = (frame.top ?? 0) + fh / 2;
+
+    // Use the longer axis of the current frame as the constraint so
+    // chip swaps don't drastically shrink the slot.
+    const longer = Math.max(fw, fh);
+    let newW: number;
+    let newH: number;
+    if (ratio >= 1) {
+      newW = longer;
+      newH = longer / ratio;
+    } else {
+      newH = longer;
+      newW = longer * ratio;
+    }
+
+    const newLeft = cx - newW / 2;
+    const newTop = cy - newH / 2;
+    const shape = ((frame as any).frameShape as FrameShape) ?? 'rect';
+
+    if (frame instanceof fabric.FabricImage) {
+      // Filled frame — refit the photo into the new bounds.
+      (frame as any).frameWidth = newW;
+      (frame as any).frameHeight = newH;
+      (frame as any).frameLeft = newLeft;
+      (frame as any).frameTop = newTop;
+
+      // Rebuild the clipPath if the frame has a non-rect shape.
+      if (shape !== 'rect') {
+        const angle = (frame as any).frameAngle ?? frame.angle ?? 0;
+        const clipShape = this.buildFrameShape(shape, newW, newH, false);
+        (clipShape as any).left = newLeft;
+        (clipShape as any).top = newTop;
+        (clipShape as any).angle = angle;
+        (clipShape as any).absolutePositioned = true;
+        (frame as any).clipPath = clipShape;
+      } else {
+        (frame as any).clipPath = undefined;
+      }
+
+      const mode: FrameFitMode = ((frame as any).fitMode as FrameFitMode) ?? 'cover';
+      const imgEl = (frame as any).getElement?.() as HTMLImageElement | undefined;
+      const angle = frame.angle ?? 0;
+      if (imgEl) {
+        this.applyFrameFit(frame as fabric.FabricImage, imgEl, newLeft, newTop, newW, newH, angle, mode);
+      }
+      this.canvas.renderAll();
+      return;
+    }
+
+    if (frame instanceof fabric.Group) {
+      // Empty placeholder — rebuild in place with new dims.
+      const angle = frame.angle ?? 0;
+      const layerId = (frame as any).layerId;
+      const replacement = this.buildEmptyFrame(newLeft, newTop, newW, newH, angle, shape);
+      (replacement as any).layerId = layerId;
+      (replacement as any).frameShape = shape;
+      (replacement as any).frameWidth = newW;
+      (replacement as any).frameHeight = newH;
+
+      const idx = this.canvas.getObjects().indexOf(frame);
+      this.canvas.remove(frame);
+      this.canvas.insertAt(idx >= 0 ? idx : this.canvas.getObjects().length, replacement);
+      this.canvas.setActiveObject(replacement);
+      this.canvas.renderAll();
+    }
+  }
+
+  /**
    * Convert a regular `FabricImage` into a photo-frame (PX-102 recovery).
    *
    * @param obj - Any selected `FabricImage` on the canvas. No-op for

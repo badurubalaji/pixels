@@ -191,6 +191,25 @@ interface ObjectProps {
                 </div>
               }
 
+              <!-- PX-108 — Canva-style aspect-ratio chips. Resize the slot
+                   to a target ratio; "Freeform" leaves the current dims. -->
+              <div class="frame-shape-row">
+                <span class="frame-shape-label">Aspect</span>
+                <div class="frame-aspect-chips" data-testid="frame-aspect-chips">
+                  @for (a of frameAspectOptions; track a.id) {
+                    <button
+                      type="button"
+                      class="frame-aspect-chip"
+                      [class.active]="frameAspect() === a.id"
+                      [attr.data-aspect]="a.id"
+                      (click)="setFrameAspect(a.id)"
+                    >
+                      {{ a.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
               <!-- PX-103 — switch the frame's clip shape after creation. -->
               <div class="frame-shape-row">
                 <span class="frame-shape-label">Shape</span>
@@ -941,6 +960,35 @@ interface ObjectProps {
       width: 18px;
       height: 18px;
     }
+
+    /* PX-108 — aspect-ratio chips */
+    .frame-aspect-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      flex: 1;
+    }
+    .frame-aspect-chip {
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 14px;
+      color: var(--px-ink-soft, #334155);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease,
+        color 160ms ease;
+    }
+    .frame-aspect-chip:hover {
+      border-color: rgba(124, 58, 237, 0.4);
+      color: var(--px-violet, #7c3aed);
+    }
+    .frame-aspect-chip.active {
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%);
+      border-color: transparent;
+      color: #ffffff;
+    }
   `],
 })
 export class PropertyPanelComponent implements OnInit, OnDestroy {
@@ -972,6 +1020,18 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     { id: 'hexagon' as const, label: 'Hexagon', icon: 'hexagon' },
     { id: 'star' as const, label: 'Star', icon: 'star' },
     { id: 'heart' as const, label: 'Heart', icon: 'favorite' },
+  ];
+
+  /** PX-108: which aspect-ratio chip is "active" — purely a UI state hint. */
+  readonly frameAspect = signal<'free' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16'>('free');
+  /** PX-108: aspect-ratio chips. `ratio` is width / height. */
+  readonly frameAspectOptions = [
+    { id: 'free' as const, label: 'Freeform', ratio: null },
+    { id: '1:1' as const, label: '1:1', ratio: 1 },
+    { id: '4:3' as const, label: '4:3', ratio: 4 / 3 },
+    { id: '16:9' as const, label: '16:9', ratio: 16 / 9 },
+    { id: '3:4' as const, label: '3:4', ratio: 3 / 4 },
+    { id: '9:16' as const, label: '9:16', ratio: 9 / 16 },
   ];
 
   readonly shadowBlur = signal(0);
@@ -1573,6 +1633,9 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
       this.frameZoom.set((obj as any).frameZoom ?? 1);
       this.frameShape.set((obj as any).frameShape ?? 'rect');
       this.framePhotoAngle.set((obj as any).photoAngle ?? 0);
+      // PX-108: aspect chip is a transient UI hint, not a persisted prop.
+      // Reset on selection change so it doesn't carry between frames.
+      this.frameAspect.set('free');
     }
 
     this.props.set(p);
@@ -1614,6 +1677,35 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this.framePanY.set(0);
     this.frameZoom.set(1);
     this.canvasService.setFrameView(obj, 0, 0, 1);
+  }
+
+  /**
+   * Apply an aspect-ratio chip to the active photo-frame (PX-108).
+   *
+   * @param id - One of the chip ids from `frameAspectOptions`.
+   *
+   * @remarks
+   * `'free'` is a no-op on the canvas — it only updates the chip
+   * highlight so the user can "release" the constraint visually.
+   * Numeric ratios call `CanvasService.setFrameAspectRatio`, which
+   * resizes the slot keeping the geometric center fixed and refits
+   * the photo to the new bounds.
+   */
+  setFrameAspect(id: 'free' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16'): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    this.frameAspect.set(id);
+    if (id === 'free') return;
+    const opt = this.frameAspectOptions.find(o => o.id === id);
+    if (!opt || opt.ratio == null) return;
+    this.canvasService.setFrameAspectRatio(obj, opt.ratio);
+    // Empty placeholders rebuild as a new Group — re-sync local frame
+    // state from the new active object so other controls stay correct.
+    const newActive = canvas?.getActiveObject();
+    if (newActive) {
+      this.frameShape.set((newActive as any).frameShape ?? this.frameShape());
+    }
   }
 
   /**
