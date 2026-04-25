@@ -486,4 +486,29 @@ Sprint-4 ran short-and-tight under the now-standing autonomous-mode + push-befor
 
 Sprint-5 starts with **PX-073** under the same autonomous rhythm.
 
+## 2026-04-25T09:50:00Z · Sprint-5 close — retrospective
+
+Sprint-5 was a single-story sprint focused on the avatar feature.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `1aa98df` | PX-073 | Avatar upload — backend POST/DELETE/GET trio (multipart, MIME allowlist, 1MB cap, Pillow `verify()` defense, deterministic per-user filename, public read endpoint with cache-busting `?v=...` URLs); UserPublic gains `avatar_url`; AuthService.uploadAvatar / deleteAvatar / avatarSrc helper; ProfileComponent + UserMenuComponent both render `<img>` when set, gradient initials otherwise. 9 new BE tests (76→85), 10 new FE tests (393→403). |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**What went well**
+1. The defensive Pillow `verify()` step caught MIME-spoofed garbage (`text/plain` claiming `image/png`) with a clean 422 in tests. Worth the local import cost.
+2. The avatar URL pattern `/api/auth/avatar/{id}?v={timestamp}` solves the browser-cache problem on re-upload without any cache-control header gymnastics. Same trick will work for any user-mutable image asset.
+3. Reusing `AuthService.avatarSrc(user)` across both ProfileComponent and UserMenuComponent meant the dev-port-split URL handling lives in one place. Same rationale as the PX-067 token consolidation — consolidate at the second consumer, not the third.
+
+**What was hard**
+1. FastAPI doesn't allow `@router.post(status_code=204)` when an implicit response_model exists. PX-075 hit this; PX-073's POST/DELETE return UserPublic so it didn't recur, but the explicit `Response(status_code=…)` workaround for 204 endpoints is now memorialized in the PX-075 commit message for next time.
+2. Deferred PX-076 editor body retheme — the editor's body styles are 1700+ lines and inter-twined with fabric.js, animation timeline, layer panel, and tool toolbars. Splitting that into a focused sprint of its own makes more sense than ramming it into sprint-5.
+
+**Sprint-6 candidates (priority order)**
+- **PX-076** — Editor body retheme. Largest visual surface still on Material defaults. Same surgical chrome-only pattern as PX-068/069/072 but applied to the canvas frame, layer panel, property panel, sidebar drawer, animation timeline. Will be split into multiple commits if scope justifies.
+- **PX-077** — Manual end-to-end smoke test of every redesigned route. Simulate a real user signup → upload avatar → set name → pick a gallery template → land in editor → save → verify Brand-Kit auto-apply toast fires. Documents what works and surfaces any visual regression.
+- **PX-074** — Email change with verification. Held; needs transactional email choice (SES, SendGrid, etc.) before backend can be written.
+
+Sprint-6 starts with **PX-076**.
+
 
