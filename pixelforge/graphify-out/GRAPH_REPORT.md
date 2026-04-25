@@ -1,12 +1,12 @@
 # Graph Report - /home/ashulabs/workspace/pixels/pixelforge  (2026-04-25)
 
 ## Corpus Check
-- 1503 files · ~99,999 words
+- 1523 files · ~99,999 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1503 nodes · 2388 edges · 51 communities detected
-- Extraction: 73% EXTRACTED · 27% INFERRED · 0% AMBIGUOUS · INFERRED: 654 edges (avg confidence: 0.77)
+- 1523 nodes · 2460 edges · 51 communities detected
+- Extraction: 71% EXTRACTED · 29% INFERRED · 0% AMBIGUOUS · INFERRED: 704 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -17,7 +17,7 @@
 - [[_COMMUNITY_Brand Kit Service|Brand Kit Service]]
 - [[_COMMUNITY_Community 5|Community 5]]
 - [[_COMMUNITY_ApiService (main)|ApiService (main)]]
-- [[_COMMUNITY_Auth Core (JWThash)|Auth Core (JWT/hash)]]
+- [[_COMMUNITY_Auth Core (JWThash) + Profile Edit (PX-071)|Auth Core (JWT/hash) + Profile Edit (PX-071)]]
 - [[_COMMUNITY_Editor Component|Editor Component]]
 - [[_COMMUNITY_AI Background Service|AI Background Service]]
 - [[_COMMUNITY_Database + FastAPI Bootstrap|Database + FastAPI Bootstrap]]
@@ -26,7 +26,7 @@
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Font Service|Font Service]]
 - [[_COMMUNITY_Community 15|Community 15]]
-- [[_COMMUNITY_Dashboard Component|Dashboard Component]]
+- [[_COMMUNITY_Dashboard Component (PX-068069)|Dashboard Component (PX-068/069)]]
 - [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
 - [[_COMMUNITY_Community 19|Community 19]]
@@ -90,131 +90,131 @@
 
 ### Community 0 - "Animation Service"
 Cohesion: 0.03
-Nodes (10): AnimationService, ClipboardService, ColorPalettePanelComponent, ContextMenuComponent, Canvas, setup(), StaticCanvas, templateFactory() (+2 more)
+Nodes (9): AnimationTimeline, BackgroundRemovalService, ColorPalettePanelComponent, FabricObject, GradientPanelComponent, ImageFiltersPanelComponent, PropertyPanelComponent, PwaInstallPrompt (+1 more)
 
 ### Community 1 - "Canvas Service Core"
-Cohesion: 0.03
-Nodes (8): AuthComponent, AuthService, BackgroundRemovalService, GradientPanelComponent, HubComponent, ImageFiltersPanelComponent, PwaInstallPrompt, TextToolbarComponent
+Cohesion: 0.02
+Nodes (92): ApiService, ConnectionManager, project_collab_socket(), Real-time collaboration via WebSocket.  Each project has a "room". Connected cli, Tracks active websocket connections per project room., ProjectCreate, ProjectDetailResponse, ProjectResponse (+84 more)
 
 ### Community 2 - "Project Models & Routes"
-Cohesion: 0.02
-Nodes (59): ApiService, BrandKitApplyService, ConnectionManager, project_collab_socket(), Real-time collaboration via WebSocket.  Each project has a "room". Connected cli, Tracks active websocket connections per project room., CommentsService, ShareDialog (+51 more)
-
-### Community 3 - "Seed & Migrations"
 Cohesion: 0.04
 Nodes (5): CanvasService, makeService(), ExportDialog, ExportService, getPlatformPreset()
 
+### Community 3 - "Seed & Migrations"
+Cohesion: 0.03
+Nodes (11): CollaborationService, DesignHelperService, Editor, setup(), StaticCanvas, templateFactory(), KeyboardService, normalizeHex() (+3 more)
+
 ### Community 4 - "Brand Kit Service"
-Cohesion: 0.04
-Nodes (72): _infer_platform(), migrate(), Migration 0001 — backfill the ``platform`` field on legacy project rows.  Backgr, Reverse-lookup the platform id that matches ``width`` × ``height``.      Args:, # WHY: `custom` itself has 0x0 sentinel dims — skip it in the reverse, Backfill ``platform`` on every project row that lacks it.      Args:         db:, Protocol, A seed starter template document, per ARD §8.1.      Validates every field the b (+64 more)
+Cohesion: 0.03
+Nodes (77): _infer_platform(), migrate(), Migration 0001 — backfill the ``platform`` field on legacy project rows.  Backgr, Reverse-lookup the platform id that matches ``width`` × ``height``.      Args:, # WHY: `custom` itself has 0x0 sentinel dims — skip it in the reverse, Backfill ``platform`` on every project row that lacks it.      Args:         db:, Protocol, PaletteSlot (+69 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.04
-Nodes (7): BrandKitService, decodeSvgDataUrl(), encodeSvgToDataUrl(), isSvgDataUrl(), sanitizeSvg(), PluginRegistry, SidebarDrawerComponent
+Cohesion: 0.03
+Nodes (8): AccessibilityService, AnimationService, ClipboardService, ContextMenuComponent, Canvas, QualityScoreService, QuickActionBar, StyleVariationsService
 
 ### Community 6 - "ApiService (main)"
 Cohesion: 0.04
-Nodes (6): Editor, KeyboardService, normalizeHex(), remapObject(), TemplateThumbnailService, ToolbarPanelComponent
+Nodes (7): BrandKitService, decodeSvgDataUrl(), encodeSvgToDataUrl(), isSvgDataUrl(), sanitizeSvg(), PluginRegistry, SidebarDrawerComponent
 
-### Community 7 - "Auth Core (JWT/hash)"
+### Community 7 - "Auth Core (JWT/hash) + Profile Edit (PX-071)"
 Cohesion: 0.03
 Nodes (18): ActiveSelection, Canvas, Circle, EventEmitter, FabricImage, FabricObject, FabricText, FakeImage (+10 more)
 
 ### Community 8 - "Editor Component"
 Cohesion: 0.06
-Nodes (6): AccessibilityService, FontService, QualityScoreService, StyleVariationsService, TemplateService, ThemeService
+Nodes (59): AuthResponse, create_token(), decode_token(), get_current_user(), hash_password(), Partial-update payload for the authenticated user's own profile.      Fields def, Returns user dict if authenticated, None otherwise (optional auth)., Requires authenticated user or raises 401. (+51 more)
 
 ### Community 9 - "AI Background Service"
-Cohesion: 0.05
-Nodes (47): AuthResponse, decode_token(), get_current_user(), Returns user dict if authenticated, None otherwise (optional auth)., Requires authenticated user or raises 401., require_user(), UserLogin, UserPublic (+39 more)
+Cohesion: 0.04
+Nodes (24): AuditDialog, CommandPalette, ActiveSelection, bootstrap(), Circle, FabricImage, FabricText, Group (+16 more)
 
 ### Community 10 - "Database + FastAPI Bootstrap"
 Cohesion: 0.05
-Nodes (33): close_db(), connect_db(), get_db(), is_connected(), Connect to MongoDB. Non-fatal if unavailable — endpoints that     require the DB, Return the MongoDB database handle.      Raises a clear error if the DB is not c, lifespan(), FastAPI lifespan: open/close Mongo and optionally seed starter templates.      A (+25 more)
+Nodes (2): Dashboard, ProjectService
 
 ### Community 11 - "Community 11"
-Cohesion: 0.06
-Nodes (3): Dashboard, ProfileComponent, UserMenuComponent
+Cohesion: 0.05
+Nodes (33): close_db(), connect_db(), get_db(), is_connected(), Connect to MongoDB. Non-fatal if unavailable — endpoints that     require the DB, Return the MongoDB database handle.      Raises a clear error if the DB is not c, lifespan(), FastAPI lifespan: open/close Mongo and optionally seed starter templates.      A (+25 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.14
-Nodes (35): ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate, Request / response Pydantic v2 models for the core project + asset APIs.  PX-060, Incoming payload for ``POST /api/projects``.      Attributes:         name: Disp, Partial update payload for ``PUT /api/projects/{id}``.      All fields are optio, List-view projection of a project document.      Excludes the heavyweight ``canv (+27 more)
+Cohesion: 0.1
+Nodes (4): AiBackgroundService, AiDesignService, TemplateService, ThemeService
 
 ### Community 13 - "Community 13"
-Cohesion: 0.06
-Nodes (21): ActiveSelection, bootstrap(), Circle, FabricImage, FabricObject, FabricText, Group, IText (+13 more)
+Cohesion: 0.08
+Nodes (4): AuthComponent, AuthService, ProfileComponent, UserMenuComponent
 
 ### Community 14 - "Font Service"
-Cohesion: 0.1
-Nodes (4): AiBackgroundService, AiDesignService, DesignHelperService, MagicWriteService
+Cohesion: 0.11
+Nodes (2): CommentsService, FontService
 
 ### Community 15 - "Community 15"
-Cohesion: 0.09
-Nodes (4): AuditDialog, CommandPalette, NewProjectDialog, ResizeDialog
-
-### Community 16 - "Dashboard Component"
-Cohesion: 0.1
-Nodes (3): AlignmentPanelComponent, AnimationTimeline, HistoryService
-
-### Community 17 - "Community 17"
-Cohesion: 0.14
-Nodes (1): ProjectService
-
-### Community 18 - "Community 18"
-Cohesion: 0.11
-Nodes (2): CanvasRulersComponent, CollaborationService
-
-### Community 19 - "Community 19"
 Cohesion: 0.1
 Nodes (22): Angular Logo SVG, Angular @for control flow block, Pill link group (Angular docs links), App Root Template (Angular placeholder), router-outlet, title() signal binding, app-root mount point, Positioning: Free Canva alternative with AI tools (+14 more)
 
-### Community 20 - "Template Authoring"
+### Community 16 - "Dashboard Component (PX-068/069)"
 Cohesion: 0.13
 Nodes (21): author_all(), _build_canvas_json(), _fabric_circle(), _fabric_rect(), _fabric_text(), _load_default_font(), _pick(), Programmatic authoring of 20 starter templates (PX-022b).  This module is an *au (+13 more)
 
-### Community 21 - "Brand Kit Apply (PX-060)"
+### Community 17 - "Community 17"
 Cohesion: 0.1
 Nodes (19): Happy-path coverage for asset_routes endpoints after the Depends refactor.  Exte, PX-003 AC-7: SVG with relative-fragment href (#id) passes validation., PX-003 AC-7: SVG with on* attributes is rejected., GET /api/assets returns [] when none uploaded., PX-003 AC-7: malformed XML is rejected before any other processing., POST /api/assets/upload then DELETE /api/assets/{id} round-trip., PX-003 AC-6: a clean, well-formed SVG uploads successfully., PX-003 AC-7: <script> in uploaded SVG is rejected (400). (+11 more)
 
-### Community 22 - "Community 22"
+### Community 18 - "Community 18"
 Cohesion: 0.15
 Nodes (1): CommentsOverlay
 
-### Community 23 - "Community 23"
+### Community 19 - "Community 19"
+Cohesion: 0.17
+Nodes (2): BrandKitApplyService, HistoryService
+
+### Community 20 - "Template Authoring"
 Cohesion: 0.13
 Nodes (4): authInterceptor(), emptyCanvasFor(), GalleryComponent, PresentationMode
 
-### Community 24 - "Gallery + Auth Interceptor"
+### Community 21 - "Brand Kit Apply (PX-060)"
+Cohesion: 0.12
+Nodes (15): Happy-path coverage for auth_routes endpoints after the Depends refactor., POST /api/auth/login returns a token for a previously-created user., GET /api/auth/me echoes the token's user., PATCH /api/auth/me writes the new name and returns it (PX-071)., Whitespace-only or empty name clears the field (stored as None, PX-071)., Names over 60 characters are rejected with 400 (PX-071)., POST /api/auth/signup creates user and returns a token., PATCH /api/auth/me without a token returns 401 (PX-071). (+7 more)
+
+### Community 22 - "Community 22"
+Cohesion: 0.17
+Nodes (1): CanvasRulersComponent
+
+### Community 23 - "Community 23"
 Cohesion: 0.14
 Nodes (14): delete_asset(), get_asset(), list_assets(), Asset upload / retrieval / deletion endpoints.  Assets are stored on-disk under, Upload an image asset, persist to disk, record metadata in Mongo.      Args:, # WHY: SVG uploads are XML and can smuggle XSS. Re-parse defensively., Stream an asset's bytes from disk.      Args:         asset_id: MongoDB ObjectId, Delete an asset record and its on-disk file.      Args:         asset_id: MongoD (+6 more)
 
-### Community 25 - "Community 25"
+### Community 24 - "Gallery + Auth Interceptor"
 Cohesion: 0.13
 Nodes (2): Canvas, FabricObject
 
-### Community 26 - "Community 26"
+### Community 25 - "Community 25"
 Cohesion: 0.24
 Nodes (13): aiofiles 24.1.0, Pixelforge Backend (Python), bcrypt 4.2.1, FastAPI 0.115.12, motor 3.7.0 (async MongoDB), onnxruntime 1.21.1, passlib[bcrypt] 1.7.4, Pillow 11.2.1 (+5 more)
 
-### Community 27 - "Auth Page Component (PX-063)"
+### Community 26 - "Community 26"
 Cohesion: 0.15
 Nodes (12): Happy-path coverage for comments_routes endpoints after the Depends refactor., POST a comment then GET surfaces it by projectId + text., # NOTE: list_comments re-derives ``id`` from ``_id`` when Mongo auto-assigns, PATCH toggles resolved flag., DELETE removes the comment., POST /{id}/replies appends a reply., GET /api/projects/{pid}/comments returns [] when none exist., test_add_reply() (+4 more)
 
-### Community 28 - "Community 28"
+### Community 27 - "Auth Page Component (PX-063)"
 Cohesion: 0.2
 Nodes (11): _parse_frontend_presets(), Parity guard: the FE and BE platform-preset lists must stay in sync.  ARD §7.1 m, The FE constants file must exist at the canonical path., FE and BE must declare the same number of presets., Every (id, label, width, height, aspect) tuple must match position-for-position., The ``custom`` preset is the user-defined sentinel at 0x0., Parse the FE TS constants file into a list of tuples.      Returns:         One, test_custom_sentinel_dimensions() (+3 more)
 
-### Community 29 - "Community 29"
+### Community 28 - "Community 28"
 Cohesion: 0.17
 Nodes (11): auth_headers(), auth_token(), auth_user(), client(), mock_db(), Pytest fixtures for the pixelforge backend test harness.  This module wires an `, Return a bearer JWT for the seeded test user.      Returns:         Encoded JWT, Return an Authorization header dict for authenticated requests.      Returns: (+3 more)
 
+### Community 29 - "Community 29"
+Cohesion: 0.42
+Nodes (1): MagicWriteService
+
 ### Community 30 - "Community 30"
-Cohesion: 0.27
-Nodes (9): get_me(), login(), Authentication endpoints: signup, login, current-user lookup., Return the authenticated caller's public user record.      Args:         db: Asy, Project an internal user document to the public-safe shape.      Args:         d, Create a new user account and return a signed JWT.      Args:         body: ``Us, Authenticate an existing user and return a signed JWT.      Args:         body:, signup() (+1 more)
+Cohesion: 0.22
+Nodes (1): HubComponent
 
 ### Community 31 - "Community 31"
-Cohesion: 0.25
-Nodes (7): Happy-path coverage for auth_routes endpoints after the Depends refactor., POST /api/auth/login returns a token for a previously-created user., GET /api/auth/me echoes the token's user., POST /api/auth/signup creates user and returns a token., test_login_with_valid_credentials(), test_me_returns_current_user(), test_signup_returns_token()
+Cohesion: 0.29
+Nodes (1): AlignmentPanelComponent
 
 ### Community 32 - "Community 32"
 Cohesion: 0.29
@@ -295,13 +295,23 @@ Nodes (1): Require ``thumbnail_data_url`` to start with ``data:image/``.        
 ## Knowledge Gaps
 - **203 isolated node(s):** `Brand kit API: per-user saved colors, fonts, and logos.`, `Comments API: per-project annotation threads with replies.`, `ng serve (dev server)`, `ng generate (scaffolding)`, `ng build` (+198 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 17`** (25 nodes): `.healthCheck()`, `.editTags()`, `.permanentDelete()`, `ProjectService`, `.addUploadedImage()`, `.checkBackend()`, `.constructor()`, `.createProject()`, `.deleteProject()`, `.duplicateProject()`, `.emptyTrash()`, `.getUploadedImages()`, `.loadProjects()`, `.loadUploads()`, `.mergeProjects()`, `.permanentlyDelete()`, `.persistProjects()`, `.persistUploads()`, `.purgeOldTrash()`, `.removeUploadedImage()`, `.restoreProject()`, `.saveCanvasState()`, `.setTags()`, `.updateProject()`, `project.service.ts`
+- **Thin community `Database + FastAPI Bootstrap`** (55 nodes): `.createProject()`, `.healthCheck()`, `Dashboard`, `.clearTemplateFilters()`, `.createFromCategory()`, `.createFromPreset()`, `.createFromTemplate()`, `.deleteProject()`, `.duplicateProject()`, `.editTags()`, `.emptyTrash()`, `.filterByTag()`, `.formatDate()`, `.formatRelativeTime()`, `.generateAiDesign()`, `.getPresetIcon()`, `.goToLogin()`, `.goToTab()`, `.loadGallery()`, `.onDragLeave()`, `.onDragOver()`, `.onDrop()`, `.onGalleryClick()`, `.onGallerySearch()`, `.onHomeUpload()`, `.openNewProjectDialog()`, `.permanentDelete()`, `.restoreProject()`, `.setGalleryCategory()`, `.triggerHomeUpload()`, `.useSuggestion()`, `.fileMakeCopy()`, `ProjectService`, `.addUploadedImage()`, `.checkBackend()`, `.constructor()`, `.createProject()`, `.deleteProject()`, `.duplicateProject()`, `.emptyTrash()`, `.getUploadedImages()`, `.loadProjects()`, `.loadUploads()`, `.mergeProjects()`, `.permanentlyDelete()`, `.persistProjects()`, `.persistUploads()`, `.purgeOldTrash()`, `.removeUploadedImage()`, `.restoreProject()`, `.saveCanvasState()`, `.setTags()`, `.updateProject()`, `project.service.ts`, `dashboard.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 18`** (25 nodes): `.restoreVersion()`, `CanvasRulersComponent`, `.drawHorizontalRuler()`, `.drawRulers()`, `.drawVerticalRuler()`, `.getGuideScreenPos()`, `.getStep()`, `.ngAfterViewInit()`, `.ngOnDestroy()`, `.onMouseMove()`, `.onMouseUp()`, `.removeGuide()`, `.startDragGuide()`, `.startMoveGuide()`, `.toggleRulers()`, `CollaborationService`, `.connect()`, `.disconnect()`, `.handleMessage()`, `.send()`, `.sendCanvasUpdate()`, `.sendCursor()`, `collaboration.service.ts`, `canvas-rulers.ts`, `.restore()`
+- **Thin community `Font Service`** (26 nodes): `.createComment()`, `.deleteCommentRemote()`, `.updateComment()`, `CommentsService`, `.addComment()`, `.addReply()`, `.constructor()`, `.deleteComment()`, `.load()`, `.persist()`, `.setCommentMode()`, `.toggleCommentMode()`, `.toggleResolved()`, `FontService`, `.constructor()`, `.fileToDataUrl()`, `.getAllFontFamilies()`, `.getGoogleFonts()`, `.loadCustomFonts()`, `.persistCustomFonts()`, `.preloadPopularFonts()`, `.registerFont()`, `.removeCustomFont()`, `.uploadCustomFont()`, `comments.service.ts`, `font.service.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 22`** (20 nodes): `.addReply()`, `CommentsOverlay`, `.cancelNewComment()`, `.closeMention()`, `.closeThread()`, `.deleteComment()`, `.formatMentions()`, `.knownUsers()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onNewEnter()`, `.onReplyInput()`, `.onReplyKey()`, `.pickMention()`, `.screenX()`, `.screenY()`, `.submitNewComment()`, `.submitReply()`, `.toggleComment()`, `comments-overlay.ts`
+- **Thin community `Community 18`** (20 nodes): `.addReply()`, `CommentsOverlay`, `.cancelNewComment()`, `.closeMention()`, `.closeThread()`, `.deleteComment()`, `.formatMentions()`, `.knownUsers()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onNewEnter()`, `.onReplyInput()`, `.onReplyKey()`, `.pickMention()`, `.screenX()`, `.screenY()`, `.submitNewComment()`, `.submitReply()`, `.toggleComment()`, `comments-overlay.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 25`** (15 nodes): `Canvas`, `.dispose()`, `.getObjects()`, `.getZoom()`, `.off()`, `.on()`, `.renderAll()`, `.requestRenderAll()`, `.setDimensions()`, `.setViewportTransform()`, `.setZoom()`, `constructor()`, `FabricObject`, `getObjects()`, `export.service.spec.ts`
+- **Thin community `Community 19`** (19 nodes): `.updateProject()`, `BrandKitApplyService`, `._buildSubstitutionMap()`, `.clearMarker()`, `._clearMarkerServerSide()`, `._revertObjectColors()`, `.revertToTemplateDefaults()`, `.finishNameEdit()`, `.toJSON()`, `HistoryService`, `.clear()`, `.init()`, `.redo()`, `.restoreState()`, `.saveState()`, `.undo()`, `.updateCounts()`, `brand-kit-apply.service.ts`, `history.service.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 22`** (16 nodes): `.restoreVersion()`, `CanvasRulersComponent`, `.drawHorizontalRuler()`, `.drawRulers()`, `.drawVerticalRuler()`, `.getGuideScreenPos()`, `.getStep()`, `.ngAfterViewInit()`, `.onMouseMove()`, `.onMouseUp()`, `.removeGuide()`, `.startDragGuide()`, `.startMoveGuide()`, `.toggleRulers()`, `canvas-rulers.ts`, `.restore()`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Gallery + Auth Interceptor`** (15 nodes): `Canvas`, `.dispose()`, `.getObjects()`, `.getZoom()`, `.off()`, `.on()`, `.renderAll()`, `.requestRenderAll()`, `.setDimensions()`, `.setViewportTransform()`, `.setZoom()`, `constructor()`, `FabricObject`, `getObjects()`, `export.service.spec.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 29`** (11 nodes): `MagicWriteService`, `.applySwaps()`, `.generateVariants()`, `.makeLonger()`, `.makeShorter()`, `.removeFillers()`, `.sentenceCase()`, `.titleCase()`, `.toHeadline()`, `.transform()`, `magic-write.service.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 30`** (9 nodes): `HubComponent`, `.buildTiles()`, `.ngOnInit()`, `.onProjectActivate()`, `.onStartFromScratch()`, `.onTileActivate()`, `.trackProjectById()`, `.trackTileById()`, `hub.component.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 31`** (8 nodes): `AlignmentPanelComponent`, `.align()`, `.attachWhenReady()`, `.autoArrange()`, `.constructor()`, `.distribute()`, `.fixOverlaps()`, `alignment-panel.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 32`** (7 nodes): `authGuard()`, `FakeAuthService`, `.isAuthenticated()`, `.setAuthenticated()`, `runGuard()`, `auth.guard.spec.ts`, `auth.guard.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -335,17 +345,17 @@ Nodes (1): Require ``thumbnail_data_url`` to start with ``data:image/``.        
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `seed_templates()` connect `Brand Kit Service` to `Database + FastAPI Bootstrap`, `Community 12`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
-- **Why does `test_each_doc_meets_palette_and_tag_requirements()` connect `Brand Kit Service` to `Canvas Service Core`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
-- **Why does `FabricObject` connect `Community 13` to `Animation Service`, `Canvas Service Core`, `Project Models & Routes`, `Editor Component`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `FabricObject` connect `Animation Service` to `AI Background Service`, `Community 5`, `Canvas Service Core`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `seed_templates()` connect `Brand Kit Service` to `Canvas Service Core`, `Community 11`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **Why does `author_all()` connect `Dashboard Component (PX-068/069)` to `Animation Service`, `Community 12`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `Brand kit API: per-user saved colors, fonts, and logos.`, `Comments API: per-project annotation threads with replies.`, `ng serve (dev server)` to the rest of the system?**
   _203 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Animation Service` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
 - **Should `Canvas Service Core` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Project Models & Routes` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
+- **Should `Project Models & Routes` be split into smaller, more focused modules?**
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
