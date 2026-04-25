@@ -201,6 +201,27 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           <button mat-icon-button (click)="flipV()" matTooltip="Flip Vertical">
             <mat-icon style="transform: rotate(90deg)">flip</mat-icon>
           </button>
+
+          @if (isPhotoFrame()) {
+            <span class="tb-sep"></span>
+            <span class="tb-label">Fit</span>
+            <mat-button-toggle-group
+              class="tb-fit-toggle"
+              [value]="frameFit()"
+              (change)="onFrameFitChange($event.value)"
+              data-testid="frame-fit"
+            >
+              <mat-button-toggle value="cover" matTooltip="Fill the frame, crop overflow">
+                <mat-icon>fit_screen</mat-icon>
+              </mat-button-toggle>
+              <mat-button-toggle value="contain" matTooltip="Show whole photo, may letterbox">
+                <mat-icon>aspect_ratio</mat-icon>
+              </mat-button-toggle>
+              <mat-button-toggle value="fill" matTooltip="Stretch to fill (may distort)">
+                <mat-icon>crop_free</mat-icon>
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          }
         }
 
         <!-- SHAPE CONTROLS -->
@@ -604,6 +625,15 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   // Selection state
   readonly selectionType = signal<SelectionType>('none');
 
+  /**
+   * `true` when the active object is a photo-frame (PX-090/091) — drives
+   * the fit-mode toggle in the IMAGE branch.
+   */
+  readonly isPhotoFrame = signal<boolean>(false);
+
+  /** Current fit mode of the active photo-frame (`'cover'` default). */
+  readonly frameFit = signal<'cover' | 'contain' | 'fill'>('cover');
+
   // Floating toolbar position (viewport pixels)
   readonly toolbarTop = signal(0);
   readonly toolbarLeft = signal(0);
@@ -803,6 +833,13 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   private updateSelectionState(): void {
     const canvas = this.canvasService.getCanvas();
     const obj = canvas?.getActiveObject();
+
+    // PX-091: track photo-frame state alongside the selection type.
+    const customType = (obj as any)?.customType;
+    this.isPhotoFrame.set(customType === 'photo-frame');
+    if (customType === 'photo-frame' && (obj as any).fitMode) {
+      this.frameFit.set((obj as any).fitMode);
+    }
 
     if (!obj) {
       this.selectionType.set('none');
@@ -1076,6 +1113,20 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     const obj = canvas?.getActiveObject();
     if (!obj) return;
     obj.set('flipY', !obj.flipY);
+    this.canvasService.commitChange(obj);
+  }
+
+  /**
+   * Switch the active photo-frame between cover / contain / fill (PX-091).
+   *
+   * @param mode - The new fit mode emitted by the toggle group.
+   */
+  onFrameFitChange(mode: 'cover' | 'contain' | 'fill'): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    this.canvasService.setFrameFit(obj, mode);
+    this.frameFit.set(mode);
     this.canvasService.commitChange(obj);
   }
 

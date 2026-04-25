@@ -8,6 +8,20 @@ import { v4 as uuidv4 } from 'uuid';
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star' | 'polygon' | 'diamond' | 'hexagon' | 'arrow' | 'line';
 export type BackgroundMode = 'white' | 'transparent' | 'custom';
 
+/**
+ * How a photo-frame fits its image (PX-091).
+ *
+ * - `cover`: scale uniformly so the image covers the frame; over-scan
+ *   on the longer dimension is cropped via cropX/cropY (CSS
+ *   `background-size: cover` semantics). Default; matches user intent
+ *   for "drop a photo into a slot."
+ * - `contain`: scale uniformly so the entire image fits inside the
+ *   frame; the shorter dimension may show empty space (letterbox).
+ * - `fill`: stretch the image to exactly fill the frame; aspect ratio
+ *   is not preserved (squashed).
+ */
+export type FrameFitMode = 'cover' | 'contain' | 'fill';
+
 const SNAP_THRESHOLD = 6;
 const GUIDE_COLOR = '#ff2d87';
 
@@ -627,6 +641,7 @@ export class CanvasService {
   async replaceFrameWithImage(
     frame: fabric.FabricObject,
     imageUrl: string,
+    fitMode: FrameFitMode = 'cover',
   ): Promise<void> {
     if (!this.canvas) return;
 
@@ -644,53 +659,16 @@ export class CanvasService {
         const fw = (frame.width ?? 100) * (frame.scaleX ?? 1);
         const fh = (frame.height ?? 100) * (frame.scaleY ?? 1);
 
-        // "Cover" the frame: scale the photo so its shorter dimension
-        // matches the frame; the longer dimension extends past and is
-        // clipped. This is the same semantics CSS background-size:cover
-        // uses, and what most users expect of a photo dropped into a slot.
-        const iw = imgEl.naturalWidth || imgEl.width;
-        const ih = imgEl.naturalHeight || imgEl.height;
-        const coverScale = Math.max(fw / iw, fh / ih);
-
         const fabricImg = new fabric.FabricImage(imgEl);
-        fabricImg.set({
-          left,
-          top,
-          angle,
-          originX: 'left',
-          originY: 'top',
-          scaleX: coverScale,
-          scaleY: coverScale,
-          clipPath: new fabric.Rect({
-            left: 0,
-            top: 0,
-            width: iw,
-            height: ih,
-            originX: 'center',
-            originY: 'center',
-            // Bound the clip to the frame's pixel size, centered on the
-            // image's natural center so scaling lines up with the cover
-            // math above.
-            absolutePositioned: false,
-          }),
-        });
-        // WHY: after `cover` scaling the image's drawn rect equals the
-        // frame's drawn rect; aligning the clipPath to the same drawn
-        // rect just means clipping the image at its own visible bounds —
-        // i.e. no clipping is needed for the cover case. clipPath stays
-        // as a no-op for now; future precise-fit modes (contain, fill)
-        // would tune it. Documented for next iteration.
-        if ((fabricImg as any).clipPath) {
-          (fabricImg as any).clipPath = undefined;
-        }
-        // Constrain the image to the frame's box by overriding width/
-        // height directly — fabric uses these for hit-testing and
-        // bounding-box rendering; the photo extends past as a visual
-        // bleed beyond the box but selection handles match the frame.
-        fabricImg.set({ width: iw, height: ih });
+        this.applyFrameFit(fabricImg, imgEl, left, top, fw, fh, angle, fitMode);
 
+        // Persist so subsequent setFrameFit calls (and resize-then-fit)
+        // can recompute without losing the original frame target dims.
         (fabricImg as any).layerId = layerId;
         (fabricImg as any).customType = 'photo-frame';
+        (fabricImg as any).frameWidth = fw;
+        (fabricImg as any).frameHeight = fh;
+        (fabricImg as any).fitMode = fitMode;
 
         const idx = canvas.getObjects().indexOf(frame);
         canvas.remove(frame);
@@ -701,6 +679,137 @@ export class CanvasService {
       };
       imgEl.onerror = () => reject(new Error('Failed to load image'));
       imgEl.src = imageUrl;
+    });
+  }
+
+  /**
+   * Switch a filled photo-frame between cover / contain / fill (PX-091).
+   *
+   * @param frame - A `customType: 'photo-frame'` `fabric.FabricImage`
+   *   that has previously been filled by {@link replaceFrameWithImage}.
+   *   Empty Group placeholders are no-ops.
+   * @param mode - Desired fit mode.
+   * @returns void. Recomputes scale / cropX / cropY / left / top
+   *   in-place and re-renders the canvas. Frame's `frameWidth` /
+   *   `frameHeight` custom props (set at first replacement) provide
+   *   the target dimensions so this stays consistent across resizes.
+   *
+   * @remarks
+   * Restoring a previously-stretched image to `cover` is lossless —
+   * the source pixels were never resampled, only the projection math
+   * changes. This means users can flip between modes freely.
+   */
+  setFrameFit(frame: fabric.FabricObject, mode: FrameFitMode): void {
+    if (!this.canvas) return;
+    if ((frame as any).customType !== 'photo-frame') return;
+    if (!(frame instanceof fabric.FabricImage)) return; // empty placeholders skip
+    const imgEl = (frame as any).getElement?.() as HTMLImageElement | undefined;
+    if (!imgEl) return;
+
+    const fw = (frame as any).frameWidth ?? frame.width ?? 100;
+    const fh = (frame as any).frameHeight ?? frame.height ?? 100;
+    const left = (frame as any).frameLeft ?? frame.left ?? 0;
+    const top = (frame as any).frameTop ?? frame.top ?? 0;
+    const angle = frame.angle ?? 0;
+
+    this.applyFrameFit(frame as fabric.FabricImage, imgEl, left, top, fw, fh, angle, mode);
+    (frame as any).fitMode = mode;
+    this.canvas.renderAll();
+  }
+
+  /**
+   * Compute and apply the (left, top, width, height, scaleX, scaleY,
+   * cropX, cropY) tuple for a given fit mode (PX-091).
+   *
+   * @param fabricImg - The `FabricImage` to mutate in place.
+   * @param imgEl - The native HTMLImageElement (for natural dimensions).
+   * @param frameLeft - Frame's drawn-bounds top-left X.
+   * @param frameTop - Frame's drawn-bounds top-left Y.
+   * @param fw - Frame's drawn-bounds width (post-scale).
+   * @param fh - Frame's drawn-bounds height (post-scale).
+   * @param angle - Frame's rotation in degrees.
+   * @param mode - Fit mode.
+   *
+   * @remarks
+   * **Cover** uses fabric's `cropX` / `cropY` to sample the
+   * appropriate sub-region of the source so the drawn rectangle
+   * exactly equals the frame's bounding box — no visual bleed past
+   * the frame, no separate `clipPath` needed.
+   *
+   * **Contain** keeps `cropX = cropY = 0` (full source) and shifts
+   * `left` / `top` so the letterboxed image is centered within the
+   * frame's unrotated bounding box. For rotated frames (e.g. polaroid
+   * scatter) this centers within the unrotated box and then rotates,
+   * which works for moderate angles.
+   *
+   * **Fill** sets non-uniform `scaleX` / `scaleY` to stretch the
+   * source to the frame's bounds.
+   */
+  private applyFrameFit(
+    fabricImg: fabric.FabricImage,
+    imgEl: HTMLImageElement,
+    frameLeft: number,
+    frameTop: number,
+    fw: number,
+    fh: number,
+    angle: number,
+    mode: FrameFitMode,
+  ): void {
+    const iw = imgEl.naturalWidth || imgEl.width;
+    const ih = imgEl.naturalHeight || imgEl.height;
+    if (!iw || !ih) return;
+
+    const common = {
+      angle,
+      originX: 'left' as const,
+      originY: 'top' as const,
+    };
+
+    if (mode === 'fill') {
+      fabricImg.set({
+        ...common,
+        left: frameLeft,
+        top: frameTop,
+        width: iw,
+        height: ih,
+        cropX: 0,
+        cropY: 0,
+        scaleX: fw / iw,
+        scaleY: fh / ih,
+      });
+      return;
+    }
+
+    if (mode === 'contain') {
+      const scale = Math.min(fw / iw, fh / ih);
+      fabricImg.set({
+        ...common,
+        left: frameLeft + (fw - iw * scale) / 2,
+        top: frameTop + (fh - ih * scale) / 2,
+        width: iw,
+        height: ih,
+        cropX: 0,
+        cropY: 0,
+        scaleX: scale,
+        scaleY: scale,
+      });
+      return;
+    }
+
+    // Cover (default).
+    const scale = Math.max(fw / iw, fh / ih);
+    const srcW = fw / scale;
+    const srcH = fh / scale;
+    fabricImg.set({
+      ...common,
+      left: frameLeft,
+      top: frameTop,
+      width: srcW,
+      height: srcH,
+      cropX: (iw - srcW) / 2,
+      cropY: (ih - srcH) / 2,
+      scaleX: scale,
+      scaleY: scale,
     });
   }
 
