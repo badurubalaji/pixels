@@ -37,7 +37,14 @@ export class HistoryService {
     const canvas = this.canvasService.getCanvas();
     if (!canvas) return;
 
-    const json = JSON.stringify(canvas.toJSON());
+    // PX-114 — use the same persistence allowlist as project save so
+    // custom props (customType, frameWidth, frameAngle, photoAngle,
+    // fitMode, framePanX/Y, frameZoom, frameShape, layerId, _locked)
+    // survive undo/redo. fabric 7's toJSON() ignores arguments and only
+    // returns standard props, so we'd otherwise restore frames with
+    // their `customType` stripped — they'd come back as plain images
+    // and the property panel / right-click menu wouldn't recognize them.
+    const json = this.canvasService.getCanvasJSON();
 
     // Don't push duplicate consecutive states
     if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === json) {

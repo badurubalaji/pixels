@@ -881,6 +881,9 @@ export class CanvasService {
     (frame as any).frameZoom = z;
 
     this.canvas.renderAll();
+    // PX-114 — slider-driven; do NOT commit here (would push N history
+    // states per drag). Property-panel calls commitFrameViewChange() on
+    // slider release.
   }
 
   /**
@@ -925,6 +928,8 @@ export class CanvasService {
       }
       (frame as any).frameShape = shape;
       this.canvas.renderAll();
+      // PX-114 — record so undo restores the prior shape.
+      this.commitChange(frame);
       return;
     }
 
@@ -945,6 +950,7 @@ export class CanvasService {
       this.canvas.insertAt(idx >= 0 ? idx : this.canvas.getObjects().length, replacement);
       this.canvas.setActiveObject(replacement);
       this.canvas.renderAll();
+      this.commitChange(replacement);
     }
   }
 
@@ -992,6 +998,8 @@ export class CanvasService {
       clip.angle = frameAngle;
     }
     this.canvas.renderAll();
+    // PX-114 — slider-driven; commitChange is fired by the property-panel
+    // on slider release rather than per-tick.
   }
 
   /**
@@ -1088,6 +1096,8 @@ export class CanvasService {
         this.applyFrameFit(frame as fabric.FabricImage, imgEl, newLeft, newTop, newW, newH, angle, mode);
       }
       this.canvas.renderAll();
+      // PX-114 — record the mutation so undo/redo captures aspect changes.
+      this.commitChange(frame);
       return;
     }
 
@@ -1106,6 +1116,7 @@ export class CanvasService {
       this.canvas.insertAt(idx >= 0 ? idx : this.canvas.getObjects().length, replacement);
       this.canvas.setActiveObject(replacement);
       this.canvas.renderAll();
+      this.commitChange(replacement);
     }
   }
 

@@ -160,6 +160,7 @@ interface ObjectProps {
                       matSliderThumb
                       [ngModel]="framePanX()"
                       (ngModelChange)="setFrameView('panX', $event)"
+                      (change)="commitFrameSlider()"
                       data-testid="frame-pan-x"
                     />
                   </mat-slider>
@@ -173,6 +174,7 @@ interface ObjectProps {
                       matSliderThumb
                       [ngModel]="framePanY()"
                       (ngModelChange)="setFrameView('panY', $event)"
+                      (change)="commitFrameSlider()"
                       data-testid="frame-pan-y"
                     />
                   </mat-slider>
@@ -186,6 +188,7 @@ interface ObjectProps {
                       matSliderThumb
                       [ngModel]="frameZoom()"
                       (ngModelChange)="setFrameView('zoom', $event)"
+                      (change)="commitFrameSlider()"
                       data-testid="frame-zoom"
                     />
                   </mat-slider>
@@ -275,6 +278,7 @@ interface ObjectProps {
                       matSliderThumb
                       [ngModel]="framePhotoAngle()"
                       (ngModelChange)="setFramePhotoAngle($event)"
+                      (change)="commitFrameSlider()"
                       data-testid="frame-photo-angle"
                     />
                   </mat-slider>
@@ -1121,6 +1125,13 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   /** PX-113 — set the canvas background color from a quick-swatch click. */
   setBackgroundColor(color: string): void {
     this.canvasService.setBackgroundMode('custom', color);
+  }
+
+  /** PX-114 — fire commitChange after a frame slider is released so undo/redo
+   *  captures a single state per gesture instead of one per slider tick. */
+  commitFrameSlider(): void {
+    const obj = this.canvasService.getCanvas()?.getActiveObject();
+    if (obj) this.canvasService.commitChange(obj);
   }
 
   readonly props = signal<ObjectProps | null>(null);
