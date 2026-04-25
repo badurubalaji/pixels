@@ -345,14 +345,29 @@ interface FilterPreset {
       }
     }
 
+    /* PX-117 — narrow panel; tighten button sizing so the icon + label fit
+       inside the stroked-button rectangle instead of overflowing right. */
     .toggle-row {
-      display: flex;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
       padding: 10px 14px;
 
       button {
-        flex: 1;
-        font-size: 0.78rem;
+        min-width: 0;
+        padding: 0 6px !important;
+        font-size: 0.68rem !important;
+        line-height: 1.1 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        mat-icon {
+          font-size: 16px !important;
+          width: 16px !important;
+          height: 16px !important;
+          margin-right: 2px !important;
+        }
 
         &.active {
           background: var(--mat-sys-primary-container);

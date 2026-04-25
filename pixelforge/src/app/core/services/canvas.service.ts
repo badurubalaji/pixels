@@ -2442,11 +2442,19 @@ export class CanvasService {
   }
 
   /**
-   * Generate a small thumbnail of the current canvas.
+   * Generate a thumbnail of the current canvas (PX-119 — sharper).
+   *
+   * @remarks
+   * Multiplier was 0.25 + PNG which produced ~200×150 thumbs that
+   * looked blurry on the /hub recent-projects grid (cards are ~280px
+   * wide; on 2× DPR screens that's a 2.8× upscale). Bumped to 0.6
+   * with WebP at quality 0.85 — gives ~480×360 for an 800×600 canvas,
+   * sharp at retina, and WebP compresses ~3× better than PNG so the
+   * stored bytes stay roughly the same as the old fuzzy version.
    */
   getThumbnail(): string {
     if (!this.canvas) return '';
-    return this.canvas.toDataURL({ format: 'png', quality: 0.6, multiplier: 0.25 });
+    return this.canvas.toDataURL({ format: 'webp', quality: 0.85, multiplier: 0.6 });
   }
 
   /**

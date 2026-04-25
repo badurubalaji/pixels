@@ -642,6 +642,42 @@ interface ObjectProps {
               <mat-icon>workspaces</mat-icon> Ungroup
             </button>
           </div>
+
+          <!-- PX-116 — page background reachable even with a selection.
+               Collapsed by default so it doesn't dominate the panel; users
+               who want to recolor the page can click outside any object or
+               just expand this section. -->
+          <mat-expansion-panel class="bg-expansion">
+            <mat-expansion-panel-header>
+              <mat-panel-title>Page background</mat-panel-title>
+            </mat-expansion-panel-header>
+            <app-background-panel />
+            <div class="bg-quick-swatches">
+              <span class="bg-quick-label">Quick colors</span>
+              <div class="bg-swatch-row">
+                @for (c of bgQuickSwatches; track c) {
+                  <button
+                    type="button"
+                    class="bg-swatch"
+                    [style.background]="c"
+                    [class.active]="canvasService.backgroundColor() === c"
+                    (click)="setBackgroundColor(c)"
+                  ></button>
+                }
+              </div>
+            </div>
+            <div class="bg-opacity-row">
+              <span class="bg-opacity-label">Transparency</span>
+              <mat-slider min="0" max="1" step="0.05" class="flex-slider">
+                <input
+                  matSliderThumb
+                  [ngModel]="canvasService.backgroundOpacity()"
+                  (ngModelChange)="setBackgroundOpacity($event)"
+                />
+              </mat-slider>
+              <span class="bg-opacity-value">{{ (canvasService.backgroundOpacity() * 100).toFixed(0) }}%</span>
+            </div>
+          </mat-expansion-panel>
         </div>
       } @else {
         <!-- PX-113 — when nothing on the canvas is selected, treat the
