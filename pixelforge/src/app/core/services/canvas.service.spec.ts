@@ -140,6 +140,7 @@ vi.mock('fabric', () => {
     getElement() { return document.createElement('canvas'); }
     toDataURL() { return 'data:image/png;base64,BBB'; }
     toJSON() { return { version: '7.0', objects: this._objects.map(() => ({})) }; }
+    toObject(_props?: string[]) { return { version: '7.0', objects: this._objects.map(() => ({})) }; }
     async loadFromJSON(_json: any) { /* noop */ return this; }
     bringObjectToFront(_o: FabricObject) {}
     sendObjectToBack(_o: FabricObject) {}

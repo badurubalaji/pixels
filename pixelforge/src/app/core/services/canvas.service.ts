@@ -2200,7 +2200,11 @@ export class CanvasService {
       '_locked',
       '_isGuideline',
     ];
-    return JSON.stringify(this.canvas.toJSON(PERSISTED_CUSTOM_PROPS));
+    // Fabric 7's TS types declare `toJSON(): any` with no args, but its
+    // runtime delegates to `toObject(propertiesToInclude)`. Use `toObject`
+    // directly so the type-check passes and the persistence allowlist
+    // (PX-101) keeps working.
+    return JSON.stringify(this.canvas.toObject(PERSISTED_CUSTOM_PROPS));
   }
 
   /**
