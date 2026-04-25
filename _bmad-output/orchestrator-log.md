@@ -787,4 +787,32 @@ Both shipped together as PX-098. The story-id collision with the queued sprint-1
 - **PX-077** — Manual e2e smoke (still your call).
 - **PX-074** — Email change (held).
 
+## 2026-04-25T12:48:00Z · Sprint-16 close — retrospective
+
+Wide sprint — three concrete features + a critical persistence fix + a deferred design spec, plus two user-flagged items mid-sprint that re-shaped the work.
+
+| Commit | Story | Scope |
+|---|---|---|
+| `92db612` | PX-099 + PX-100 + PX-101 + PX-096 spec | Shift+drag pan inside cover-mode frames; right-click "Replace photo" + "Reset crop & zoom" in context menu; photo-frame state survives save/reload via custom-prop persistence allowlist + load-time recovery heuristic for legacy frames; deferred PX-096 spec story file. |
+| *(this commit)* | chore | Graphify refresh + retro |
+
+**The persistence fix (PX-101) was the urgent one.** User flagged: *"in frames I added photos, at the time of adding photo, the app was reloaded, now I lost the photos and unable to photos again."* Two-fix:
+
+1. **`getCanvasJSON` was calling fabric's `toJSON()` with no `propertiesToInclude` argument.** Fabric's serializer drops every `(obj as any).foo` we attach by default. Every photo-frame across PX-090/091/094 lost its `customType` flag on round-trip — click-to-fill stopped working, the property-panel branch never lit up, the right-click menu didn't surface frame actions. Fixed by passing an explicit allowlist: `customType`, `layerId`, `frameWidth`, `frameHeight`, `fitMode`, `framePanX`, `framePanY`, `frameZoom`, `_locked`, `_isGuideline`. Documented as a service-layer convention — every new custom prop on a fabric object must be added to this list.
+
+2. **For projects saved BEFORE the fix**, the JSON already lacks the flags. Heuristic recovery in `loadFromJSON`: walk the loaded objects, find `Group`s with exactly two children where one is a `Rect` with a non-empty `strokeDashArray` and the other is a `Textbox` with text `"+"` — that's a photo-frame placeholder structurally. Re-flag with `customType: 'photo-frame'`. Filled `FabricImage` frames that lost the flag can't be reliably recovered (they look like normal cropped images); user has to delete + re-add those.
+
+**PX-100 (right-click Replace) was the smallest add** — context-menu's `getContextItems` already adapted by selection type. Added a `frameItems` array that gets prepended when `customType === 'photo-frame'` is the active object. Two items: Replace photo (dispatches the same `pf:request-frame-replace` CustomEvent the property-panel button uses) and Reset crop & zoom (calls `setFrameView(0, 0, 1)` directly; disabled in non-cover modes).
+
+**PX-099 (Shift+drag pan) is a power-user shortcut.** Holding Shift while dragging a cover-mode frame engages a pan gesture instead of fabric's normal drag-to-move. Direction follows "pull the photo" semantics (drag right shows more of the source's left edge). Math accounts for the current zoom — a single canvas pixel maps to fewer source pixels at higher zooms, so the same gesture produces a smaller pan delta. Without Shift the frame moves normally; without cover mode the pan is no-op. Three independent paths to pan a photo now: precision sliders, direct drag, replace+re-import.
+
+**PX-096 deferred properly.** Wrote the full BMAD story file with architecture decision (Group + clipPath restructure), math for nested transforms, ACs, task list, file-list contract. Documented WHY it's deferred (high-blast-radius across every photo-frame method; PX-101 needed to land first since the new `photoAngle` will go through the same serializer). When you flag it as needed, the spec is ready to execute.
+
+**PX-077 re-ran clean.** Same 11-step API smoke, all green. Confirms backend stack is unaffected by all the editor-side work.
+
+**Sprint-17 candidates**
+- **PX-096** — Independent in-frame photo rotation. Now unblocked; PX-101's serializer allowlist will accept the new `photoAngle` prop. Story file is ready.
+- **PX-077 manual** — Browser-driven e2e smoke (still genuinely needs you driving).
+- **PX-074** — Email change (held on transactional-email service choice — I'll surface a compact 4-option recommendation matrix next turn so you can pick in one read).
+
 
