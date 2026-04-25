@@ -37,6 +37,8 @@ export class CanvasService {
   private readonly _zoom = signal(1);
   private readonly _backgroundMode = signal<BackgroundMode>('white');
   private readonly _backgroundColor = signal('#ffffff');
+  /** PX-115 — alpha 0..1 applied to `_backgroundColor` for the rendered canvas. */
+  private readonly _backgroundOpacity = signal<number>(1);
   private readonly _isPanning = signal(false);
   private readonly _showGrid = signal(false);
   private readonly _snapToGrid = signal(false);
@@ -71,6 +73,8 @@ export class CanvasService {
   readonly zoom = this._zoom.asReadonly();
   readonly backgroundMode = this._backgroundMode.asReadonly();
   readonly backgroundColor = this._backgroundColor.asReadonly();
+  /** PX-115 — exposed read-only so the property panel can drive an opacity slider. */
+  readonly backgroundOpacity = this._backgroundOpacity.asReadonly();
 
   readonly activeLayer = computed(() => {
     const id = this._activeLayerId();
@@ -1798,20 +1802,76 @@ export class CanvasService {
     switch (mode) {
       case 'white':
         this._backgroundColor.set('#ffffff');
+        this._backgroundOpacity.set(1);
         this.canvas.backgroundColor = '#ffffff';
         break;
       case 'transparent':
         this._backgroundColor.set('');
+        this._backgroundOpacity.set(0);
         this.canvas.backgroundColor = '' as any;
         break;
       case 'custom':
         const c = color ?? '#ffffff';
         this._backgroundColor.set(c);
-        this.canvas.backgroundColor = c;
+        // PX-115 — re-apply current opacity through the new base color.
+        this.applyBackgroundColorWithOpacity(c, this._backgroundOpacity());
         break;
     }
 
     this.canvas.renderAll();
+  }
+
+  /**
+   * Set the canvas background opacity for solid-color backgrounds (PX-115).
+   *
+   * @param alpha - `0..1`, where `0` is fully transparent (checkerboard
+   *   shows through) and `1` is fully opaque.
+   *
+   * @remarks
+   * Only meaningful in `'custom'` mode. In `'white'` mode the canvas is
+   * always opaque white; `'transparent'` mode is alpha=0 by definition.
+   * Composes the current `_backgroundColor` hex with the alpha into an
+   * rgba string so we don't lose the underlying hue when the user toggles
+   * opacity to 0 and back.
+   */
+  setBackgroundOpacity(alpha: number): void {
+    if (!this.canvas) return;
+    const a = Math.max(0, Math.min(1, alpha));
+    this._backgroundOpacity.set(a);
+
+    const hex = this._backgroundColor() || '#ffffff';
+    this.applyBackgroundColorWithOpacity(hex, a);
+    this.canvas.renderAll();
+  }
+
+  /** PX-115 — internal: render `hex` at `alpha` as the canvas background. */
+  private applyBackgroundColorWithOpacity(hex: string, alpha: number): void {
+    if (!this.canvas) return;
+    if (!hex || alpha <= 0) {
+      this.canvas.backgroundColor = '' as any;
+      return;
+    }
+    if (alpha >= 1) {
+      this.canvas.backgroundColor = hex;
+      return;
+    }
+    const m = /^#([0-9a-f]{6})$/i.exec(hex) || /^#([0-9a-f]{3})$/i.exec(hex);
+    if (!m) {
+      this.canvas.backgroundColor = hex;
+      return;
+    }
+    let r: number, g: number, b: number;
+    const h = m[1];
+    if (h.length === 3) {
+      r = parseInt(h[0] + h[0], 16);
+      g = parseInt(h[1] + h[1], 16);
+      b = parseInt(h[2] + h[2], 16);
+    } else {
+      r = parseInt(h.slice(0, 2), 16);
+      g = parseInt(h.slice(2, 4), 16);
+      b = parseInt(h.slice(4, 6), 16);
+    }
+    this.canvas.backgroundColor = `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   // ============================

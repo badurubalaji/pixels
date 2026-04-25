@@ -673,6 +673,20 @@ interface ObjectProps {
             </div>
           </div>
 
+          <!-- PX-115 — opacity slider for solid-color backgrounds. -->
+          <div class="bg-opacity-row">
+            <span class="bg-opacity-label">Transparency</span>
+            <mat-slider min="0" max="1" step="0.05" class="flex-slider">
+              <input
+                matSliderThumb
+                [ngModel]="canvasService.backgroundOpacity()"
+                (ngModelChange)="setBackgroundOpacity($event)"
+                data-testid="bg-opacity"
+              />
+            </mat-slider>
+            <span class="bg-opacity-value">{{ (canvasService.backgroundOpacity() * 100).toFixed(0) }}%</span>
+          </div>
+
           <p class="bg-hint">Tip: click any object on the canvas to edit it instead.</p>
         </div>
       }
@@ -1111,6 +1125,27 @@ interface ObjectProps {
       opacity: 0.6;
       margin: 0;
     }
+    .bg-opacity-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+    .bg-opacity-label {
+      font-size: 0.72rem;
+      color: var(--px-ink-soft, #334155);
+      flex-shrink: 0;
+      min-width: 78px;
+    }
+    .bg-opacity-row .flex-slider {
+      flex: 1;
+    }
+    .bg-opacity-value {
+      font-size: 0.72rem;
+      color: var(--px-ink-soft, #334155);
+      min-width: 38px;
+      text-align: right;
+    }
   `],
 })
 export class PropertyPanelComponent implements OnInit, OnDestroy {
@@ -1132,6 +1167,11 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   commitFrameSlider(): void {
     const obj = this.canvasService.getCanvas()?.getActiveObject();
     if (obj) this.canvasService.commitChange(obj);
+  }
+
+  /** PX-115 — drive the canvas-background opacity slider in the empty state. */
+  setBackgroundOpacity(alpha: number): void {
+    this.canvasService.setBackgroundOpacity(alpha);
   }
 
   readonly props = signal<ObjectProps | null>(null);
