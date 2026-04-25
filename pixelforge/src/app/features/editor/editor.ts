@@ -1249,6 +1249,147 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PX-072 — editor topbar consistency overrides
+       Final selector wins. Brings the editor's chrome into the same
+       light/violet palette used by /auth /hub /gallery /profile
+       /dashboard. Body (canvas, sidebar, panels) untouched.
+       ═══════════════════════════════════════════════════════════════ */
+
+    .editor-topbar {
+      height: 60px;
+      padding: 0 18px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: saturate(1.4) blur(10px);
+      border-bottom: 1px solid var(--px-line, #e2e8f0);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    .home-btn {
+      color: var(--px-ink-soft, #334155);
+    }
+    .home-btn:hover {
+      color: var(--px-violet, #7c3aed);
+      background: rgba(124, 58, 237, 0.08);
+    }
+
+    .file-btn {
+      color: var(--px-ink, #0f172a) !important;
+      font-weight: 500;
+    }
+    .file-btn:hover {
+      background: rgba(124, 58, 237, 0.08) !important;
+      color: var(--px-violet, #7c3aed) !important;
+    }
+    .file-btn mat-icon { color: inherit; }
+
+    /* Slate divider (replaces #27272a) */
+    .topbar-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--px-line, #e2e8f0);
+      margin: 0 4px;
+      border: none;
+    }
+
+    /* Project info block */
+    .project-info {
+      border-left: 1px solid var(--px-line, #e2e8f0);
+    }
+    .project-info .project-name {
+      color: var(--px-ink, #0f172a);
+    }
+    .project-info .project-name:hover {
+      background: rgba(124, 58, 237, 0.08);
+      color: var(--px-violet, #7c3aed);
+    }
+    .project-info .project-name .edit-icon {
+      color: var(--px-muted, #64748b);
+    }
+    .project-info .project-size {
+      color: var(--px-muted, #64748b);
+    }
+    .project-info .project-size:hover {
+      color: var(--px-violet, #7c3aed);
+    }
+    .name-input {
+      color: var(--px-ink, #0f172a);
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-violet, #7c3aed);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    /* Center-zone icon buttons */
+    .topbar-center button.mat-mdc-icon-button,
+    .topbar-right button.mat-mdc-icon-button {
+      color: var(--px-ink-soft, #334155);
+    }
+    .topbar-center button.mat-mdc-icon-button:not(:disabled):hover,
+    .topbar-right button.mat-mdc-icon-button:not(:disabled):hover {
+      background: rgba(124, 58, 237, 0.08);
+      color: var(--px-violet, #7c3aed);
+    }
+    .topbar-center button.mat-mdc-icon-button:disabled,
+    .topbar-right button.mat-mdc-icon-button:disabled {
+      color: rgba(15, 23, 42, 0.25);
+    }
+
+    .active-toggle {
+      color: var(--px-violet, #7c3aed) !important;
+      background: rgba(124, 58, 237, 0.12) !important;
+    }
+
+    /* Save CTA — gradient primary like /hub's "Create design" */
+    .save-btn {
+      height: 40px !important;
+      padding: 0 18px !important;
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
+      color: #ffffff !important;
+      border: none !important;
+      border-radius: 10px !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.005em;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+      transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+    }
+    .save-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(124, 58, 237, 0.36);
+      filter: brightness(1.05);
+    }
+    .save-btn .mdc-button__label,
+    .save-btn .save-label {
+      color: #ffffff !important;
+    }
+    .save-btn mat-icon { color: #ffffff !important; }
+    .save-btn.saving {
+      filter: brightness(0.95);
+    }
+    .save-btn.saved {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+    }
+
+    /* Quality badge — keep semantic colors but soften surface */
+    .quality-badge {
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    /* Drop the dark default text color on any leftover topbar children */
+    .editor-topbar, .editor-topbar * {
+      color: inherit;
+    }
+    .editor-topbar { color: var(--px-ink, #0f172a); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .save-btn, .file-btn, .home-btn { transition: none !important; }
+      .save-btn:not(:disabled):hover { transform: none !important; }
+    }
   `],
 })
 export class Editor implements AfterViewInit, OnDestroy {
