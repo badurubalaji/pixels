@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { getPlatformPreset, type PlatformType } from '../constants/platform-presets';
 import type { Template } from '../models/template.model';
@@ -236,6 +236,43 @@ export class ApiService {
     }
 
     return this.http.post<ApiAsset>(url, formData);
+  }
+
+  /**
+   * Upload a data-URL image as an asset (PX-112).
+   *
+   * @param dataUrl - A `data:image/...;base64,...` string from FileReader,
+   *   clipboard paste, drag-drop, or canvas snapshot.
+   * @param filename - Suggested filename (used for the upload metadata).
+   * @param projectId - Optional project scope.
+   * @returns Observable emitting the absolute URL of the persisted asset.
+   *
+   * @remarks
+   * Converts the data URL → Blob → File and routes through `uploadAsset`
+   * so the caller can keep its data-URL-based code path while the actual
+   * payload lives on disk. Crucial for canvas persistence: inlining base64
+   * photos in `canvas_json` blew past MongoDB's 16MB BSON document limit
+   * once a project had a couple of high-res frame photos.
+   */
+  uploadDataUrl(dataUrl: string, filename = 'image.png', projectId?: string): Observable<string> {
+    // data:image/png;base64,iVBORw0KGgo...
+    const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+    if (!m) {
+      return new Observable(s => {
+        s.error(new Error('Not a base64 data URL'));
+      });
+    }
+    const mime = m[1];
+    const binary = atob(m[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
+    const ext = mime.split('/')[1]?.split('+')[0] ?? 'png';
+    const finalName = filename.includes('.') ? filename : `${filename}.${ext}`;
+    const file = new File([blob], finalName, { type: mime });
+    return this.uploadAsset(file, projectId).pipe(
+      map(asset => `${this.baseUrl}${asset.url}`),
+    );
   }
 
   /**

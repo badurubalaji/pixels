@@ -17,6 +17,7 @@ import { ClipboardService } from '../../../core/services/clipboard.service';
 import { BrandKitService } from '../../../core/services/brand-kit.service';
 import { MagicWriteService, TRANSFORMATIONS, Transformation } from '../../../core/services/magic-write.service';
 import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../core/services/animation.service';
+import { ApiService } from '../../../core/services/api.service';
 import * as fabric from 'fabric';
 
 type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
@@ -609,6 +610,7 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   private readonly brandKit = inject(BrandKitService);
   private readonly magicWrite = inject(MagicWriteService);
   private readonly animationService = inject(AnimationService);
+  private readonly apiService = inject(ApiService);
   readonly transformations = TRANSFORMATIONS;
   readonly animationPresets = ANIMATION_PRESETS;
 
@@ -1106,36 +1108,39 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     const obj = canvas?.getActiveObject();
     if (!obj || !(obj instanceof fabric.FabricImage)) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imgEl = new Image();
-      imgEl.crossOrigin = 'anonymous';
-      imgEl.onload = () => {
-        const oldProps = {
-          left: obj.left, top: obj.top,
-          angle: obj.angle, opacity: obj.opacity,
-          flipX: obj.flipX, flipY: obj.flipY,
-          originX: obj.originX, originY: obj.originY,
-          filters: obj.filters,
+    // PX-112 — upload first, then load via URL so canvas_json stays small.
+    this.apiService.uploadAsset(file).subscribe({
+      next: asset => {
+        const url = this.apiService.getAssetUrl(asset.id);
+        const imgEl = new Image();
+        imgEl.crossOrigin = 'anonymous';
+        imgEl.onload = () => {
+          const oldProps = {
+            left: obj.left, top: obj.top,
+            angle: obj.angle, opacity: obj.opacity,
+            flipX: obj.flipX, flipY: obj.flipY,
+            originX: obj.originX, originY: obj.originY,
+            filters: obj.filters,
+          };
+
+          const newImg = new fabric.FabricImage(imgEl);
+          const oldWidth = (obj.width ?? 1) * (obj.scaleX ?? 1);
+          const oldHeight = (obj.height ?? 1) * (obj.scaleY ?? 1);
+          const newScaleX = oldWidth / (newImg.width ?? 1);
+          const newScaleY = oldHeight / (newImg.height ?? 1);
+
+          newImg.set({ ...oldProps, scaleX: newScaleX, scaleY: newScaleY } as any);
+          (newImg as any).layerId = (obj as any).layerId;
+
+          canvas!.remove(obj);
+          canvas!.add(newImg);
+          canvas!.setActiveObject(newImg);
+          this.canvasService.commitChange(obj);
         };
-
-        const newImg = new fabric.FabricImage(imgEl);
-        const oldWidth = (obj.width ?? 1) * (obj.scaleX ?? 1);
-        const oldHeight = (obj.height ?? 1) * (obj.scaleY ?? 1);
-        const newScaleX = oldWidth / (newImg.width ?? 1);
-        const newScaleY = oldHeight / (newImg.height ?? 1);
-
-        newImg.set({ ...oldProps, scaleX: newScaleX, scaleY: newScaleY } as any);
-        (newImg as any).layerId = (obj as any).layerId;
-
-        canvas!.remove(obj);
-        canvas!.add(newImg);
-        canvas!.setActiveObject(newImg);
-        this.canvasService.commitChange(obj);
-      };
-      imgEl.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+        imgEl.src = url;
+      },
+      error: () => {/* surface a snackbar via host snackBar — but text-toolbar does not own one */},
+    });
   }
 
   applyFilterPreset(preset: any): void {

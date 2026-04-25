@@ -165,6 +165,12 @@ function makeCanvasStub() {
 function makeApiStub() {
   return {
     publishTemplate: vi.fn(() => of({ id: 't1' })),
+    uploadAsset: vi.fn(() => of({
+      id: 'a1', filename: 'x.png', content_type: 'image/png',
+      size: 1, project_id: null, created_at: new Date().toISOString(),
+      url: '/api/assets/a1',
+    })),
+    getAssetUrl: vi.fn((id: string) => `http://localhost/api/assets/${id}`),
   };
 }
 

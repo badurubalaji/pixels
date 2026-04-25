@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { CanvasService } from '../../../core/services/canvas.service';
+import { ApiService } from '../../../core/services/api.service';
 import * as fabric from 'fabric';
 
 interface FilterPreset {
@@ -363,6 +364,7 @@ interface FilterPreset {
 })
 export class ImageFiltersPanelComponent implements OnInit, OnDestroy {
   readonly canvasService = inject(CanvasService);
+  private readonly apiService = inject(ApiService);
   @ViewChild('replaceInput') replaceInputRef!: ElementRef<HTMLInputElement>;
 
   readonly isImageSelected = signal(false);
@@ -591,49 +593,50 @@ export class ImageFiltersPanelComponent implements OnInit, OnDestroy {
     const obj = canvas?.getActiveObject();
     if (!obj || !(obj instanceof fabric.FabricImage)) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imgEl = new Image();
-      imgEl.crossOrigin = 'anonymous';
-      imgEl.onload = () => {
-        const oldProps = {
-          left: obj.left,
-          top: obj.top,
-          scaleX: obj.scaleX,
-          scaleY: obj.scaleY,
-          angle: obj.angle,
-          opacity: obj.opacity,
-          flipX: obj.flipX,
-          flipY: obj.flipY,
-          clipPath: obj.clipPath,
-          originX: obj.originX,
-          originY: obj.originY,
-          filters: obj.filters,
+    // PX-112 — upload to asset store first; canvas_json holds URL not base64.
+    this.apiService.uploadAsset(file).subscribe({
+      next: asset => {
+        const url = this.apiService.getAssetUrl(asset.id);
+        const imgEl = new Image();
+        imgEl.crossOrigin = 'anonymous';
+        imgEl.onload = () => {
+          const oldProps = {
+            left: obj.left,
+            top: obj.top,
+            scaleX: obj.scaleX,
+            scaleY: obj.scaleY,
+            angle: obj.angle,
+            opacity: obj.opacity,
+            flipX: obj.flipX,
+            flipY: obj.flipY,
+            clipPath: obj.clipPath,
+            originX: obj.originX,
+            originY: obj.originY,
+            filters: obj.filters,
+          };
+
+          const newImg = new fabric.FabricImage(imgEl);
+          const oldWidth = (obj.width ?? 1) * (obj.scaleX ?? 1);
+          const oldHeight = (obj.height ?? 1) * (obj.scaleY ?? 1);
+          const newScaleX = oldWidth / (newImg.width ?? 1);
+          const newScaleY = oldHeight / (newImg.height ?? 1);
+
+          newImg.set({
+            ...oldProps,
+            scaleX: newScaleX,
+            scaleY: newScaleY,
+          } as any);
+          (newImg as any).layerId = (obj as any).layerId;
+
+          canvas!.remove(obj);
+          canvas!.add(newImg);
+          canvas!.setActiveObject(newImg);
+          this.canvasService.commitChange(obj);
         };
-
-        const newImg = new fabric.FabricImage(imgEl);
-        // Scale new image to match old dimensions
-        const oldWidth = (obj.width ?? 1) * (obj.scaleX ?? 1);
-        const oldHeight = (obj.height ?? 1) * (obj.scaleY ?? 1);
-        const newScaleX = oldWidth / (newImg.width ?? 1);
-        const newScaleY = oldHeight / (newImg.height ?? 1);
-
-        newImg.set({
-          ...oldProps,
-          scaleX: newScaleX,
-          scaleY: newScaleY,
-        } as any);
-
-        (newImg as any).layerId = (obj as any).layerId;
-
-        canvas!.remove(obj);
-        canvas!.add(newImg);
-        canvas!.setActiveObject(newImg);
-        this.canvasService.commitChange(obj);
-      };
-      imgEl.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+        imgEl.src = url;
+      },
+      error: () => {/* swallow — host snackbar wiring not available here */},
+    });
   }
 
   resetFilters(): void {

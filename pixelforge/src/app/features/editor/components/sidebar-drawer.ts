@@ -18,6 +18,7 @@ import { BRAND_PALETTES } from '../../../core/models/color-palettes';
 import { CanvasService, BackgroundMode } from '../../../core/services/canvas.service';
 import { BackgroundRemovalService } from '../../../core/services/background-removal.service';
 import { ProjectService } from '../../../core/services/project.service';
+import { ApiService } from '../../../core/services/api.service';
 import { STOCK_ICONS, ICON_CATEGORIES } from '../../../core/data/stock-icons';
 import { AiBackgroundService } from '../../../core/services/ai-background.service';
 import { BrandKitService, BrandLogo } from '../../../core/services/brand-kit.service';
@@ -2458,6 +2459,7 @@ export class SidebarDrawerComponent {
   readonly lastAiImage = signal<string | null>(null);
 
   private readonly projectService = inject(ProjectService);
+  private readonly apiService = inject(ApiService);
   readonly uploadedImages = this.projectService.uploadedImages;
 
   readonly activeTab = signal<SidebarTab>(null);
@@ -2932,12 +2934,16 @@ export class SidebarDrawerComponent {
         };
         reader.readAsText(file);
       } else {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const dataUrl = e.target?.result as string;
-          this.projectService.addUploadedImage(file.name, dataUrl);
-        };
-        reader.readAsDataURL(file);
+        // PX-112 — upload to asset store, then keep the asset URL in
+        // uploadedImages instead of inline base64. Drag-to-canvas later
+        // uses the URL directly so canvas_json stays small.
+        const projectId = this.projectService.currentProject()?.id;
+        this.apiService.uploadAsset(file, projectId).subscribe({
+          next: asset => {
+            this.projectService.addUploadedImage(file.name, this.apiService.getAssetUrl(asset.id));
+          },
+          error: () => {/* swallow — keep batch going */},
+        });
       }
     }
 

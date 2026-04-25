@@ -2288,21 +2288,24 @@ export class Editor implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const target = this.framePendingFill;
-      this.framePendingFill = null;
-      if (!target) return;
-      void this.canvasService.replaceFrameWithImage(target, dataUrl);
-    };
-    reader.onerror = () => {
-      this.framePendingFill = null;
-      this.snackBar.open('Could not read that photo.', 'Dismiss', {
-        duration: 3000,
-      });
-    };
-    reader.readAsDataURL(file);
+    // PX-112 — upload to GridFS-backed asset store first, THEN load via
+    // URL. Inlining base64 photos in canvas_json blew past MongoDB's 16MB
+    // BSON document limit and silently failed every save.
+    const target = this.framePendingFill;
+    this.framePendingFill = null;
+    if (!target) return;
+    const projectId = this.projectService.currentProject()?.id;
+    this.apiService.uploadAsset(file, projectId).subscribe({
+      next: asset => {
+        const url = `${this.apiService.getAssetUrl(asset.id)}`;
+        void this.canvasService.replaceFrameWithImage(target, url);
+      },
+      error: () => {
+        this.snackBar.open('Could not upload that photo.', 'Dismiss', {
+          duration: 3000,
+        });
+      },
+    });
   }
 
   /**
@@ -2725,11 +2728,13 @@ export class Editor implements AfterViewInit, OnDestroy {
       };
       reader.readAsText(file);
     } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.canvasService.addImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      // PX-112 — route through the asset upload endpoint so the canvas JSON
+      // holds a URL instead of inline base64 (MongoDB 16MB doc limit).
+      const projectId = this.projectService.currentProject()?.id;
+      this.apiService.uploadAsset(file, projectId).subscribe({
+        next: asset => this.canvasService.addImage(this.apiService.getAssetUrl(asset.id)),
+        error: () => this.snackBar.open('Could not upload that image.', 'Dismiss', { duration: 3000 }),
+      });
     }
   }
 
