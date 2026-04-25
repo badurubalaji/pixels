@@ -1822,7 +1822,9 @@ export class Editor implements AfterViewInit, OnDestroy {
             isFrame &&
             ((target as any).fitMode === 'cover' || !(target as any).fitMode);
           if (isShift && isFrame && inCover && opt.e) {
-            const ptr = fabricCanvas.getPointer(opt.e as Event);
+            // fabric 7 dropped `getPointer` from its TS types; `getScenePoint`
+            // is the canvas-coord replacement (same return shape).
+            const ptr = fabricCanvas.getScenePoint(opt.e as any);
             panState = { frame: target!, lastX: ptr.x, lastY: ptr.y };
             target!.set({ lockMovementX: true, lockMovementY: true });
           }
@@ -1844,7 +1846,7 @@ export class Editor implements AfterViewInit, OnDestroy {
       fabricCanvas.on('mouse:move', (opt: { e?: Event }) => {
         if (!panState) return;
         if (!opt.e) return;
-        const ptr = fabricCanvas.getPointer(opt.e as Event);
+        const ptr = fabricCanvas.getScenePoint(opt.e as any);
         const dx = ptr.x - panState.lastX;
         const dy = ptr.y - panState.lastY;
         panState.lastX = ptr.x;
