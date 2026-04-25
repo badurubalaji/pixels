@@ -192,23 +192,44 @@ interface ObjectProps {
               }
 
               <!-- PX-108 — Canva-style aspect-ratio chips. Resize the slot
-                   to a target ratio; "Freeform" leaves the current dims. -->
+                   to a target ratio; "Freeform" leaves the current dims.
+                   PX-109: "Original" maps to the photo's natural aspect
+                   and is hidden for empty placeholders (no photo yet). -->
               <div class="frame-shape-row">
                 <span class="frame-shape-label">Aspect</span>
                 <div class="frame-aspect-chips" data-testid="frame-aspect-chips">
                   @for (a of frameAspectOptions; track a.id) {
-                    <button
-                      type="button"
-                      class="frame-aspect-chip"
-                      [class.active]="frameAspect() === a.id"
-                      [attr.data-aspect]="a.id"
-                      (click)="setFrameAspect(a.id)"
-                    >
-                      {{ a.label }}
-                    </button>
+                    @if (a.id !== 'original' || !isEmptyPhotoFrame()) {
+                      <button
+                        type="button"
+                        class="frame-aspect-chip"
+                        [class.active]="frameAspect() === a.id"
+                        [attr.data-aspect]="a.id"
+                        (click)="setFrameAspect(a.id)"
+                      >
+                        {{ a.label }}
+                      </button>
+                    }
                   }
                 </div>
               </div>
+
+              <!-- PX-109 — Smart Crop button. Auto-fits the slot to the
+                   photo's natural aspect, cover mode, zero pan/zoom.
+                   Hidden for empty placeholders since they have no photo
+                   to fit to. -->
+              @if (!isEmptyPhotoFrame()) {
+                <button
+                  mat-flat-button
+                  class="frame-smart-crop-btn"
+                  data-testid="frame-smart-crop"
+                  matTooltip="Auto-fit photo to its natural aspect"
+                  (click)="smartCrop()"
+                >
+                  <mat-icon>auto_awesome</mat-icon>
+                  Smart Crop
+                </button>
+              }
 
               <!-- PX-103 — switch the frame's clip shape after creation. -->
               <div class="frame-shape-row">
@@ -989,6 +1010,16 @@ interface ObjectProps {
       border-color: transparent;
       color: #ffffff;
     }
+
+    /* PX-109 — Smart Crop primary action */
+    .frame-smart-crop-btn {
+      width: 100%;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+      color: #ffffff !important;
+      border-radius: 10px !important;
+      font-weight: 600 !important;
+    }
   `],
 })
 export class PropertyPanelComponent implements OnInit, OnDestroy {
@@ -1022,11 +1053,15 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     { id: 'heart' as const, label: 'Heart', icon: 'favorite' },
   ];
 
-  /** PX-108: which aspect-ratio chip is "active" — purely a UI state hint. */
-  readonly frameAspect = signal<'free' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16'>('free');
-  /** PX-108: aspect-ratio chips. `ratio` is width / height. */
+  /** PX-108 / PX-109: which aspect-ratio chip is "active" — purely a UI hint. */
+  readonly frameAspect = signal<
+    'free' | 'original' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16'
+  >('free');
+  /** PX-108: aspect-ratio chips. `ratio` is width / height; `original` and
+   *  `free` are sentinel values resolved at click time. */
   readonly frameAspectOptions = [
     { id: 'free' as const, label: 'Freeform', ratio: null },
+    { id: 'original' as const, label: 'Original', ratio: 'photo' as const },
     { id: '1:1' as const, label: '1:1', ratio: 1 },
     { id: '4:3' as const, label: '4:3', ratio: 4 / 3 },
     { id: '16:9' as const, label: '16:9', ratio: 16 / 9 },
@@ -1691,21 +1726,72 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
    * resizes the slot keeping the geometric center fixed and refits
    * the photo to the new bounds.
    */
-  setFrameAspect(id: 'free' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16'): void {
+  setFrameAspect(
+    id: 'free' | 'original' | '1:1' | '4:3' | '16:9' | '3:4' | '9:16',
+  ): void {
     const canvas = this.canvasService.getCanvas();
     const obj = canvas?.getActiveObject();
     if (!obj || (obj as any).customType !== 'photo-frame') return;
     this.frameAspect.set(id);
     if (id === 'free') return;
-    const opt = this.frameAspectOptions.find(o => o.id === id);
-    if (!opt || opt.ratio == null) return;
-    this.canvasService.setFrameAspectRatio(obj, opt.ratio);
+
+    // PX-109: 'original' resolves to the photo's natural aspect.
+    // Only valid for filled FabricImage frames.
+    let ratio: number | null = null;
+    if (id === 'original') {
+      if (!(obj instanceof fabric.FabricImage)) return;
+      const el = (obj as any).getElement?.() as HTMLImageElement | undefined;
+      const iw = el?.naturalWidth || el?.width || 0;
+      const ih = el?.naturalHeight || el?.height || 0;
+      if (!iw || !ih) return;
+      ratio = iw / ih;
+    } else {
+      const opt = this.frameAspectOptions.find(o => o.id === id);
+      if (!opt || typeof opt.ratio !== 'number') return;
+      ratio = opt.ratio;
+    }
+    if (ratio == null) return;
+
+    this.canvasService.setFrameAspectRatio(obj, ratio);
     // Empty placeholders rebuild as a new Group — re-sync local frame
     // state from the new active object so other controls stay correct.
     const newActive = canvas?.getActiveObject();
     if (newActive) {
       this.frameShape.set((newActive as any).frameShape ?? this.frameShape());
     }
+  }
+
+  /**
+   * "Smart Crop" — one-click auto-fit (PX-109).
+   *
+   * @remarks
+   * Without a real AI subject-detection backend, this is the best we can
+   * do automatically: switch to cover mode, reset pan/zoom to (0, 0, 1×),
+   * and resize the slot to the photo's natural aspect ratio. The result
+   * is a frame whose bounds match the photo — no over-scan crop, no
+   * letterboxing, photo perfectly centered. Future work can wire this
+   * to a saliency / face-detection service to bias the crop toward the
+   * photo's subject.
+   */
+  smartCrop(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj || (obj as any).customType !== 'photo-frame') return;
+    if (!(obj instanceof fabric.FabricImage)) return;
+
+    const el = (obj as any).getElement?.() as HTMLImageElement | undefined;
+    const iw = el?.naturalWidth || el?.width || 0;
+    const ih = el?.naturalHeight || el?.height || 0;
+    if (!iw || !ih) return;
+
+    this.canvasService.setFrameFit(obj, 'cover');
+    this.frameFitMode.set('cover');
+    this.canvasService.setFrameAspectRatio(obj, iw / ih);
+    this.canvasService.setFrameView(obj, 0, 0, 1);
+    this.framePanX.set(0);
+    this.framePanY.set(0);
+    this.frameZoom.set(1);
+    this.frameAspect.set('original');
   }
 
   /**
