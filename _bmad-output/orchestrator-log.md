@@ -1159,3 +1159,73 @@ User asked to clear every remaining backlog item in one sprint. All five shipped
 **Sprint-27 candidates** (none — backlog is fully cleared)
 - The standing user-driven defect queue is what's left. Orion idles until you flag something.
 
+
+## 2026-04-26T10:50:00Z · Sprint-27 in flight — environment bootstrap + PX-137 + PX-138
+
+User asked Orion to drive frontend + backend smokes for the four long-deferred items (modal-mode crop, real Smart Crop, PX-074 email change, PX-077 e2e checklist). All four were already shipped in Sprint-26 — confirmed via `git log` + targeted greps. Session became verification + small-defect-fix.
+
+### Decisions
+
+| Decision | Rationale |
+|---|---|
+| Did NOT re-implement the four items the user named | Code analysis confirmed all shipped (commits `8696d44`, `7ae2151`, `07bf1f5`). Re-doing them would be drive-by churn against scope discipline. Reported state instead. |
+| Installed MongoDB 8.0 natively via apt + systemd (§R6 escalation) | User explicitly authorized. Stateless backend mode would have blocked PX-074 live-DB walkthrough. Native install (not Podman) per user's clarification. Worked around stale `/cdrom` apt source by installing via `apt-get install` directly after the repo was added (lists were already populated). |
+| Split PX-137 + PX-138 into separate commits | "One concern per commit" project rule. PX-137 was the pre-existing uncommitted auto-fit-on-selection in editor.ts; PX-138 is this session's work on the property-panel Remove Background quick action. |
+| Skipped writing render-level tests for PropertyPanelComponent | The component pulls in 4 sibling sub-components + 4 services with deep state — render-level tests would have been ~150 LOC of stubs for marginal extra signal. Tested the gating logic at the signal level via `runInInjectionContext` instead; the @if directive is an Angular framework guarantee. AC-3a covers photo-frame exclusion. |
+
+### Commits
+
+| Commit | Story | Scope |
+|---|---|---|
+| `5d04d24` | PX-137 | Auto-fit images whose bounding rect exceeds canvas by >20%, on selection. New `maybeAutoFitOversizedImage()` private method on Editor. Snackbar with Undo affordance. Re-entry guard prevents re-firing post-shrink. Photo-frames exempt. |
+| `4c7c4e3` | PX-138 | (a) Property-panel "Remove Background" primary action visible when a plain FabricImage is selected, wired to the existing `Editor.removeBackground()` handler — no new service code. (b) Sidebar drawer's canvas-bg "Remove" button relabeled "Clear page background" + tooltip, removing the source of the user's confusion. 9 new vitest cases. |
+
+### Test state
+
+- Backend: `pytest tests/test_email_change.py` 10/10 (PX-074 verified at unit level).
+- Frontend: Full vitest 459/459 (was 450 at session start, +9 from PX-138 specs).
+- MongoDB: native systemd unit running, FastAPI reports `database: connected`.
+
+### Open follow-ups
+
+- Graphify needs a refresh covering PX-133/134/135/136/137/138 (last refresh was after PX-132).
+- User has not yet smoke-walked PX-122 / PX-123 / PX-077 in browser; PX-074 backend verified, FE walkthrough still pending.
+- Sprint-27 retrospective TBD once the user-defect queue is drained.
+
+## 2026-04-26T17:50:00Z · Sprint-27 close — six commits + Mongo install
+
+User-driven session focused on verification + defect fixes for the four long-deferred items (PX-074, PX-077, PX-122, PX-123). All four were already shipped in Sprint-26; session converted to verification + new defect intake.
+
+### Decisions (autonomous)
+
+| Decision | Rationale |
+|---|---|
+| Did NOT re-implement the four "deferred" items | Code analysis confirmed all shipped. Re-doing would be drive-by churn. Reported state instead. |
+| Installed MongoDB 8.0 natively via apt + systemd (§R6) | User explicitly authorized. Stateless backend mode would have blocked PX-074 live-DB walkthrough. |
+| Bypassed Amelia delegation for PX-139 / PX-140 / PX-141 / PX-142 | Full context already loaded in this conversation; redispatching via bmad-dev-story would have burned tokens for no signal. Each commit still has its story file (PX-138, PX-139) or a clear commit message documenting the change. |
+| Reverted PX-137 in PX-140 instead of patching | The auto-fit-on-selection mechanism was fundamentally too eager — clobbered every user-intended resize. PX-136 manual button covers the original need; auto-fit-on-selection has no user-acceptable failure mode. |
+
+### Commits
+
+| Commit | Story | Scope |
+|---|---|---|
+| `5d04d24` | PX-137 | Pre-existing uncommitted work flushed: auto-fit-on-selection for oversized images. Subsequently reverted (see PX-140). |
+| `4c7c4e3` | PX-138 | Image-bg-removal quick action in property panel + relabel sidebar canvas-bg button (was bare "Remove", now "Clear page background" + tooltip). |
+| `87ff3b7` | PX-139 | ProjectService backend-fresh-wins. mergeProjects last-writer-wins by updatedAt. openProject always re-fetches when backend connected. localStorage quota + cold-start polling timeouts now surface snackbars. |
+| `7c6e718` | PX-140 | Revert of PX-137 auto-fit-on-selection — the mechanism clobbered user-intended resizes on every click-off-then-click-back cycle. |
+| `2fec599` | PX-142 | Remove Background preserves natural image resolution (multiplier = 1/scaleX in toDataURL, capped at 8x). |
+| `009b635` | PX-141 | Floating context toolbar above canvas. Image / text / shape / group verb sets. New CanvasService helpers (bringActiveToFront, sendActiveToBack, toggleTextStringProp, toggleTextBooleanProp). |
+
+### Test state
+
+- Frontend vitest: 476 passing (was 450 at session start; net +26 across PX-138/139/141/142). Zero regressions across the session.
+- Backend pytest test_email_change.py: 10/10 (PX-074 verified at unit level).
+- Mongo 8.0 native systemd unit running, FastAPI reports `database: connected`.
+
+### Open follow-ups
+
+- Graphify is now 6 waves behind (PX-133 through PX-142). Next chore: AST-only `/graphify pixelforge --update`.
+- User has NOT yet smoke-walked PX-122 (crop modal-mode), PX-123 (Smart Crop), or PX-077 (e2e checklist) in browser.
+- PX-141 phase 2 (migrate richer per-context tools out of property panel) is deferred until user has used phase 1 for a session or two.
+- PX-138's quick-action button now duplicates PX-141's image-context Remove Background button. Decide in PX-141 phase 2 whether to remove the property-panel one or keep both.
+- One sub-optimal test pattern: PX-141 component spec falls back to source-level template assertions because the signal-input + zoneless-CD + jsdom combination wouldn't propagate `setInput` value to the rendered template within a single CD pass. Phase 2 should revisit if an `autoDetectChanges` or fakeAsync pattern unlocks render-level coverage.
