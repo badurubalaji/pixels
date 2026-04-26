@@ -320,6 +320,52 @@ export class CanvasService {
    * @remarks The image is centered and scaled to fit 80% of the canvas.
    * Asynchronous — completes when the browser fires `Image.onload`.
    */
+  /**
+   * Scale + recenter the active image so it fits within the canvas (PX-136).
+   *
+   * @remarks
+   * The classic "I can't reach the corner handles" symptom: when a user
+   * scales an image past the canvas bounds (or imports a much-larger
+   * legacy asset), the resize corners sit OFF the visible canvas
+   * element and become un-clickable. Fabric draws controls at the
+   * object's bounding-rect corners and doesn't clamp to viewport, so
+   * the only practical recovery is to bring the object back inside the
+   * canvas. This helper does that:
+   *
+   * 1. Computes a uniform scale that keeps the entire image inside ~95%
+   *    of the canvas dimensions (preserves aspect ratio, never upscales).
+   * 2. Recenters the image at the canvas center.
+   * 3. Commits a history entry so the user can undo if it wasn't what
+   *    they wanted.
+   *
+   * No-op if no image is active.
+   */
+  fitActiveImageToCanvas(): void {
+    if (!this.canvas) return;
+    const obj = this.canvas.getActiveObject();
+    if (!obj || !(obj instanceof fabric.FabricImage)) return;
+
+    const cw = this._canvasWidth();
+    const ch = this._canvasHeight();
+    const iw = obj.width ?? cw;
+    const ih = obj.height ?? ch;
+
+    const scale = Math.min((cw * 0.95) / iw, (ch * 0.95) / ih, 1);
+
+    obj.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: cw / 2,
+      top: ch / 2,
+      originX: 'center',
+      originY: 'center',
+      angle: obj.angle ?? 0,
+    });
+    obj.setCoords();
+    this.canvas.renderAll();
+    this.commitChange(obj);
+  }
+
   addImage(url: string): void {
     if (!this.canvas) return;
 

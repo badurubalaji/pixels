@@ -170,6 +170,14 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           </button>
           <input type="file" #replaceInput accept="image/*" hidden (change)="onReplaceFile($event)" />
 
+          <!-- PX-136 — Fit-to-canvas: recover when an oversized image's
+               resize corners sit off the visible canvas. One click and the
+               image scales down + recenters; user can undo if they didn't
+               want it. -->
+          <button mat-stroked-button class="tb-btn" matTooltip="Fit image to canvas" (click)="canvasService.fitActiveImageToCanvas()">
+            <mat-icon>fit_screen</mat-icon> Fit
+          </button>
+
           <span class="tb-sep"></span>
 
           @if (canvasService.isCropping()) {
