@@ -1022,22 +1022,33 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       gap: 12px;
     }
 
-    /* PX-152 — checkerboard pattern under the fabric canvas when the
-       page background is set to "transparent". Lets the user actually
-       SEE the transparency (especially after Remove Background /
-       Magic Eraser, where the cut is invisible against a white page).
-       The fabric canvas's own backgroundColor is empty in this mode,
-       so the wrapper's pattern shows through. Tile size 20px feels
-       right for normal zoom levels. */
+    /* PX-153 — visual indicator for transparent canvas mode. The
+       previous PX-152 checkerboard was too easy to confuse with the
+       transparency pattern image viewers show on exported PNGs (users
+       reported "the grid is in my exported file" — it wasn't, but the
+       pattern looked identical). Now: let the canvas-area's solid
+       dark background show through (background:transparent), with a
+       faint dashed outline to keep the canvas bounds visible. The
+       exported PNG is unaffected either way (CSS on the wrapper never
+       leaks into fabric's toDataURL), but this look is unmistakably
+       UI chrome — you can't mistake a dark void with a dashed border
+       for a "transparency-indicator" pattern in an image. */
     .canvas-wrapper.canvas-transparent {
-      background-image:
-        linear-gradient(45deg, #d1d5db 25%, transparent 25%),
-        linear-gradient(-45deg, #d1d5db 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #d1d5db 75%),
-        linear-gradient(-45deg, transparent 75%, #d1d5db 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-      background-color: #ffffff;
+      background: transparent !important;
+      box-shadow: none !important;
+      outline: 1px dashed rgba(255, 255, 255, 0.25);
+      outline-offset: -1px;
+    }
+    .canvas-wrapper.canvas-transparent::before {
+      content: 'Transparent canvas';
+      position: absolute;
+      top: -22px;
+      left: 0;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
     }
 
     /* PX-152 — page-bg menu styling. The custom-color row uses a

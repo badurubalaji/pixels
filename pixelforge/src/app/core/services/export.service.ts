@@ -712,11 +712,18 @@ export class ExportService {
     const multiplier = options.width / this.canvasService.canvasWidth();
 
     const dataUrl = this.withIdentityViewport(() => {
-      // Strip background if transparent requested
+      // Strip both backgroundColor AND backgroundImage if transparent
+      // requested. PX-153 — backgroundImage was being preserved through
+      // the export, which could leak any decorative page background
+      // (incl. legacy projects with a tiled pattern) into a "transparent"
+      // PNG. Snapshot both, swap to undefined, export, restore.
       let originalBg: any;
+      let originalBgImage: any;
       if (options.transparent) {
         originalBg = canvas.backgroundColor;
+        originalBgImage = canvas.backgroundImage;
         canvas.backgroundColor = undefined as any;
+        canvas.backgroundImage = undefined as any;
         canvas.renderAll();
       }
 
@@ -727,8 +734,9 @@ export class ExportService {
       });
 
       // Restore background
-      if (options.transparent && originalBg !== undefined) {
-        canvas.backgroundColor = originalBg;
+      if (options.transparent) {
+        if (originalBg !== undefined) canvas.backgroundColor = originalBg;
+        if (originalBgImage !== undefined) canvas.backgroundImage = originalBgImage;
         canvas.renderAll();
       }
 
