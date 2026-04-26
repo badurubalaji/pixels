@@ -228,19 +228,13 @@ interface ObjectProps {
                 <mat-panel-title>Photo in frame</mat-panel-title>
               </mat-expansion-panel-header>
 
-              <p class="frame-controls-hint">
+              <p class="frame-controls-hint frame-controls-hint--compact">
                 @if (frameFitMode() === 'cover') {
-                  <strong>Cover mode.</strong> Drag the sliders to pan and
-                  zoom the photo inside the slot. The over-scan crops to
-                  the frame's edges.
+                  <strong>Cover.</strong> Pan & zoom — over-scan crops.
                 } @else if (frameFitMode() === 'contain') {
-                  <strong>Contain mode.</strong> Whole photo is visible
-                  (may letterbox). Switch to <em>cover</em> on the
-                  toolbar above to crop and reposition.
+                  <strong>Contain.</strong> Whole photo visible (letterboxed).
                 } @else {
-                  <strong>Fill mode.</strong> Photo stretches to fill the
-                  frame (aspect ratio not preserved). Switch to
-                  <em>cover</em> on the toolbar above to crop instead.
+                  <strong>Fill.</strong> Stretches to fill (aspect not preserved).
                 }
               </p>
 
@@ -311,22 +305,35 @@ interface ObjectProps {
                 </div>
               </div>
 
-              <!-- PX-109 — Smart Crop button. Auto-fits the slot to the
-                   photo's natural aspect, cover mode, zero pan/zoom.
-                   Hidden for empty placeholders since they have no photo
-                   to fit to. -->
-              @if (!isEmptyPhotoFrame()) {
+              <!-- PX-109/154 — Smart Crop + Reset on the same row, saving
+                   a full vertical row each. Smart Crop auto-fits the slot
+                   to the photo's natural aspect (hidden for empty
+                   placeholders); Reset clears pan/zoom and is disabled
+                   outside cover mode. -->
+              <div class="frame-action-row">
+                @if (!isEmptyPhotoFrame()) {
+                  <button
+                    mat-flat-button
+                    class="frame-smart-crop-btn"
+                    data-testid="frame-smart-crop"
+                    matTooltip="Auto-fit photo to its natural aspect"
+                    (click)="smartCrop()"
+                  >
+                    <mat-icon>auto_awesome</mat-icon>
+                    Smart Crop
+                  </button>
+                }
                 <button
-                  mat-flat-button
-                  class="frame-smart-crop-btn"
-                  data-testid="frame-smart-crop"
-                  matTooltip="Auto-fit photo to its natural aspect"
-                  (click)="smartCrop()"
+                  mat-icon-button
+                  class="frame-reset-btn-icon"
+                  data-testid="frame-reset"
+                  matTooltip="Reset crop &amp; zoom"
+                  (click)="resetFrameView()"
+                  [disabled]="frameFitMode() !== 'cover'"
                 >
-                  <mat-icon>auto_awesome</mat-icon>
-                  Smart Crop
+                  <mat-icon>restart_alt</mat-icon>
                 </button>
-              }
+              </div>
 
               <!-- PX-103 — switch the frame's clip shape after creation. -->
               <div class="frame-shape-row">
@@ -347,59 +354,13 @@ interface ObjectProps {
                 </div>
               </div>
 
-              <!-- Slot rotation (PX-095) — drives frame.angle directly. -->
-              <div class="slider-row">
-                <span>Rotate</span>
-                <mat-slider min="-180" max="180" step="1" class="flex-slider">
-                  <input
-                    matSliderThumb
-                    [ngModel]="p.angle"
-                    (ngModelChange)="updateProp('angle', $event)"
-                    data-testid="frame-rotate"
-                  />
-                </mat-slider>
-                <span class="slider-value">{{ (p.angle ?? 0).toFixed(0) }}°</span>
-              </div>
-
-              <!-- Photo tilt (PX-096) — rotates the photo INSIDE the slot. -->
-              @if (frameFitMode() !== 'fill') {
-                <div class="slider-row">
-                  <span>Photo tilt</span>
-                  <mat-slider min="-45" max="45" step="1" class="flex-slider">
-                    <input
-                      matSliderThumb
-                      [ngModel]="framePhotoAngle()"
-                      (ngModelChange)="setFramePhotoAngle($event)"
-                      (change)="commitFrameSlider()"
-                      data-testid="frame-photo-angle"
-                    />
-                  </mat-slider>
-                  <span class="slider-value">{{ framePhotoAngle().toFixed(0) }}°</span>
-                </div>
-              }
-
-              <button
-                mat-button
-                class="frame-reset-btn"
-                data-testid="frame-reset"
-                (click)="resetFrameView()"
-                [disabled]="frameFitMode() !== 'cover'"
-              >
-                <mat-icon>restart_alt</mat-icon>
-                Reset crop &amp; zoom
-              </button>
-
-              <!-- PX-098: guaranteed "Replace" path independent of the
-                   canvas click-to-fill detector. -->
-              <button
-                mat-flat-button
-                class="frame-replace-btn"
-                data-testid="frame-replace"
-                (click)="onReplacePhotoClick()"
-              >
-                <mat-icon>swap_horiz</mat-icon>
-                Replace photo
-              </button>
+              <!-- PX-154 — removed slot Rotate slider (duplicated the
+                   Transform panel's Rotation field directly above), the
+                   "Photo tilt" slider (niche; users can rotate the slot
+                   itself), the standalone "Reset crop & zoom" row (now
+                   an icon button next to Smart Crop above), and the
+                   duplicate "Replace photo" button (the prominent
+                   top-row button at line 188-198 covers it). -->
             </mat-expansion-panel>
           }
 
@@ -1065,31 +1026,30 @@ interface ObjectProps {
       }
     }
 
-    /* PX-094 + PX-095 — photo-frame controls panel */
+    /* PX-094 + PX-095 + PX-154 — photo-frame controls panel.
+       Compacted: smaller hint, tighter spacing, icon-only Reset. */
     .frame-controls-hint {
-      margin: 0 0 12px;
-      padding: 10px 12px;
+      margin: 0 0 8px;
+      padding: 6px 10px;
       background: rgba(124, 58, 237, 0.06);
-      border: 1px solid rgba(124, 58, 237, 0.18);
-      border-radius: 8px;
-      font-size: 0.78rem;
-      line-height: 1.5;
+      border: 1px solid rgba(124, 58, 237, 0.16);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      line-height: 1.35;
       color: var(--px-ink-soft, #334155);
     }
+    .frame-controls-hint--compact { padding: 4px 8px; font-size: 0.72rem; }
     .frame-controls-hint strong { color: var(--px-ink, #0f172a); }
-    .frame-controls-hint em {
-      font-style: normal;
-      font-weight: 600;
-      color: var(--px-violet, #7c3aed);
-    }
 
-    .frame-reset-btn {
-      width: 100%;
+    /* Smart Crop + Reset live on the same row now (PX-154) */
+    .frame-action-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       margin-top: 6px;
     }
-    .frame-reset-btn[disabled] {
-      opacity: 0.4;
-    }
+    .frame-action-row .frame-smart-crop-btn { flex: 1; }
+    .frame-reset-btn-icon[disabled] { opacity: 0.4; }
     .frame-replace-btn {
       width: 100%;
       margin-top: 8px;
