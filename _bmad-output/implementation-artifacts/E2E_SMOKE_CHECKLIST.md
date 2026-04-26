@@ -22,10 +22,14 @@ This checklist replaces the deferred "manual e2e" story. Backend pytest covers t
 - [ ] **B4.** Click Logo tile → routes to `/logo/mode-chooser`, NOT a gallery.
 
 ## C. Editor — basic objects
-- [ ] **C1.** Add a Rectangle from the sidebar Shapes panel. Drag it. Resize it. Rotate it. Floating toolbar appears above the rect with format controls + align / group / lock / duplicate / delete (PX-104 single-toolbar consolidation).
-- [ ] **C2.** Add a Text. Edit font, size, color, bold/italic/underline. Floating toolbar shows text controls in the same single bar.
+- [ ] **C1.** Add a Rectangle from the sidebar Shapes panel. Drag it. Resize it. Rotate it. The PX-141 floating context toolbar appears pinned at the top-center of the canvas viewport (PX-148 absolute placement). Toolbar shows the **shape** verb set: Bring to front · Send to back · Delete.
+- [ ] **C2.** Add a Text. Edit font, size, color, bold/italic/underline via the right property panel. The floating context toolbar swaps to the **text** verb set: Bold · Italic · Underline · Bring to front · Send to back · Delete (PX-141).
 - [ ] **C3.** Click an empty area of the canvas. Right property panel switches to a "Page background" editor (PX-113). Pick a quick-color swatch — canvas color changes. Drag the Transparency slider — canvas alpha changes (PX-115).
 - [ ] **C4.** With a shape selected, scroll the right panel — there's also a "Page background" expansion-panel at the end (PX-116). Open it and confirm the same controls work without deselecting.
+- [ ] **C5.** Top-right of the canvas: the new **Page background** palette button (PX-152) opens a menu with White / Transparent / Color. Picking Transparent shows the dark canvas-area through the wrapper (PX-153 — replaced the prior checkerboard that was visually confused with viewer transparency hints).
+- [ ] **C6.** Select multiple objects (drag-select). Floating toolbar swaps to the **group** verb set: Group · Ungroup · Bring to front · Send to back · Delete (PX-141). Click an open toolbar verb — the selection survives (PX-148/149/150 deselect-on-click guards).
+- [ ] **C7.** Add an image. Floating toolbar shows the **image** verb set with **Remove Background** as the primary gradient button (PX-141). Property panel also shows a Remove Background quick action and a **Magic Eraser** button (PX-138 + PX-151).
+- [ ] **C8.** Delete the selected object via the toolbar's trash icon. The toolbar disappears (PX-145 object:removed re-sync).
 
 ## D. Editor — photo frames (collage)
 - [ ] **D1.** Sidebar → Elements tab → Photo frames section. Sub-categories visible (PX-121): **Grids · Filmstrips · Polaroid · Hero layouts · Shapes**.
@@ -49,11 +53,11 @@ This checklist replaces the deferred "manual e2e" story. Backend pytest covers t
 - [ ] **F3.** Hold Alt while dragging — snap is disabled. Release Alt — snap engages again. (PX-107 escape hatch)
 - [ ] **F4.** Zoom canvas to 4× via the zoom slider — snap pull radius stays ~6 screen pixels (not 24). (PX-107 zoom-aware)
 
-## G. Editor — single-toolbar + context menu
-- [ ] **G1.** Select an object near the canvas top — floating toolbar appears BELOW it (auto-flip).
-- [ ] **G2.** Select an object lower on the canvas — floating toolbar appears ABOVE it (default).
+## G. Editor — floating context toolbar + context menu
+- [ ] **G1.** The floating context toolbar (PX-141) is **always pinned to the top-center of the canvas viewport** — does NOT track the selected object up/down. (PX-148 changed from object-relative to canvas-anchored placement.)
+- [ ] **G2.** Click any verb on the toolbar (Remove Background, Bold, Front, Delete) — the active selection is preserved through the click (PX-148/149/150 cumulative fix to the document-level + canvas-area mousedown deselect handlers).
 - [ ] **G3.** Select a frame near the canvas BOTTOM and right-click — context menu opens UPWARDS so all menu items are visible (PX-106 viewport clamp).
-- [ ] **G4.** Single floating toolbar only — no separate quick-action-bar (PX-104 consolidation).
+- [ ] **G4.** Toolbar hides when nothing is selected, including after deleting an object via Delete key, toolbar trash icon, layer-panel delete, or right-click → Delete (PX-145 object:removed re-sync).
 
 ## H. Editor — multi-page
 - [ ] **H1.** Click "+ Add page" below the canvas. Switch between pages. Each page's content persists per page.
@@ -68,6 +72,19 @@ This checklist replaces the deferred "manual e2e" story. Backend pytest covers t
 - [ ] **J1.** Topbar → Export. Pick PNG. File downloads.
 - [ ] **J2.** Pick PDF (multi-page). Each page becomes one PDF page.
 - [ ] **J3.** Topbar → Share → Get a public link. Open in an incognito window — read-only canvas renders.
+- [ ] **J4.** Set canvas background to Transparent via PX-152 menu. Export PNG with **Transparent background ON**. Drop the file onto a colored web page or Figma frame — the transparent regions show the backdrop through, no checkerboard data in the file (PX-153 also strips canvas.backgroundImage in transparent export).
+- [ ] **J5.** Same export with **Transparent background OFF** — PNG includes whatever color/pattern the canvas has.
+
+## L. Editor — image cleanup tools (PX-138/151)
+- [ ] **L1.** Add an image with a clear bg (e.g. logo on white). Click **Remove Background** in either the floating toolbar OR the property panel. After ~1-3s the bg is replaced with transparent (PX-138 + PX-142 — captured at natural resolution so resizing afterward stays sharp).
+- [ ] **L2.** Resize the bg-removed image up to ~2× original. Edges stay crisp (PX-142 multiplier=1/scaleX).
+- [ ] **L3.** If the AI left bg halo or shadow patches, click **Magic Eraser** in the property panel. Click any leftover patch on the canvas — the flood fill clears the contiguous color region (PX-151). Repeat clicks to clean multiple spots; tweak the Tolerance slider (4-120). Esc exits.
+- [ ] **L4.** Re-open the project after edits — the bg-removed image's transparency persists (PX-143 inject crossOrigin on load + PX-147 preserve canvasJson on backend list-sync).
+
+## M. Editor — refresh / nav-away persistence (PX-144/146/147)
+- [ ] **M1.** Resize an image, immediately hit F5. Image stays resized (PX-144 1s debounce + beforeunload flush).
+- [ ] **M2.** Edit something, navigate to /hub via Home button, click the same project. Edit is preserved (PX-147 fix to mergeProjects nullish-preserve).
+- [ ] **M3.** Edit, close the tab, reopen `/editor/{id}`. Edit is preserved.
 
 ## K. Account
 - [ ] **K1.** Top-right avatar menu → Profile → change Name. Saved on Save.
@@ -87,3 +104,4 @@ This checklist replaces the deferred "manual e2e" story. Backend pytest covers t
 
 ### Run log
 - 2026-04-25 — backend pytest 85/85 green; frontend tests 448/448 green; build clean. Browser walkthrough deferred to next session.
+- 2026-04-26 — Sprint-27. Backend pytest 95/95 green; frontend vitest 499/499 green. Added sections C5-C8 (PX-141 floating context toolbar verb sets + PX-152 canvas-bg menu + PX-145 hide-on-delete), reworked G (toolbar now canvas-anchored not object-relative), added L (PX-138 Remove Background + PX-151 Magic Eraser cleanup) and M (PX-144/146/147 persistence). Code-level coverage added for cropMode + smartCrop in canvas.service.spec.ts and property-panel.spec.ts. Browser walkthrough still pending.

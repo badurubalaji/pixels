@@ -118,4 +118,50 @@ describe('PropertyPanelComponent — PX-138 Remove Background gating', () => {
     expect(component.removeBackgroundRequested).toBeDefined();
     expect(typeof (component.removeBackgroundRequested as any).emit).toBe('function');
   });
+
+  // ---------------------------------------------------------------
+  // PX-122 — modal-mode crop wiring
+  // ---------------------------------------------------------------
+  describe('PX-122: modal-mode crop', () => {
+    it('applyCropMode delegates to canvasService.applyCropMode', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      svc.applyCropMode = vi.fn();
+      component.applyCropMode();
+      expect(svc.applyCropMode).toHaveBeenCalled();
+    });
+
+    it('cancelCropMode delegates to canvasService.cancelCropMode', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      svc.cancelCropMode = vi.fn();
+      component.cancelCropMode();
+      expect(svc.cancelCropMode).toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // PX-123 — Smart Crop wiring (no-op paths only; pixel saliency is
+  // exercised at runtime since jsdom doesn't render Canvas2D)
+  // ---------------------------------------------------------------
+  describe('PX-123: Smart Crop', () => {
+    it('smartCrop is a no-op when nothing is selected', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      svc.setFrameFit = vi.fn();
+      svc.setFrameAspectRatio = vi.fn();
+      svc.setFrameView = vi.fn();
+      // Default canvas stub returns null active.
+      component.smartCrop();
+      expect(svc.setFrameFit).not.toHaveBeenCalled();
+      expect(svc.setFrameAspectRatio).not.toHaveBeenCalled();
+      expect(svc.setFrameView).not.toHaveBeenCalled();
+    });
+
+    it('smartCrop is a no-op for non-frame selection', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      const fakeRect = { customType: undefined };
+      svc.getCanvas = () => ({ getActiveObject: () => fakeRect });
+      svc.setFrameFit = vi.fn();
+      component.smartCrop();
+      expect(svc.setFrameFit).not.toHaveBeenCalled();
+    });
+  });
 });

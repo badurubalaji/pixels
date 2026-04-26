@@ -520,6 +520,41 @@ describe('CanvasService', () => {
     });
   });
 
+  describe('PX-122: crop modal-mode', () => {
+    it('enterCropMode is a no-op when nothing is selected', () => {
+      const { service } = makeService();
+      expect(service.cropMode()).toBe(false);
+      service.enterCropMode();
+      expect(service.cropMode()).toBe(false);
+    });
+
+    it('enterCropMode is a no-op for non-photo-frame selection', () => {
+      const { service } = makeService();
+      const canvas = service.getCanvas() as any;
+      // Plain object — customType is NOT 'photo-frame', enterCropMode
+      // should bail early.
+      canvas._active = { customType: 'rect' };
+      service.enterCropMode();
+      expect(service.cropMode()).toBe(false);
+    });
+
+    it('applyCropMode flips cropMode false (post-enter)', () => {
+      const { service } = makeService();
+      // Force the signal on directly to test the apply path without
+      // needing a full photo-frame fixture in jsdom.
+      (service as any)._cropMode.set(true);
+      service.applyCropMode();
+      expect(service.cropMode()).toBe(false);
+    });
+
+    it('cancelCropMode flips cropMode false even with no snapshot', () => {
+      const { service } = makeService();
+      (service as any)._cropMode.set(true);
+      service.cancelCropMode();
+      expect(service.cropMode()).toBe(false);
+    });
+  });
+
   describe('PX-151: Magic Eraser', () => {
     it('enterMagicEraserMode flips the signal + cursor; exit restores them', () => {
       const { service } = makeService();
