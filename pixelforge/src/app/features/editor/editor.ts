@@ -2149,19 +2149,23 @@ export class Editor implements AfterViewInit, OnDestroy {
     // is gone.
     // PX-141 — additionally classifies the active selection so the floating
     // context toolbar can swap its verb set (image / text / shape / group).
+    // PX-145 — also re-syncs on `object:removed` because some deletion
+    // paths (right-click → Delete, layer-panel delete, certain
+    // programmatic removes) fired the remove event without a paired
+    // `selection:cleared`, leaving the toolbar pinned to a stale
+    // context. Reading canvas state directly on every event makes the
+    // toolbar's visibility derive from one source of truth.
     const fcanvas = this.canvasService.getCanvas();
     if (fcanvas) {
-      const onSel = () => {
+      const syncSel = () => {
         const active = fcanvas.getActiveObject();
         this.hasSelection.set(!!active);
         this.selectionContext.set(this.classifySelection(active));
       };
-      fcanvas.on('selection:created', onSel);
-      fcanvas.on('selection:updated', onSel);
-      fcanvas.on('selection:cleared', () => {
-        this.hasSelection.set(false);
-        this.selectionContext.set('none');
-      });
+      fcanvas.on('selection:created', syncSel);
+      fcanvas.on('selection:updated', syncSel);
+      fcanvas.on('selection:cleared', syncSel);
+      fcanvas.on('object:removed', syncSel);
     }
 
     // Auto-save every 30 seconds

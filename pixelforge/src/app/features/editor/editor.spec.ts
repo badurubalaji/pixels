@@ -682,6 +682,47 @@ describe('Editor', () => {
     expect(ed.isProcessing()).toBe(false);
   });
 
+  it('PX-145: object:removed re-syncs selectionContext to "none" when active is null', () => {
+    // The bug: clicking Delete (or any path that removed the object
+    // without firing selection:cleared) left selectionContext stuck at
+    // its prior value, so the floating toolbar stayed visible with the
+    // wrong verb set. Now object:removed re-reads canvas state.
+    const fixture = TestBed.createComponent(Editor);
+    const ed: any = fixture.componentInstance;
+    ed.canvasRef = { nativeElement: document.createElement('canvas') };
+    ed.containerRef = { nativeElement: { clientWidth: 800, clientHeight: 600 } };
+
+    // Wire a fake canvas that returns null active on demand and exposes
+    // the fabric event-bus API the editor's listener attaches to.
+    const handlers: Record<string, Array<() => void>> = {};
+    let active: any = null;
+    const fakeCanvas: any = {
+      getActiveObject: () => active,
+      on: (evt: string, fn: () => void) => {
+        (handlers[evt] ??= []).push(fn);
+      },
+      fire: (evt: string) => handlers[evt]?.forEach(h => h()),
+    };
+    canvasStub.getCanvas.mockReturnValue(fakeCanvas);
+
+    ed.ngAfterViewInit();
+
+    // Seed: simulate an active image so the toolbar is showing.
+    active = { type: 'image' };
+    fakeCanvas.fire('selection:created');
+    expect(ed.hasSelection()).toBe(true);
+    expect(ed.selectionContext()).not.toBe('none');
+
+    // The user "deletes" — fabric clears active and fires object:removed.
+    // (Whether or not selection:cleared also fires is the bug surface
+    // we're guarding against; this test only emits object:removed.)
+    active = null;
+    fakeCanvas.fire('object:removed');
+
+    expect(ed.hasSelection()).toBe(false);
+    expect(ed.selectionContext()).toBe('none');
+  });
+
   it('PX-144: beforeunload triggers a synchronous saveProject', async () => {
     // Edits within the debounce window were getting lost on refresh
     // because the timer never fired. The beforeunload handler now
