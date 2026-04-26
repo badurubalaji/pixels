@@ -1984,7 +1984,11 @@ export class Editor implements AfterViewInit, OnDestroy {
     if (projectId) {
       const savedJson = this.projectService.getCanvasState(projectId);
       if (savedJson) {
-        this.canvasService.loadFromJSON(savedJson).then(() => {
+        // PX-135 — peel off the multi-page envelope before handing the
+        // active page's JSON to fabric. Single-page legacy projects skip
+        // this branch; the entire savedJson is the canvas JSON.
+        const activeCanvasJson = this.hydrateMultiPageEnvelope(savedJson);
+        this.canvasService.loadFromJSON(activeCanvasJson).then(() => {
           this.historyService.init();
           this.fitToScreen();
         });
@@ -2005,7 +2009,9 @@ export class Editor implements AfterViewInit, OnDestroy {
           if (json) {
             clearInterval(waitForProject);
             this.canvasService.setCanvasSize(p!.width, p!.height);
-            this.canvasService.loadFromJSON(json).then(() => this.fitToScreen());
+            // PX-135 — same multi-page hydration as the eager-load path.
+            const activeCanvasJson = this.hydrateMultiPageEnvelope(json);
+            this.canvasService.loadFromJSON(activeCanvasJson).then(() => this.fitToScreen());
           } else if (attempts > 30) {
             clearInterval(waitForProject);
           }
@@ -2180,6 +2186,45 @@ export class Editor implements AfterViewInit, OnDestroy {
       this.pages.set([{ id: crypto.randomUUID(), canvasJson: '', thumbnail: '' }]);
       this.activePage.set(0);
     }
+  }
+
+  /**
+   * Detect a PX-135 multi-page envelope inside a project's stored canvas
+   * JSON, restore the `pages` signal + `activePage`, and return the JSON
+   * fabric should actually load right now (the active page's canvas JSON).
+   *
+   * @param savedJson - Whatever ProjectService.getCanvasState handed back.
+   * @returns The single canvas JSON to pass to fabric's loadFromJSON.
+   *
+   * @remarks
+   * Single-page projects round-trip exactly as before — the envelope is
+   * a NEW shape and old project docs don't carry the `_multiPage` flag,
+   * so they fall through to the "this whole string IS the canvas JSON"
+   * branch.
+   */
+  private hydrateMultiPageEnvelope(savedJson: string): string {
+    try {
+      const parsed = JSON.parse(savedJson);
+      if (parsed && parsed._multiPage === true && Array.isArray(parsed.pages)) {
+        const pages = parsed.pages.map((p: { id?: string; canvasJson?: string; thumbnail?: string }) => ({
+          id: p.id ?? crypto.randomUUID(),
+          canvasJson: p.canvasJson ?? '',
+          thumbnail: p.thumbnail ?? '',
+        }));
+        const activeIdx = Math.max(
+          0,
+          Math.min(typeof parsed.activePage === 'number' ? parsed.activePage : 0, pages.length - 1),
+        );
+        if (pages.length > 0) {
+          this.pages.set(pages);
+          this.activePage.set(activeIdx);
+          return pages[activeIdx].canvasJson || '';
+        }
+      }
+    } catch {
+      /* Not JSON-shaped or not our envelope — fall through to legacy. */
+    }
+    return savedJson;
   }
 
   /** Snapshot the active page's canvas JSON + thumbnail into {@link pages}. */
@@ -2579,19 +2624,48 @@ export class Editor implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Persist the active page's canvas JSON + thumbnail via
-   * {@link ProjectService.saveCanvasState}. Noop without an active project.
+   * Persist the project's canvas state via {@link ProjectService.saveCanvasState}.
+   * Noop without an active project.
+   *
+   * @remarks
+   * PX-135 — multi-page projects round-trip ALL pages, not just the
+   * active one. Single-page projects fall through to the legacy single-
+   * canvas serializer so old project documents stay byte-compatible:
+   *
+   * - 1 page → canvas_json = the page's canvas JSON (legacy shape).
+   * - 2+ pages → canvas_json = `{ "_multiPage": true, "version": 1,
+   *   "activePage": N, "pages": [{ id, canvasJson, thumbnail }, ...] }`.
+   *
+   * The thumbnail saved alongside is always the active page's, since
+   * the hub's recent-projects strip shows one image per project.
    */
   saveProject(): void {
     const project = this.projectService.currentProject();
     if (!project) return;
 
-    // Save current page state first
+    // Save current page state first so pages[activePage] is fresh.
     this.saveCurrentPageState();
 
-    // Use the active page's canvas state as the project's main canvas
-    const canvasJson = this.canvasService.getCanvasJSON();
+    const allPages = this.pages();
     const thumbnail = this.canvasService.getThumbnail();
+
+    let canvasJson: string;
+    if (allPages.length <= 1) {
+      // Legacy single-page envelope.
+      canvasJson = this.canvasService.getCanvasJSON();
+    } else {
+      // PX-135 — multi-page envelope.
+      canvasJson = JSON.stringify({
+        _multiPage: true,
+        version: 1,
+        activePage: this.activePage(),
+        pages: allPages.map(p => ({
+          id: p.id,
+          canvasJson: p.canvasJson ?? '',
+          thumbnail: p.thumbnail ?? '',
+        })),
+      });
+    }
 
     // Silent save — the save-button pill in the topbar reflects sync state
     // ("Saving..." / "Saved Xs ago" / "Offline"), so no snackbar needed.
