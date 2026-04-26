@@ -93,6 +93,26 @@ interface ObjectProps {
             Remove Background
           </button>
 
+          <!-- PX-156 — surface the convert-to-photo-frame promotion as a
+               first-class quick action so users don't have to discover it
+               via right-click. After conversion the property panel
+               automatically re-renders with the rich photo-frame editing
+               surface (Pan/Zoom/Aspect/Shape/Smart Crop/Modal Crop).
+               Hidden once the image IS a photo-frame to avoid a no-op
+               button. -->
+          @if (!isPhotoFrame()) {
+            <button
+              mat-stroked-button
+              class="convert-to-frame-btn"
+              data-testid="convert-to-frame"
+              matTooltip="Unlock pan / zoom / shape / aspect controls"
+              (click)="convertToPhotoFrame()"
+            >
+              <mat-icon>crop</mat-icon>
+              Edit as photo frame
+            </button>
+          }
+
           <!-- PX-151 — Magic Eraser. After AI bg-removal, click a missed
                background pixel and the flood fill clears its surrounding
                color region. Toggles on/off; cursor flips to crosshair on
@@ -1084,6 +1104,16 @@ interface ObjectProps {
       background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
       color: #ffffff !important;
     }
+    /* PX-156 — convert-to-photo-frame quick action. Lives between
+       Remove BG and Magic Eraser; secondary look (stroked, not gradient)
+       so it doesn't compete with the primary verb above it. */
+    .convert-to-frame-btn {
+      width: 100%;
+      height: 36px !important;
+      border-radius: 10px !important;
+      font-weight: 500 !important;
+    }
+
     /* PX-151 — Magic Eraser button (secondary; sits below Remove BG). */
     .magic-eraser-btn {
       width: 100%;
@@ -1359,6 +1389,22 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   /** PX-122 — revert to the snapshot taken on enterCropMode and exit. */
   cancelCropMode(): void {
     this.canvasService.cancelCropMode();
+  }
+
+  /**
+   * PX-156 — promote the active plain image into a photo-frame so the
+   * rich pan / zoom / aspect / shape / smart-crop UI lights up. Re-reads
+   * props after conversion so the panel re-renders with the photo-frame
+   * surface in the same tick.
+   */
+  convertToPhotoFrame(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    this.canvasService.convertImageToFrame(obj);
+    this.canvasService.commitChange(obj);
+    // Force the panel to re-evaluate isPhotoFrame / isImageSelected etc.
+    (this as any).readProps?.();
   }
 
   readonly props = signal<ObjectProps | null>(null);
@@ -1948,11 +1994,14 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this._isText.set(isText);
     this._isRect.set(obj instanceof fabric.Rect);
     this._isLocked.set(!!(obj as any)._locked);
-    // PX-138 — gate the Remove Background quick action. Photo-frames are
-    // FabricImages too but have their own crop/replace UI, so exclude them.
-    this._isImage.set(
-      obj instanceof fabric.FabricImage && (obj as any).customType !== 'photo-frame',
-    );
+    // PX-138 — gate the Remove Background quick action.
+    // PX-156 — was excluding photo-frames, but a filled photo-frame is
+    // still a FabricImage with bg-removable pixels. Removing that
+    // exclusion lets the user run Remove BG / Magic Eraser AFTER they've
+    // converted an image to a frame for shape masking. Empty photo-frame
+    // placeholders are fabric.Group, so `instanceof fabric.FabricImage`
+    // already excludes them.
+    this._isImage.set(obj instanceof fabric.FabricImage);
 
     // Read shadow
     if (obj.shadow && obj.shadow instanceof fabric.Shadow) {

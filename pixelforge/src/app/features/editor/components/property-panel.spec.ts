@@ -94,12 +94,16 @@ describe('PropertyPanelComponent — PX-138 Remove Background gating', () => {
     expect(component.isImageSelected()).toBe(false);
   });
 
-  it('AC-3: isImageSelected stays false for a photo-frame FabricImage', () => {
+  it('PX-156: isImageSelected is TRUE for a photo-frame FabricImage (was false pre-PX-156)', () => {
+    // PX-156 dropped the customType='photo-frame' exclusion so users
+    // keep access to Remove Background + Magic Eraser AFTER promoting
+    // an image to a frame for shape masking. A filled photo-frame is
+    // still a FabricImage with bg-removable pixels.
     const frame = new fabric.FabricImage();
     (frame as any).customType = 'photo-frame';
     activeObject = frame;
     (component as any).readProps();
-    expect(component.isImageSelected()).toBe(false);
+    expect(component.isImageSelected()).toBe(true);
   });
 
   it('AC-3: isImageSelected stays false for text selections', () => {
@@ -117,6 +121,30 @@ describe('PropertyPanelComponent — PX-138 Remove Background gating', () => {
   it('AC-2: removeBackgroundRequested is exposed as an output', () => {
     expect(component.removeBackgroundRequested).toBeDefined();
     expect(typeof (component.removeBackgroundRequested as any).emit).toBe('function');
+  });
+
+  // ---------------------------------------------------------------
+  // PX-156 — convert-to-photo-frame promotion
+  // ---------------------------------------------------------------
+  describe('PX-156: Edit as photo frame', () => {
+    it('convertToPhotoFrame delegates to canvasService.convertImageToFrame + commitChange', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      const fakeImage = { customType: undefined };
+      svc.getCanvas = () => ({ getActiveObject: () => fakeImage });
+      svc.convertImageToFrame = vi.fn();
+      svc.commitChange = vi.fn();
+      component.convertToPhotoFrame();
+      expect(svc.convertImageToFrame).toHaveBeenCalledWith(fakeImage);
+      expect(svc.commitChange).toHaveBeenCalledWith(fakeImage);
+    });
+
+    it('convertToPhotoFrame is a no-op when nothing is selected', () => {
+      const svc = TestBed.inject(CanvasService) as any;
+      svc.getCanvas = () => ({ getActiveObject: () => null });
+      svc.convertImageToFrame = vi.fn();
+      component.convertToPhotoFrame();
+      expect(svc.convertImageToFrame).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------
