@@ -2079,18 +2079,15 @@ export class Editor implements AfterViewInit, OnDestroy {
       this.contextMenu.show(e);
     });
 
-    // Track selection so we can collapse right panel when nothing is selected
+    // Track selection so we can collapse right panel when nothing is selected.
+    // PX-140 — earlier shape (PX-137) also auto-shrunk oversized images on
+    // every selection event, which clobbered user-intended resizes the
+    // moment they clicked away and back. The Fit-to-canvas toolbar button
+    // (PX-136) is the explicit, user-controlled path; auto-fit-on-selection
+    // is gone.
     const fcanvas = this.canvasService.getCanvas();
     if (fcanvas) {
-      const onSel = () => {
-        this.hasSelection.set(!!fcanvas.getActiveObject());
-        // PX-137 — auto-fit images whose bounding rect would put their
-        // resize corners off-canvas (user can't grab corners they can't
-        // see). Defensive: only triggers when the image bounding rect
-        // genuinely exceeds the canvas; respects the user's intentional
-        // off-canvas placements via a small buffer.
-        this.maybeAutoFitOversizedImage();
-      };
+      const onSel = () => this.hasSelection.set(!!fcanvas.getActiveObject());
       fcanvas.on('selection:created', onSel);
       fcanvas.on('selection:updated', onSel);
       fcanvas.on('selection:cleared', () => this.hasSelection.set(false));
@@ -2431,45 +2428,6 @@ export class Editor implements AfterViewInit, OnDestroy {
     this.framePendingFill = target;
     this.frameImageInputRef?.nativeElement.click();
   }
-
-  /**
-   * PX-137 — when an image is selected and its bounding rect significantly
-   * exceeds the canvas (so its resize corners sit off the visible canvas
-   * element and become un-clickable), auto-shrink it via
-   * {@link CanvasService.fitActiveImageToCanvas} and surface a snackbar
-   * with an Undo action. Trigger threshold: bounding rect dimensions
-   * exceed canvas by 20% in either axis. That tolerance lets users
-   * intentionally place an image slightly off-canvas without the editor
-   * fighting them, while still catching the "I scaled this 5× and lost
-   * the corners" common case.
-   */
-  private maybeAutoFitOversizedImage(): void {
-    const canvas = this.canvasService.getCanvas();
-    const obj = canvas?.getActiveObject();
-    if (!obj) return;
-    if (!(obj instanceof fabric.FabricImage)) return;
-    if ((obj as any).customType === 'photo-frame') return; // photo-frames have their own crop UI
-
-    const cw = this.canvasService.canvasWidth();
-    const ch = this.canvasService.canvasHeight();
-    const b = obj.getBoundingRect();
-    const tolerance = 1.20;
-    if (b.width <= cw * tolerance && b.height <= ch * tolerance) return;
-    if (this._autoFitJustRan) return; // avoid re-firing after we shrink + reselect
-
-    this._autoFitJustRan = true;
-    // Snapshot so Undo can restore manually if the user wanted off-canvas
-    // (commitChange in fitActiveImageToCanvas already pushes a history
-    // entry — Ctrl+Z will revert).
-    this.canvasService.fitActiveImageToCanvas();
-    this.snackBar.open(
-      'Image was bigger than the canvas — auto-fit so you can resize it. Press Ctrl+Z to undo.',
-      'OK',
-      { duration: 4500 },
-    );
-    setTimeout(() => { this._autoFitJustRan = false; }, 1000);
-  }
-  private _autoFitJustRan = false;
 
   /**
    * Add a text layer with custom typography options.
