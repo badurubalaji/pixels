@@ -866,12 +866,17 @@ export class HubComponent implements OnInit {
         ariaLabel: `${preset.label}, ${preset.width} by ${preset.height} pixels`,
       }));
 
+    // PX-134 — Logo tile previously routed to '/logo/mode-chooser' which
+    // was never actually registered as a route, so the catchall bounced
+    // it back to /hub (looked like the tile did nothing). Routes through
+    // the gallery now, same as every other platform tile, using the
+    // PX-120 `logo` platform preset (500x500 square canvas).
     const logoTile: HubTile = {
       id: 'logo',
       label: 'Logo',
       subtitle: 'Make a logo',
       icon: 'auto_awesome',
-      route: '/logo/mode-chooser',
+      route: '/gallery/logo',
       ariaLabel: 'Logo, make a logo',
     };
 

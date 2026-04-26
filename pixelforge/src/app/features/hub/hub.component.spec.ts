@@ -146,7 +146,8 @@ describe('HubComponent', () => {
       { id: 'linkedin-post', route: '/gallery/linkedin-post' },
       { id: 'linkedin-banner', route: '/gallery/linkedin-banner' },
       { id: 'yt-thumb', route: '/gallery/yt-thumb' },
-      { id: 'logo', route: '/logo/mode-chooser' },
+      // PX-134: routed through the gallery using the PX-120 `logo` preset.
+      { id: 'logo', route: '/gallery/logo' },
     ];
 
     for (const c of cases) {
