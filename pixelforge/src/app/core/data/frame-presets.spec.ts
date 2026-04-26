@@ -8,9 +8,9 @@ import {
 } from './frame-presets';
 
 describe('FRAME_PRESETS — PX-090 / PX-121', () => {
-  it('ships the curated MVP catalogue (31 presets across 7 categories)', () => {
-    // PX-090: 8 collage + PX-102: 5 shapes + PX-121: 12 new + PX-124: 6 new = 31.
-    expect(FRAME_PRESETS).toHaveLength(31);
+  it('ships the curated MVP catalogue (~50+ presets across 7 categories)', () => {
+    // PX-090: 8 + PX-102: 5 + PX-121: 12 + PX-124: 6 + PX-132: ~28 = 59.
+    expect(FRAME_PRESETS.length).toBeGreaterThanOrEqual(50);
   });
 
   it('includes single-shape presets for circle / rounded / hexagon / star / heart', () => {
@@ -23,8 +23,14 @@ describe('FRAME_PRESETS — PX-090 / PX-121', () => {
   });
 
   it('every single-shape preset has its slot shape set', () => {
-    const singles = FRAME_PRESETS.filter(p => p.id.startsWith('single-'));
-    for (const p of singles) {
+    // PX-132 — `single-rect-*` variants are intentionally rect-shaped (the
+    // Canva "Square / Portrait / Landscape" frames). The original PX-102
+    // shapes (circle / rounded / hexagon / star / heart) still carry a
+    // non-rect shape; assert THAT subset.
+    const nonRectSingles = FRAME_PRESETS.filter(
+      p => p.id.startsWith('single-') && !p.id.startsWith('single-rect-'),
+    );
+    for (const p of nonRectSingles) {
       expect(p.slots.length).toBe(1);
       expect(p.slots[0].shape).toBeDefined();
       expect(p.slots[0].shape).not.toBe('rect');

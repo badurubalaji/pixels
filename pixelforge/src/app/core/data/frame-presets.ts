@@ -241,6 +241,150 @@ export const FRAME_PRESETS: ReadonlyArray<FramePreset> = [
       { x: 2 * (1 - 2 * GAP) / 3 + 2 * GAP, y: 0.6 + GAP / 2, w: (1 - 2 * GAP) / 3, h: 0.4 - GAP / 2 },
     ],
   },
+  // PX-132 — inverted L: 3-strip top, hero bottom.
+  {
+    id: 'quad-l-inverse',
+    name: 'L-quad (top)',
+    icon: 'dashboard',
+    category: 'grids',
+    slots: [
+      { x: 0, y: 0, w: (1 - 2 * GAP) / 3, h: 0.4 - GAP / 2 },
+      { x: (1 - 2 * GAP) / 3 + GAP, y: 0, w: (1 - 2 * GAP) / 3, h: 0.4 - GAP / 2 },
+      { x: 2 * (1 - 2 * GAP) / 3 + 2 * GAP, y: 0, w: (1 - 2 * GAP) / 3, h: 0.4 - GAP / 2 },
+      { x: 0, y: 0.4 + GAP / 2, w: 1, h: 0.6 - GAP / 2 },
+    ],
+  },
+  // PX-132 — T-shape: 1 wide top + 3 below in equal columns.
+  {
+    id: 'grid-t',
+    name: 'T-shape',
+    icon: 'dashboard',
+    category: 'grids',
+    slots: [
+      { x: 0.20, y: 0, w: 0.60, h: 0.45 },
+      { x: 0, y: 0.50, w: (1 - 2 * GAP) / 3, h: 0.50 },
+      { x: (1 - 2 * GAP) / 3 + GAP, y: 0.50, w: (1 - 2 * GAP) / 3, h: 0.50 },
+      { x: 2 * (1 - 2 * GAP) / 3 + 2 * GAP, y: 0.50, w: (1 - 2 * GAP) / 3, h: 0.50 },
+    ],
+  },
+  // PX-132 — U-shape: 2 tall sides + 1 short bottom-center.
+  {
+    id: 'grid-u',
+    name: 'U-shape',
+    icon: 'dashboard',
+    category: 'grids',
+    slots: [
+      { x: 0, y: 0, w: 0.30, h: 1 },
+      { x: 0.70, y: 0, w: 0.30, h: 1 },
+      { x: 0.32, y: 0.55, w: 0.36, h: 0.45 },
+    ],
+  },
+  // PX-132 — Hero + 4 small (5-cell mosaic, hero on left).
+  {
+    id: 'grid-hero-left',
+    name: 'Hero left + 4',
+    icon: 'view_quilt',
+    category: 'grids',
+    slots: [
+      { x: 0, y: 0, w: 0.55, h: 1 },
+      { x: 0.58, y: 0, w: 0.42, h: 0.5 - GAP / 2 },
+      { x: 0.58, y: 0.5 + GAP / 2, w: 0.20, h: 0.5 - GAP / 2 },
+      { x: 0.80, y: 0.5 + GAP / 2, w: 0.20, h: 0.25 - GAP / 2 },
+      { x: 0.80, y: 0.75 + GAP / 2, w: 0.20, h: 0.25 - GAP / 2 },
+    ],
+  },
+  // PX-132 — Hero + 4 small (hero on right).
+  {
+    id: 'grid-hero-right',
+    name: 'Hero right + 4',
+    icon: 'view_quilt',
+    category: 'grids',
+    slots: [
+      { x: 0.45, y: 0, w: 0.55, h: 1 },
+      { x: 0, y: 0, w: 0.42, h: 0.5 - GAP / 2 },
+      { x: 0, y: 0.5 + GAP / 2, w: 0.20, h: 0.5 - GAP / 2 },
+      { x: 0.22, y: 0.5 + GAP / 2, w: 0.20, h: 0.25 - GAP / 2 },
+      { x: 0.22, y: 0.75 + GAP / 2, w: 0.20, h: 0.25 - GAP / 2 },
+    ],
+  },
+  // PX-132 — Hero + 3 stack (hero top).
+  {
+    id: 'grid-hero-top',
+    name: 'Hero top + 3',
+    icon: 'view_quilt',
+    category: 'grids',
+    slots: [
+      { x: 0, y: 0, w: 1, h: 0.5 - GAP / 2 },
+      { x: 0, y: 0.5 + GAP / 2, w: (1 - 2 * GAP) / 3, h: 0.5 - GAP / 2 },
+      { x: (1 - 2 * GAP) / 3 + GAP, y: 0.5 + GAP / 2, w: (1 - 2 * GAP) / 3, h: 0.5 - GAP / 2 },
+      { x: 2 * (1 - 2 * GAP) / 3 + 2 * GAP, y: 0.5 + GAP / 2, w: (1 - 2 * GAP) / 3, h: 0.5 - GAP / 2 },
+    ],
+  },
+  // PX-132 — 2x4 grid (8 cells).
+  {
+    id: 'grid-2x4',
+    name: '2 × 4 grid',
+    icon: 'grid_on',
+    category: 'grids',
+    slots: (() => {
+      const cw = 0.5 - GAP / 2;
+      const rh = (1 - 3 * GAP) / 4;
+      const slots: FrameSlot[] = [];
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 2; c++) {
+          slots.push({ x: c * (cw + GAP), y: r * (rh + GAP), w: cw, h: rh });
+        }
+      }
+      return slots;
+    })(),
+  },
+  // PX-132 — 4x2 grid (8 cells, wide aspect).
+  {
+    id: 'grid-4x2',
+    name: '4 × 2 grid',
+    icon: 'grid_on',
+    category: 'grids',
+    slots: (() => {
+      const cw = (1 - 3 * GAP) / 4;
+      const rh = 0.5 - GAP / 2;
+      const slots: FrameSlot[] = [];
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 4; c++) {
+          slots.push({ x: c * (cw + GAP), y: r * (rh + GAP), w: cw, h: rh });
+        }
+      }
+      return slots;
+    })(),
+  },
+  // PX-132 — Plus / cross pattern (5 cells).
+  {
+    id: 'grid-plus',
+    name: 'Plus',
+    icon: 'add',
+    category: 'grids',
+    slots: [
+      { x: 0.35, y: 0, w: 0.30, h: 0.30 },
+      { x: 0, y: 0.35, w: 0.30, h: 0.30 },
+      { x: 0.35, y: 0.35, w: 0.30, h: 0.30 },
+      { x: 0.70, y: 0.35, w: 0.30, h: 0.30 },
+      { x: 0.35, y: 0.70, w: 0.30, h: 0.30 },
+    ],
+  },
+  // PX-132 — Asymmetric magazine (1 big + 4 strip below + 1 wide bottom).
+  {
+    id: 'magazine-spread',
+    name: 'Magazine spread',
+    icon: 'view_quilt',
+    category: 'grids',
+    slots: [
+      { x: 0, y: 0, w: 0.6, h: 0.55 - GAP / 2 },
+      { x: 0.62, y: 0, w: 0.38, h: 0.55 - GAP / 2 },
+      { x: 0, y: 0.55 + GAP / 2, w: 0.25 - GAP / 2, h: 0.45 - GAP / 2 },
+      { x: 0.25, y: 0.55 + GAP / 2, w: 0.25 - GAP / 2, h: 0.45 - GAP / 2 },
+      { x: 0.50, y: 0.55 + GAP / 2, w: 0.25 - GAP / 2, h: 0.45 - GAP / 2 },
+      { x: 0.75, y: 0.55 + GAP / 2, w: 0.25, h: 0.45 - GAP / 2 },
+    ],
+  },
 
   // ===========================
   // Category: strips (PX-090 + PX-121)
@@ -407,6 +551,161 @@ export const FRAME_PRESETS: ReadonlyArray<FramePreset> = [
     icon: 'favorite',
     category: 'shapes',
     slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'heart' }],
+  },
+  // PX-132 — additional shape variants at different aspect ratios so the
+  // Frames > Shapes section has the same depth Canva does (the user-shared
+  // elements-frames-basicshapes.png screenshot showed 24+ variants).
+
+  // Square / rectangle (rect) variants
+  {
+    id: 'single-rect-square',
+    name: 'Square',
+    icon: 'crop_square',
+    category: 'shapes',
+    slots: [{ x: 0.25, y: 0.25, w: 0.5, h: 0.5, shape: 'rect' }],
+  },
+  {
+    id: 'single-rect-portrait',
+    name: 'Portrait',
+    icon: 'crop_portrait',
+    category: 'shapes',
+    slots: [{ x: 0.32, y: 0.10, w: 0.36, h: 0.80, shape: 'rect' }],
+  },
+  {
+    id: 'single-rect-landscape',
+    name: 'Landscape',
+    icon: 'crop_landscape',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.32, w: 0.80, h: 0.36, shape: 'rect' }],
+  },
+
+  // Rounded variants
+  {
+    id: 'single-rounded-portrait',
+    name: 'Rounded portrait',
+    icon: 'crop_portrait',
+    category: 'shapes',
+    slots: [{ x: 0.32, y: 0.10, w: 0.36, h: 0.80, shape: 'rounded' }],
+  },
+  {
+    id: 'single-rounded-landscape',
+    name: 'Rounded landscape',
+    icon: 'crop_landscape',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.32, w: 0.80, h: 0.36, shape: 'rounded' }],
+  },
+  {
+    id: 'single-rounded-large',
+    name: 'Rounded (large)',
+    icon: 'crop_5_4',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.10, w: 0.80, h: 0.80, shape: 'rounded' }],
+  },
+
+  // Circle / ellipse variants
+  {
+    id: 'single-circle-large',
+    name: 'Circle (large)',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.10, w: 0.80, h: 0.80, shape: 'circle' }],
+  },
+  {
+    id: 'single-circle-small',
+    name: 'Circle (small)',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [{ x: 0.35, y: 0.35, w: 0.30, h: 0.30, shape: 'circle' }],
+  },
+  {
+    id: 'single-ellipse-portrait',
+    name: 'Oval (portrait)',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [{ x: 0.32, y: 0.10, w: 0.36, h: 0.80, shape: 'circle' }],
+  },
+  {
+    id: 'single-ellipse-landscape',
+    name: 'Oval (landscape)',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.32, w: 0.80, h: 0.36, shape: 'circle' }],
+  },
+
+  // Hexagon variants
+  {
+    id: 'single-hexagon-large',
+    name: 'Hexagon (large)',
+    icon: 'hexagon',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.10, w: 0.80, h: 0.80, shape: 'hexagon' }],
+  },
+  {
+    id: 'single-hexagon-portrait',
+    name: 'Hexagon (tall)',
+    icon: 'hexagon',
+    category: 'shapes',
+    slots: [{ x: 0.32, y: 0.10, w: 0.36, h: 0.80, shape: 'hexagon' }],
+  },
+
+  // Star variants
+  {
+    id: 'single-star-large',
+    name: 'Star (large)',
+    icon: 'star',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.10, w: 0.80, h: 0.80, shape: 'star' }],
+  },
+  {
+    id: 'single-star-small',
+    name: 'Star (small)',
+    icon: 'star',
+    category: 'shapes',
+    slots: [{ x: 0.35, y: 0.35, w: 0.30, h: 0.30, shape: 'star' }],
+  },
+
+  // Heart variant
+  {
+    id: 'single-heart-large',
+    name: 'Heart (large)',
+    icon: 'favorite',
+    category: 'shapes',
+    slots: [{ x: 0.10, y: 0.10, w: 0.80, h: 0.80, shape: 'heart' }],
+  },
+
+  // PX-132 — multi-shape compositions (still in 'shapes' since they're
+  // single-shape building blocks repeated). Useful for designers who want
+  // a "two circles" or "three squares" arrangement out of the box.
+  {
+    id: 'shapes-circle-pair',
+    name: 'Circle pair',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [
+      { x: 0.05, y: 0.30, w: 0.40, h: 0.40, shape: 'circle' },
+      { x: 0.55, y: 0.30, w: 0.40, h: 0.40, shape: 'circle' },
+    ],
+  },
+  {
+    id: 'shapes-circle-trio',
+    name: 'Circle trio',
+    icon: 'circle',
+    category: 'shapes',
+    slots: [
+      { x: 0.02, y: 0.32, w: 0.30, h: 0.36, shape: 'circle' },
+      { x: 0.35, y: 0.32, w: 0.30, h: 0.36, shape: 'circle' },
+      { x: 0.68, y: 0.32, w: 0.30, h: 0.36, shape: 'circle' },
+    ],
+  },
+  {
+    id: 'shapes-rounded-pair',
+    name: 'Rounded pair',
+    icon: 'crop_5_4',
+    category: 'shapes',
+    slots: [
+      { x: 0.05, y: 0.20, w: 0.40, h: 0.60, shape: 'rounded' },
+      { x: 0.55, y: 0.20, w: 0.40, h: 0.60, shape: 'rounded' },
+    ],
   },
 
   // ===========================
