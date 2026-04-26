@@ -1,7 +1,7 @@
 # Graph Report - pixelforge  (2026-04-26)
 
 ## Corpus Check
-- 144 files · ~1,267,494 words
+- 144 files · ~1,269,003 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
