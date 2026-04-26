@@ -1998,7 +1998,12 @@ export class Editor implements AfterViewInit, OnDestroy {
         this.historyService.init();
         this.fitToScreen();
       } else {
-        // Project may be loading from backend — poll briefly for canvas state
+        // Project may be loading from backend — poll for canvas state.
+        // PX-139 — extended from 4.5s (30 attempts) to 15s (100 attempts)
+        // because cold-start backend responses + Mongo connect + getProject
+        // can comfortably exceed the old window. On final timeout we
+        // surface a snackbar instead of leaving an empty canvas with no
+        // signal that anything went wrong.
         this.historyService.init();
         this.fitToScreen();
         let attempts = 0;
@@ -2012,8 +2017,13 @@ export class Editor implements AfterViewInit, OnDestroy {
             // PX-135 — same multi-page hydration as the eager-load path.
             const activeCanvasJson = this.hydrateMultiPageEnvelope(json);
             this.canvasService.loadFromJSON(activeCanvasJson).then(() => this.fitToScreen());
-          } else if (attempts > 30) {
+          } else if (attempts > 100) {
             clearInterval(waitForProject);
+            this.snackBar.open(
+              "Couldn't load this project. Try refreshing or going back to /hub.",
+              'OK',
+              { duration: 8000 },
+            );
           }
         }, 150);
       }

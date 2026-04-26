@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Project } from '../models/project.model';
 import { ApiService, ApiProject } from './api.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +16,7 @@ export interface UploadedImage {
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
   private readonly apiService = inject(ApiService);
+  private readonly snackBar = inject(MatSnackBar);
 
   private readonly _projects = signal<Project[]>([]);
   private readonly _currentProject = signal<Project | null>(null);
@@ -59,13 +61,29 @@ export class ProjectService {
     });
   }
 
+  /**
+   * Reconcile the local project store with what the backend returned.
+   *
+   * PX-139 — last-writer-wins by `updatedAt`. Earlier shape silently
+   * skipped any backend project whose id was already in localStorage,
+   * which caused a stale resize / canvas-empty class of bug whenever
+   * `persistProjects` had failed quietly on a previous session: the
+   * backend held the truth, the merge ignored it.
+   *
+   * @param apiProjects - Backend project DTOs, ISO-string timestamps.
+   * @returns The merged project list. New (backend-only) entries are
+   *   appended; pre-existing entries are replaced when the backend's
+   *   `updated_at` is strictly newer than the local `updatedAt`.
+   * @remarks A local entry whose `updatedAt` is newer than backend's
+   *   (an unsynced offline edit) is preserved unchanged — saveCanvasState
+   *   will eventually reconcile it on the next save.
+   */
   private mergeProjects(apiProjects: ApiProject[]): Project[] {
-    const existing = this._projects();
-    const existingIds = new Set(existing.map(p => p.id));
+    const local = this._projects();
+    const byId = new Map<string, Project>(local.map(p => [p.id, p]));
 
-    const fromApi: Project[] = apiProjects
-      .filter(ap => !existingIds.has(ap.id))
-      .map(ap => ({
+    for (const ap of apiProjects) {
+      const incoming: Project = {
         id: ap.id,
         name: ap.name,
         width: ap.width,
@@ -75,9 +93,34 @@ export class ProjectService {
         createdAt: new Date(ap.created_at),
         updatedAt: new Date(ap.updated_at),
         layers: [],
-      }));
+      };
+      const existing = byId.get(ap.id);
+      if (!existing) {
+        byId.set(ap.id, incoming);
+        continue;
+      }
+      // PX-139 — only overwrite when backend is strictly newer. Equal-time
+      // ties keep local (avoids clobbering an in-memory edit whose persist
+      // hasn't fired yet). `existing.updatedAt` may be a string after a
+      // JSON round-trip from localStorage, so coerce via `new Date(...)`
+      // (no-op for an actual Date, parses for a string).
+      const existingMs = new Date(existing.updatedAt).getTime();
+      if (incoming.updatedAt.getTime() > existingMs) {
+        // Preserve any local-only fields (deletedAt, tags) that backend
+        // doesn't track, by spreading existing first.
+        byId.set(ap.id, { ...existing, ...incoming });
+      }
+    }
 
-    return [...existing, ...fromApi];
+    // Maintain original local order so the recent-projects strip on /hub
+    // doesn't reshuffle on every backend sync.
+    const merged: Project[] = local.map(p => byId.get(p.id) ?? p);
+    for (const ap of apiProjects) {
+      if (!local.some(p => p.id === ap.id)) {
+        merged.unshift(byId.get(ap.id)!);
+      }
+    }
+    return merged;
   }
 
   createProject(name: string, width: number, height: number): Project {
@@ -115,13 +158,22 @@ export class ProjectService {
     return project;
   }
 
+  /**
+   * Open a project by id. Sets `_currentProject` immediately from the
+   * local store (optimistic), then — when backend sync is on — always
+   * re-fetches and replaces it if the backend version is newer.
+   *
+   * PX-139 — earlier shape only fetched from backend when the project
+   * wasn't local at all, so any post-localStorage-quota stale state
+   * lived forever. Now backend is the source of truth whenever it's
+   * connected, with `updatedAt` as the tiebreaker so unsynced offline
+   * edits aren't clobbered.
+   */
   openProject(id: string): Project | null {
-    // Find in local store first
-    let project = this._projects().find(p => p.id === id) ?? null;
-    this._currentProject.set(project);
+    const local = this._projects().find(p => p.id === id) ?? null;
+    this._currentProject.set(local);
 
-    // If not found locally and backend is enabled, try fetching from backend
-    if (!project && this._useBackend()) {
+    if (this._useBackend()) {
       this.apiService.getProject(id).subscribe({
         next: (apiProject) => {
           const loaded: Project = {
@@ -135,17 +187,30 @@ export class ProjectService {
             updatedAt: new Date(apiProject.updated_at),
             layers: [],
           };
-          this._projects.update(ps => {
-            if (ps.find(p => p.id === loaded.id)) return ps;
-            return [loaded, ...ps];
-          });
-          this._currentProject.set(loaded);
-          this.persistProjects();
+
+          const localCopy = this._projects().find(p => p.id === id) ?? null;
+          // `localCopy.updatedAt` may be a string post JSON round-trip;
+          // coerce defensively.
+          const backendIsNewer =
+            !localCopy ||
+            loaded.updatedAt.getTime() > new Date(localCopy.updatedAt).getTime();
+
+          if (backendIsNewer) {
+            this._projects.update(ps => {
+              const existing = ps.find(p => p.id === loaded.id);
+              if (!existing) return [loaded, ...ps];
+              return ps.map(p =>
+                p.id === loaded.id ? { ...existing, ...loaded } : p,
+              );
+            });
+            this._currentProject.set(loaded);
+            this.persistProjects();
+          }
         },
       });
     }
 
-    return project;
+    return local;
   }
 
   /**
@@ -349,7 +414,16 @@ export class ProjectService {
         const slim = this._projects().map(p => ({ ...p, thumbnail: undefined }));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
       } catch {
+        // PX-139 — second-tier failure. Previously this was a silent
+        // console.error which let users keep editing while their state
+        // existed only in this tab; refreshing then quietly lost work.
+        // Surface a snackbar so they can act before they navigate away.
         console.error('localStorage is full');
+        this.snackBar.open(
+          'Local storage full — your latest changes only exist in this tab. Refreshing may lose them.',
+          'OK',
+          { duration: 8000 },
+        );
       }
     }
   }
