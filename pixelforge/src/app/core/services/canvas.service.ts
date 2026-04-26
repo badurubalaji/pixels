@@ -222,6 +222,15 @@ export class CanvasService {
           this.canvas!.requestRenderAll();
         }
         this.rightClick$.next(e);
+        return;
+      }
+      // PX-151 — Magic Eraser intercepts left-clicks on the active image
+      // when the mode is on. fabric 7's `getScenePoint` returns coords
+      // in the canvas's design space (already adjusted for viewport
+      // pan / zoom), which is exactly what magicEraseClick wants.
+      if (this._magicEraserActive() && e && e.button === 0) {
+        const p = this.canvas!.getScenePoint(e);
+        void this.magicEraseClick({ x: p.x, y: p.y });
       }
     });
 
@@ -2442,6 +2451,192 @@ export class CanvasService {
     (active as any).set(prop, !current);
     this.commitChange(active);
     this.canvas.renderAll();
+  }
+
+  // ============================
+  // PX-151 — Magic Eraser
+  // ============================
+
+  /**
+   * True while the user is in Magic Eraser mode — each click on the
+   * active image flood-fills pixels of similar color to alpha=0.
+   * Drives the editor's cursor and the property-panel "exit" UI.
+   */
+  private readonly _magicEraserActive = signal(false);
+  readonly magicEraserActive = this._magicEraserActive.asReadonly();
+
+  /**
+   * RGB-distance tolerance used by the flood fill, in 0–255 units per
+   * channel. Default 32 catches anti-aliased edges and shadow halos
+   * without bleeding into the subject. Exposed so a future tolerance
+   * slider in the UI can mutate it without wider refactor.
+   */
+  private readonly _magicEraserTolerance = signal(32);
+  readonly magicEraserTolerance = this._magicEraserTolerance.asReadonly();
+
+  setMagicEraserTolerance(value: number): void {
+    this._magicEraserTolerance.set(Math.max(1, Math.min(120, value)));
+  }
+
+  /**
+   * Enter Magic Eraser mode. Cursor flips to crosshair on the canvas.
+   * The next click on the active image runs the flood fill.
+   */
+  enterMagicEraserMode(): void {
+    if (!this.canvas) return;
+    this._magicEraserActive.set(true);
+    this.canvas.defaultCursor = 'crosshair';
+    this.canvas.hoverCursor = 'crosshair';
+  }
+
+  /** Exit Magic Eraser mode and restore the default cursor. */
+  exitMagicEraserMode(): void {
+    if (!this.canvas) return;
+    this._magicEraserActive.set(false);
+    this.canvas.defaultCursor = 'default';
+    this.canvas.hoverCursor = 'move';
+  }
+
+  /**
+   * Run a flood-fill alpha-removal on `image` starting at the given
+   * image-local pixel coordinates. Pixels whose RGB distance from the
+   * sampled color is within `tolerance` (Euclidean, summed channels)
+   * are set to alpha=0; the result replaces the image's bitmap.
+   *
+   * Used by the click handler when {@link magicEraserActive} is true,
+   * but also exported so callers (and tests) can drive the operation
+   * deterministically without a fake mouse event.
+   *
+   * @param image - The fabric.FabricImage to mutate.
+   * @param px - X pixel coordinate in the image's NATURAL bitmap space
+   *   (i.e., 0 ≤ px < image.width). Caller is responsible for mapping
+   *   from canvas-space click coords to image-local coords.
+   * @param py - Y pixel coordinate in the image's natural bitmap space.
+   * @param tolerance - Optional override. Defaults to the current
+   *   {@link magicEraserTolerance} signal value.
+   * @returns The number of pixels erased. Useful for snackbar feedback
+   *   ("erased 1,234 pixels").
+   */
+  async magicEraseAt(
+    image: fabric.FabricImage,
+    px: number,
+    py: number,
+    tolerance?: number,
+  ): Promise<number> {
+    const el = (image as any).getElement?.() as HTMLImageElement | HTMLCanvasElement | null;
+    if (!el) return 0;
+    const W = (el as any).naturalWidth ?? el.width;
+    const H = (el as any).naturalHeight ?? el.height;
+    if (!W || !H) return 0;
+    const x0 = Math.max(0, Math.min(W - 1, Math.round(px)));
+    const y0 = Math.max(0, Math.min(H - 1, Math.round(py)));
+
+    const tmp = document.createElement('canvas');
+    tmp.width = W;
+    tmp.height = H;
+    const ctx = tmp.getContext('2d');
+    if (!ctx) return 0;
+    ctx.drawImage(el as CanvasImageSource, 0, 0, W, H);
+
+    const imageData = ctx.getImageData(0, 0, W, H);
+    const data = imageData.data;
+    const seedIdx = (y0 * W + x0) * 4;
+    const tR = data[seedIdx];
+    const tG = data[seedIdx + 1];
+    const tB = data[seedIdx + 2];
+    const tA = data[seedIdx + 3];
+    if (tA === 0) return 0; // already transparent — nothing to do
+
+    const tol = tolerance ?? this._magicEraserTolerance();
+    // Squared distance in summed channels — avoids the sqrt.
+    const tolSq = tol * tol * 3;
+
+    const visited = new Uint8Array(W * H);
+    const queue: number[] = [y0 * W + x0];
+    let erased = 0;
+    while (queue.length) {
+      const i = queue.pop()!;
+      if (visited[i]) continue;
+      visited[i] = 1;
+      const di = i * 4;
+      if (data[di + 3] === 0) continue;
+      const dR = data[di] - tR;
+      const dG = data[di + 1] - tG;
+      const dB = data[di + 2] - tB;
+      if (dR * dR + dG * dG + dB * dB > tolSq) continue;
+      data[di + 3] = 0;
+      erased++;
+      const x = i % W;
+      const y = (i - x) / W;
+      if (x > 0) queue.push(i - 1);
+      if (x < W - 1) queue.push(i + 1);
+      if (y > 0) queue.push(i - W);
+      if (y < H - 1) queue.push(i + W);
+    }
+    if (erased === 0) return 0;
+
+    ctx.putImageData(imageData, 0, 0);
+    const newDataUrl = tmp.toDataURL('image/png');
+
+    // Replace the image element in place — preserves fabric metadata
+    // (left/top/scaleX/scaleY/angle/etc.) so the user's positioning
+    // and the layer's customType / layerId stay intact.
+    return new Promise<number>((resolve) => {
+      const newEl = new Image();
+      newEl.crossOrigin = 'anonymous';
+      newEl.onload = () => {
+        (image as any).setElement?.(newEl);
+        // After swap, fabric needs a full re-render to pick up the new bitmap.
+        this.canvas?.requestRenderAll();
+        this.commitChange(image);
+        resolve(erased);
+      };
+      newEl.onerror = () => resolve(0);
+      newEl.src = newDataUrl;
+    });
+  }
+
+  /**
+   * Map a canvas pointer event to the active fabric.FabricImage's
+   * NATURAL pixel coordinates and run {@link magicEraseAt}. No-op when
+   * Magic Eraser mode is off, no image is selected, or the click is
+   * outside the image's bounding rect.
+   *
+   * @param ev - Pointer-style event from fabric (pointer or DOM).
+   * @returns The number of pixels erased (0 if no-op).
+   */
+  async magicEraseClick(ev: { x: number; y: number }): Promise<number> {
+    if (!this._magicEraserActive() || !this.canvas) return 0;
+    const active = this.canvas.getActiveObject();
+    if (!active || !(active instanceof fabric.FabricImage)) return 0;
+
+    // Translate canvas-space (already adjusted for viewport zoom by
+    // fabric's pointer event) to the image's local NATURAL pixel
+    // coordinates. The image's displayed bounds are
+    //   left/top + width*scaleX × height*scaleY
+    // and natural bounds are width × height.
+    const left = active.left ?? 0;
+    const top = active.top ?? 0;
+    const sX = active.scaleX ?? 1;
+    const sY = active.scaleY ?? 1;
+    const w = active.width ?? 0;
+    const h = active.height ?? 0;
+    const originX = (active.originX ?? 'left') as 'left' | 'center' | 'right';
+    const originY = (active.originY ?? 'top') as 'top' | 'center' | 'bottom';
+
+    let canvasX = ev.x;
+    let canvasY = ev.y;
+    // Adjust for the image's origin so local (0,0) is the bitmap top-left.
+    if (originX === 'center') canvasX += (w * sX) / 2;
+    else if (originX === 'right') canvasX += w * sX;
+    if (originY === 'center') canvasY += (h * sY) / 2;
+    else if (originY === 'bottom') canvasY += h * sY;
+
+    const localX = (canvasX - left) / sX;
+    const localY = (canvasY - top) / sY;
+    if (localX < 0 || localX >= w || localY < 0 || localY >= h) return 0;
+
+    return this.magicEraseAt(active, localX, localY);
   }
 
   /** Delete the currently-selected object and drop its associated layer. */

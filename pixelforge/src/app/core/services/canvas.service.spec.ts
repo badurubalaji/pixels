@@ -520,6 +520,54 @@ describe('CanvasService', () => {
     });
   });
 
+  describe('PX-151: Magic Eraser', () => {
+    it('enterMagicEraserMode flips the signal + cursor; exit restores them', () => {
+      const { service } = makeService();
+      const canvas = service.getCanvas()!;
+      expect(service.magicEraserActive()).toBe(false);
+      service.enterMagicEraserMode();
+      expect(service.magicEraserActive()).toBe(true);
+      expect(canvas.defaultCursor).toBe('crosshair');
+      expect(canvas.hoverCursor).toBe('crosshair');
+      service.exitMagicEraserMode();
+      expect(service.magicEraserActive()).toBe(false);
+      expect(canvas.defaultCursor).toBe('default');
+      expect(canvas.hoverCursor).toBe('move');
+    });
+
+    it('setMagicEraserTolerance clamps to [1, 120]', () => {
+      const { service } = makeService();
+      service.setMagicEraserTolerance(0);
+      expect(service.magicEraserTolerance()).toBe(1);
+      service.setMagicEraserTolerance(500);
+      expect(service.magicEraserTolerance()).toBe(120);
+      service.setMagicEraserTolerance(45);
+      expect(service.magicEraserTolerance()).toBe(45);
+    });
+
+    it('magicEraseAt is a no-op when the image element has no dimensions', async () => {
+      // jsdom doesn't ship a real Canvas 2D context, so the full
+      // pixel-level correctness of the flood-fill is exercised at
+      // browser-runtime by the user — here we only assert the early
+      // return paths the algorithm takes for degenerate inputs.
+      const fakeImage: any = {
+        getElement: () => ({ naturalWidth: 0, naturalHeight: 0 }),
+        setElement: () => {},
+      };
+      const { service } = makeService();
+      const erased = await service.magicEraseAt(fakeImage as any, 0, 0);
+      expect(erased).toBe(0);
+    });
+
+    it('magicEraseClick is a no-op when not in eraser mode', async () => {
+      const { service } = makeService();
+      // Mode is OFF — should bail without touching the canvas, even
+      // when an image is the active selection.
+      const erased = await service.magicEraseClick({ x: 10, y: 10 });
+      expect(erased).toBe(0);
+    });
+  });
+
   describe('grid / thirds / print toggles', () => {
     it('toggleGrid flips showGrid', () => {
       const { service } = makeService();

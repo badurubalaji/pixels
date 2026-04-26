@@ -92,6 +92,51 @@ interface ObjectProps {
             <mat-icon>auto_fix_high</mat-icon>
             Remove Background
           </button>
+
+          <!-- PX-151 — Magic Eraser. After AI bg-removal, click a missed
+               background pixel and the flood fill clears its surrounding
+               color region. Toggles on/off; cursor flips to crosshair on
+               the canvas while active. -->
+          @if (canvasService.magicEraserActive()) {
+            <button
+              mat-stroked-button
+              class="magic-eraser-btn magic-eraser-btn--active"
+              data-testid="magic-eraser-exit"
+              matTooltip="Exit Magic Eraser (Esc)"
+              (click)="canvasService.exitMagicEraserMode()"
+            >
+              <mat-icon>close</mat-icon>
+              Exit Eraser ({{ canvasService.magicEraserTolerance() }})
+            </button>
+          } @else {
+            <button
+              mat-stroked-button
+              class="magic-eraser-btn"
+              data-testid="magic-eraser-enter"
+              matTooltip="Click missed background pixels to erase them by color"
+              (click)="canvasService.enterMagicEraserMode()"
+            >
+              <mat-icon>auto_fix_normal</mat-icon>
+              Magic Eraser
+            </button>
+          }
+
+          @if (canvasService.magicEraserActive()) {
+            <div class="magic-eraser-tolerance">
+              <span class="me-label" matTooltip="How aggressively similar colors are erased">Tolerance</span>
+              <mat-slider min="4" max="120" step="2" class="me-slider">
+                <input
+                  matSliderThumb
+                  [ngModel]="canvasService.magicEraserTolerance()"
+                  (ngModelChange)="canvasService.setMagicEraserTolerance($event)"
+                />
+              </mat-slider>
+            </div>
+            <p class="me-hint">
+              Click any leftover background pixel on the image to erase
+              its color region. Press <kbd>Esc</kbd> to exit.
+            </p>
+          }
         </div>
       }
 
@@ -1067,6 +1112,9 @@ interface ObjectProps {
        Mirrors the photo-frame quick-actions layout so it feels familiar. */
     .image-quick-actions {
       padding: 0 4px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
     .remove-bg-btn {
       width: 100%;
@@ -1075,6 +1123,44 @@ interface ObjectProps {
       border-radius: 10px !important;
       background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
       color: #ffffff !important;
+    }
+    /* PX-151 — Magic Eraser button (secondary; sits below Remove BG). */
+    .magic-eraser-btn {
+      width: 100%;
+      height: 36px !important;
+      border-radius: 10px !important;
+      font-weight: 500 !important;
+    }
+    .magic-eraser-btn--active {
+      background: rgba(124, 58, 237, 0.12) !important;
+      border-color: var(--px-violet, #7c3aed) !important;
+      color: var(--px-violet, #7c3aed) !important;
+    }
+    .magic-eraser-tolerance {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 2px 0;
+    }
+    .me-label {
+      font-size: 0.78rem;
+      color: var(--px-ink-soft, #334155);
+      flex-shrink: 0;
+    }
+    .me-slider {
+      flex: 1;
+    }
+    .me-hint {
+      margin: 4px 2px 0;
+      font-size: 0.72rem;
+      color: var(--px-ink-soft, #475569);
+      line-height: 1.4;
+    }
+    .me-hint kbd {
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.7rem;
     }
 
     /* PX-103 — frame shape selector */

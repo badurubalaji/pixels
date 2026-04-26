@@ -142,8 +142,15 @@ export class KeyboardService {
           return;
         }
 
-        // Escape — deselect
+        // Escape — exit Magic Eraser if active, else deselect.
+        // PX-151: eraser mode takes precedence so a single Esc press
+        // restores the normal cursor + selection rather than dropping
+        // out of both at once.
         if (e.key === 'Escape') {
+          if (this.canvasService.magicEraserActive()) {
+            this.canvasService.exitMagicEraserMode();
+            return;
+          }
           if (!canvas) return;
           canvas.discardActiveObject();
           canvas.renderAll();
