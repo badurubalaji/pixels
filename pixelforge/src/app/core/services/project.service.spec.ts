@@ -107,6 +107,36 @@ describe('ProjectService — PX-139 backend-fresh-wins sync', () => {
       expect(found?.canvasJson).toBe('LOCAL_NEW');
     });
 
+    it('PX-147: preserves local canvasJson when backend list-response lacks it', () => {
+      // GET /api/projects strips canvas_json for performance.
+      // Backend updated_at is reliably newer than local (clock drift /
+      // network latency), so the merge fires every boot. Without the
+      // nullish-preserve guard, this wipes the user's saved canvas.
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify([localProj('p1', '2026-04-26T10:00:00.000Z', 'GOOD_CANVAS')]),
+      );
+      api.healthCheck.mockReturnValue(of({ status: 'ok', database: 'connected' }));
+      // List endpoint with NO canvas_json field.
+      api.listProjects.mockReturnValue(
+        of([{
+          id: 'p1',
+          name: 'P',
+          width: 800,
+          height: 600,
+          thumbnail: '',
+          // canvas_json intentionally omitted (the bug surface).
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-04-26T11:00:00Z',
+        }]),
+      );
+
+      const svc = TestBed.inject(ProjectService);
+      const found = svc.projects().find(p => p.id === 'p1');
+      // The user's edit must survive the boot-time merge.
+      expect(found?.canvasJson).toBe('GOOD_CANVAS');
+    });
+
     it('appends backend-only entries (preserves new behavior)', () => {
       localStorage.setItem(
         STORAGE_KEY,

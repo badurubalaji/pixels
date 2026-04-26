@@ -106,9 +106,22 @@ export class ProjectService {
       // (no-op for an actual Date, parses for a string).
       const existingMs = new Date(existing.updatedAt).getTime();
       if (incoming.updatedAt.getTime() > existingMs) {
-        // Preserve any local-only fields (deletedAt, tags) that backend
-        // doesn't track, by spreading existing first.
-        byId.set(ap.id, { ...existing, ...incoming });
+        // PX-147 — `GET /api/projects` (list) strips canvas_json and may
+        // strip thumbnail for performance, so `incoming` from this path
+        // has `canvasJson: undefined`. A naive spread wipes the local
+        // value, and because backend updated_at is reliably ~tens of ms
+        // ahead of client local (network latency + server clock drift),
+        // every boot's syncFromBackend would silently destroy the user's
+        // saved canvas. Preserve local canvasJson / thumbnail whenever
+        // the incoming version is nullish.
+        const preservedCanvas = incoming.canvasJson ?? existing.canvasJson;
+        const preservedThumb = incoming.thumbnail ?? existing.thumbnail;
+        byId.set(ap.id, {
+          ...existing,
+          ...incoming,
+          canvasJson: preservedCanvas,
+          thumbnail: preservedThumb,
+        });
       }
     }
 
@@ -196,14 +209,24 @@ export class ProjectService {
             loaded.updatedAt.getTime() > new Date(localCopy.updatedAt).getTime();
 
           if (backendIsNewer) {
+            // PX-147 — same nullish-preservation as mergeProjects. Even
+            // though /projects/{id} normally returns canvas_json, defend
+            // against any future endpoint variant that doesn't.
+            const localBefore = this._projects().find(p => p.id === loaded.id);
+            const finalCanvas = loaded.canvasJson ?? localBefore?.canvasJson;
+            const finalThumb = loaded.thumbnail ?? localBefore?.thumbnail;
+            const merged: Project = {
+              ...(localBefore ?? {} as Project),
+              ...loaded,
+              canvasJson: finalCanvas,
+              thumbnail: finalThumb,
+            };
             this._projects.update(ps => {
-              const existing = ps.find(p => p.id === loaded.id);
-              if (!existing) return [loaded, ...ps];
-              return ps.map(p =>
-                p.id === loaded.id ? { ...existing, ...loaded } : p,
-              );
+              const existing = ps.find(p => p.id === merged.id);
+              if (!existing) return [merged, ...ps];
+              return ps.map(p => (p.id === merged.id ? merged : p));
             });
-            this._currentProject.set(loaded);
+            this._currentProject.set(merged);
             this.persistProjects();
           }
         },
