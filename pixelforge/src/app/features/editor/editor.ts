@@ -36,6 +36,10 @@ import { ClipboardService } from '../../core/services/clipboard.service';
 import { BackgroundRemovalService } from '../../core/services/background-removal.service';
 import { LayerPanelComponent } from './components/layer-panel';
 import { PropertyPanelComponent } from './components/property-panel';
+import {
+  ContextToolbarComponent,
+  ContextToolbarContext,
+} from './components/context-toolbar';
 import { SidebarDrawerComponent } from './components/sidebar-drawer';
 import { ExportDialog } from './components/export-dialog';
 import { ShortcutsDialog } from './components/shortcuts-dialog';
@@ -108,6 +112,7 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     MatDialogModule,
     LayerPanelComponent,
     PropertyPanelComponent,
+    ContextToolbarComponent,
     CanvasRulersComponent,
     CommandPalette,
     PresentationMode,
@@ -365,6 +370,20 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
             [class.drag-over]="isDragOver()"
           >
             <div class="canvas-stack">
+              <!-- PX-141 — floating context toolbar; hides itself when
+                   selectionContext() === 'none'. -->
+              <app-context-toolbar
+                [context]="selectionContext()"
+                (removeBackground)="removeBackground()"
+                (toggleBold)="canvasService.toggleTextStringProp('fontWeight', 'bold', 'normal')"
+                (toggleItalic)="canvasService.toggleTextStringProp('fontStyle', 'italic', 'normal')"
+                (toggleUnderline)="canvasService.toggleTextBooleanProp('underline')"
+                (groupSelected)="canvasService.groupSelected()"
+                (ungroupSelected)="canvasService.ungroupSelected()"
+                (bringToFront)="canvasService.bringActiveToFront()"
+                (sendToBack)="canvasService.sendActiveToBack()"
+                (deleteSelected)="canvasService.removeActiveObject()"
+              />
               <div class="canvas-wrapper">
                 <canvas
                   #editorCanvas
@@ -1580,6 +1599,31 @@ export class Editor implements AfterViewInit, OnDestroy {
 
   readonly isOnline = signal(navigator.onLine);
   readonly hasSelection = signal(false);
+
+  /**
+   * PX-141 — kind of the active fabric selection. Drives which verb set
+   * the floating context toolbar surfaces above the canvas.
+   */
+  readonly selectionContext = signal<ContextToolbarContext>('none');
+
+  /**
+   * PX-141 — map a fabric active-object instance to one of the four
+   * supported context kinds. ActiveSelection (multi-select) and Group
+   * both render the group context. Photo-frames have their own
+   * crop/replace UI (property panel), so they fall back to `'none'` to
+   * keep the floating toolbar out of their way.
+   */
+  private classifySelection(
+    obj: fabric.FabricObject | null | undefined,
+  ): ContextToolbarContext {
+    if (!obj) return 'none';
+    if ((obj as any).customType === 'photo-frame') return 'none';
+    if (obj instanceof fabric.ActiveSelection) return 'group';
+    if (obj instanceof fabric.Group) return 'group';
+    if (obj instanceof fabric.FabricImage) return 'image';
+    if (obj instanceof fabric.IText || obj instanceof fabric.FabricText) return 'text';
+    return 'shape';
+  }
   readonly layersPinned = signal(false);
   readonly pageLocked = signal(false);
   /**
@@ -2085,12 +2129,21 @@ export class Editor implements AfterViewInit, OnDestroy {
     // moment they clicked away and back. The Fit-to-canvas toolbar button
     // (PX-136) is the explicit, user-controlled path; auto-fit-on-selection
     // is gone.
+    // PX-141 — additionally classifies the active selection so the floating
+    // context toolbar can swap its verb set (image / text / shape / group).
     const fcanvas = this.canvasService.getCanvas();
     if (fcanvas) {
-      const onSel = () => this.hasSelection.set(!!fcanvas.getActiveObject());
+      const onSel = () => {
+        const active = fcanvas.getActiveObject();
+        this.hasSelection.set(!!active);
+        this.selectionContext.set(this.classifySelection(active));
+      };
       fcanvas.on('selection:created', onSel);
       fcanvas.on('selection:updated', onSel);
-      fcanvas.on('selection:cleared', () => this.hasSelection.set(false));
+      fcanvas.on('selection:cleared', () => {
+        this.hasSelection.set(false);
+        this.selectionContext.set('none');
+      });
     }
 
     // Auto-save every 30 seconds

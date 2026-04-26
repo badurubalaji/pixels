@@ -2379,6 +2379,71 @@ export class CanvasService {
   // Basic operations
   // ============================
 
+  /**
+   * PX-141 — bring the active selection to the top of the z-order and
+   * commit a history entry. Noop when there is no active object.
+   */
+  bringActiveToFront(): void {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+    this.canvas.bringObjectToFront(active);
+    this.commitChange(active);
+    this.canvas.renderAll();
+  }
+
+  /**
+   * PX-141 — send the active selection to the bottom of the z-order and
+   * commit a history entry. Noop when there is no active object.
+   */
+  sendActiveToBack(): void {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+    this.canvas.sendObjectToBack(active);
+    this.commitChange(active);
+    this.canvas.renderAll();
+  }
+
+  /**
+   * PX-141 — toggle a string-valued property on the active text object
+   * (`fontWeight`, `fontStyle`) between two well-known states. Used by
+   * the floating context toolbar's B / I quick actions.
+   *
+   * @param prop - Fabric prop name (`'fontWeight'` or `'fontStyle'`).
+   * @param onValue - Value when the toggle is "on" (`'bold'` / `'italic'`).
+   * @param offValue - Value when the toggle is "off" (`'normal'`).
+   */
+  toggleTextStringProp(
+    prop: 'fontWeight' | 'fontStyle',
+    onValue: 'bold' | 'italic',
+    offValue: 'normal',
+  ): void {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+    if (!(active instanceof fabric.IText) && !(active instanceof fabric.FabricText)) return;
+    const current = (active as any)[prop];
+    (active as any).set(prop, current === onValue ? offValue : onValue);
+    this.commitChange(active);
+    this.canvas.renderAll();
+  }
+
+  /**
+   * PX-141 — toggle a boolean text-decoration prop (`underline`,
+   * `linethrough`) on the active text object.
+   */
+  toggleTextBooleanProp(prop: 'underline' | 'linethrough'): void {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+    if (!(active instanceof fabric.IText) && !(active instanceof fabric.FabricText)) return;
+    const current = (active as any)[prop] === true;
+    (active as any).set(prop, !current);
+    this.commitChange(active);
+    this.canvas.renderAll();
+  }
+
   /** Delete the currently-selected object and drop its associated layer. */
   removeActiveObject(): void {
     if (!this.canvas) return;
