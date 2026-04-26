@@ -2780,9 +2780,53 @@ export class Editor implements AfterViewInit, OnDestroy {
       });
     }
 
+    // PX-146 — guard against teardown / mid-load races that briefly
+    // produce an empty canvas snapshot. If the new state is empty AND
+    // the existing saved project has content, refuse the save. This
+    // prevents the "edited image, refresh, canvas is empty" failure
+    // mode where a transient empty getCanvasJSON destroyed real work.
+    // Intentional "delete everything" still persists because that
+    // path goes through user-driven object:removed → autosave with a
+    // fully stable (just empty-of-objects) canvas; the guard kicks in
+    // only when our prior saved state was non-empty AND the new
+    // snapshot is empty in a way that suggests a torn-down canvas.
+    if (
+      this.isEffectivelyEmpty(canvasJson) &&
+      !this.isEffectivelyEmpty(project.canvasJson)
+    ) {
+      console.warn(
+        '[saveProject] refusing to overwrite non-empty saved state with empty snapshot',
+      );
+      return;
+    }
+
     // Silent save — the save-button pill in the topbar reflects sync state
     // ("Saving..." / "Saved Xs ago" / "Offline"), so no snackbar needed.
     this.projectService.saveCanvasState(project.id, canvasJson, thumbnail);
+  }
+
+  /**
+   * PX-146 — true when the given canvasJson string represents a canvas
+   * with no objects. Handles both the legacy single-page shape
+   * (`{"version":"7","objects":[]}`) and the PX-135 multi-page envelope
+   * (every page's canvasJson is itself empty). Defensive against
+   * unparseable / nullish inputs (treats them as empty).
+   */
+  private isEffectivelyEmpty(json: string | null | undefined): boolean {
+    if (!json || json === '' || json === '{}') return true;
+    try {
+      const parsed = JSON.parse(json);
+      if (parsed?._multiPage && Array.isArray(parsed.pages)) {
+        return parsed.pages.every((p: { canvasJson?: string }) =>
+          this.isEffectivelyEmpty(p.canvasJson),
+        );
+      }
+      return !Array.isArray(parsed.objects) || parsed.objects.length === 0;
+    } catch {
+      // Unknown shape — be safe and treat as non-empty so we don't
+      // refuse a legitimate save.
+      return false;
+    }
   }
 
   // --- History ---

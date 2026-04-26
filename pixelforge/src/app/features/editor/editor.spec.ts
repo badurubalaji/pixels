@@ -682,6 +682,84 @@ describe('Editor', () => {
     expect(ed.isProcessing()).toBe(false);
   });
 
+  describe('PX-146: empty-save guard', () => {
+    it('refuses to overwrite a non-empty saved state with an empty snapshot', () => {
+      const fixture = TestBed.createComponent(Editor);
+      const ed: any = fixture.componentInstance;
+      // Project that already has saved content.
+      projectStub.currentProject.set({
+        id: 'p1',
+        name: 'Test',
+        width: 800,
+        height: 600,
+        canvasJson: '{"version":"7","objects":[{"type":"image","src":"a"}]}',
+      });
+      // Force the canvas snapshot to look empty (e.g., teardown race).
+      canvasStub.getCanvasJSON.mockReturnValue('{"version":"7","objects":[]}');
+      ed.pages.set([{ id: 'p', canvasJson: '', thumbnail: '' }]);
+
+      ed.saveProject();
+      expect(projectStub.saveCanvasState).not.toHaveBeenCalled();
+    });
+
+    it('still saves when the new canvas IS non-empty (normal edit path)', () => {
+      const fixture = TestBed.createComponent(Editor);
+      const ed: any = fixture.componentInstance;
+      projectStub.currentProject.set({
+        id: 'p1',
+        name: 'Test',
+        width: 800,
+        height: 600,
+        canvasJson: '{"version":"7","objects":[{"type":"image","src":"a"}]}',
+      });
+      canvasStub.getCanvasJSON.mockReturnValue(
+        '{"version":"7","objects":[{"type":"image","src":"b"}]}',
+      );
+      ed.pages.set([{ id: 'p', canvasJson: '', thumbnail: '' }]);
+
+      ed.saveProject();
+      expect(projectStub.saveCanvasState).toHaveBeenCalled();
+    });
+
+    it('allows saving an empty canvas when the project has no prior content (new project)', () => {
+      const fixture = TestBed.createComponent(Editor);
+      const ed: any = fixture.componentInstance;
+      projectStub.currentProject.set({
+        id: 'p1',
+        name: 'New',
+        width: 800,
+        height: 600,
+        canvasJson: '',
+      });
+      canvasStub.getCanvasJSON.mockReturnValue('{"version":"7","objects":[]}');
+      ed.pages.set([{ id: 'p', canvasJson: '', thumbnail: '' }]);
+
+      ed.saveProject();
+      expect(projectStub.saveCanvasState).toHaveBeenCalled();
+    });
+
+    it('detects empty multi-page envelope (every page empty)', () => {
+      const fixture = TestBed.createComponent(Editor);
+      const ed: any = fixture.componentInstance;
+      projectStub.currentProject.set({
+        id: 'p1',
+        name: 'Test',
+        width: 800,
+        height: 600,
+        canvasJson: '{"version":"7","objects":[{"type":"image","src":"a"}]}',
+      });
+      canvasStub.getCanvasJSON.mockReturnValue('{"version":"7","objects":[]}');
+      // Multi-page with two empty pages (>1 page triggers envelope branch).
+      ed.pages.set([
+        { id: 'p1', canvasJson: '', thumbnail: '' },
+        { id: 'p2', canvasJson: '', thumbnail: '' },
+      ]);
+
+      ed.saveProject();
+      expect(projectStub.saveCanvasState).not.toHaveBeenCalled();
+    });
+  });
+
   it('PX-145: object:removed re-syncs selectionContext to "none" when active is null', () => {
     // The bug: clicking Delete (or any path that removed the object
     // without firing selection:cleared) left selectionContext stuck at
