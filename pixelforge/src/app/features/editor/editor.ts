@@ -369,21 +369,26 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
             (mousedown)="onCanvasAreaMouseDown($event)"
             [class.drag-over]="isDragOver()"
           >
+            <!-- PX-141 / PX-148 — floating context toolbar; lives at the
+                 top of the canvas-area (sibling of canvas-stack, NOT
+                 inside it) so it stays pinned above the canvas as the
+                 user pans / zooms instead of scrolling away with the
+                 design content. Hides itself when selectionContext() is
+                 'none'. -->
+            <app-context-toolbar
+              class="floating-context-toolbar"
+              [context]="selectionContext()"
+              (removeBackground)="removeBackground()"
+              (toggleBold)="canvasService.toggleTextStringProp('fontWeight', 'bold', 'normal')"
+              (toggleItalic)="canvasService.toggleTextStringProp('fontStyle', 'italic', 'normal')"
+              (toggleUnderline)="canvasService.toggleTextBooleanProp('underline')"
+              (groupSelected)="canvasService.groupSelected()"
+              (ungroupSelected)="canvasService.ungroupSelected()"
+              (bringToFront)="canvasService.bringActiveToFront()"
+              (sendToBack)="canvasService.sendActiveToBack()"
+              (deleteSelected)="canvasService.removeActiveObject()"
+            />
             <div class="canvas-stack">
-              <!-- PX-141 — floating context toolbar; hides itself when
-                   selectionContext() === 'none'. -->
-              <app-context-toolbar
-                [context]="selectionContext()"
-                (removeBackground)="removeBackground()"
-                (toggleBold)="canvasService.toggleTextStringProp('fontWeight', 'bold', 'normal')"
-                (toggleItalic)="canvasService.toggleTextStringProp('fontStyle', 'italic', 'normal')"
-                (toggleUnderline)="canvasService.toggleTextBooleanProp('underline')"
-                (groupSelected)="canvasService.groupSelected()"
-                (ungroupSelected)="canvasService.ungroupSelected()"
-                (bringToFront)="canvasService.bringActiveToFront()"
-                (sendToBack)="canvasService.sendActiveToBack()"
-                (deleteSelected)="canvasService.removeActiveObject()"
-              />
               <div class="canvas-wrapper">
                 <canvas
                   #editorCanvas
@@ -970,6 +975,21 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       flex-direction: column;
       align-items: center;
       gap: 12px;
+    }
+
+    /* PX-148 — pin the floating context toolbar to the top-center of
+       the canvas viewport so it doesn't slide off-screen when the user
+       pans or scrolls a large design. canvas-area is position:relative
+       and centers its content via flex; absolute positioning here
+       takes the toolbar out of flow and parks it at the top, while
+       canvas-stack continues to live in the centered flex line. */
+    .floating-context-toolbar {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      pointer-events: auto;
     }
 
     .canvas-wrapper {
@@ -1971,6 +1991,12 @@ export class Editor implements AfterViewInit, OnDestroy {
       '.canvas-area',
       '.right-panel',
       '.ctx-toolbar',
+      // PX-148 — also whitelist the PX-141 floating context toolbar.
+      // Without this, clicking Remove Background (or any toolbar verb)
+      // would fire the document-level mousedown deselect, clearing the
+      // active object before the click handler runs and leaving the
+      // verbs unable to act on a selection.
+      '.context-toolbar',
       '.canvas-actions',
       '.editor-topbar',
       // PX-129 — sidebar must keep selection so the text-toolbar stays
