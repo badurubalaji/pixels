@@ -2016,6 +2016,19 @@ export class Editor implements AfterViewInit, OnDestroy {
     this.docDeselectListener = (e: Event) => {
       const target = e.target as Element | null;
       if (!target || !target.closest) return;
+      // PX-149 — any click that lands on (or inside) a button keeps
+      // the canvas selection. Buttons outside the canvas are always
+      // intended to act on the currently-selected object (Remove
+      // Background, font picker, color, layer order, etc.); deselecting
+      // before the click handler runs makes them silently no-op.
+      // Same intent applies to native form controls.
+      if (
+        target.closest(
+          'button, [role="button"], a, input, textarea, select, label, [matMenuTriggerFor]',
+        )
+      ) {
+        return;
+      }
       if (target.closest(KEEP_SELECTION_INSIDE)) return;
       const fc = this.canvasService.getCanvas();
       if (fc?.getActiveObject()) {
