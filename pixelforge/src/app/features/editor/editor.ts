@@ -389,7 +389,7 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
               (deleteSelected)="canvasService.removeActiveObject()"
             />
             <div class="canvas-stack">
-              <div class="canvas-wrapper">
+              <div class="canvas-wrapper" [class.canvas-transparent]="canvasService.backgroundMode() === 'transparent'">
                 <canvas
                   #editorCanvas
                   role="img"
@@ -400,6 +400,51 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
 
                 <!-- Canvas-level quick actions (top-right of canvas) -->
                 <div class="canvas-actions">
+                  <!-- PX-152 — quick page-background toggle. Same three
+                       modes as the sidebar Background tab and the
+                       property-panel "Page background" expansion, just
+                       always one click away from the canvas itself.
+                       Useful especially after Remove Background /
+                       Magic Eraser to verify the transparent cut. -->
+                  <button
+                    mat-icon-button
+                    matTooltip="Page background"
+                    data-testid="canvas-bg-menu"
+                    [matMenuTriggerFor]="canvasBgMenu"
+                  >
+                    <mat-icon>palette</mat-icon>
+                  </button>
+                  <mat-menu #canvasBgMenu="matMenu" class="canvas-bg-menu">
+                    <button
+                      mat-menu-item
+                      data-testid="canvas-bg-white"
+                      [class.active]="canvasService.backgroundMode() === 'white'"
+                      (click)="canvasService.setBackgroundMode('white')"
+                    >
+                      <mat-icon>format_color_fill</mat-icon>
+                      <span>White</span>
+                    </button>
+                    <button
+                      mat-menu-item
+                      data-testid="canvas-bg-transparent"
+                      [class.active]="canvasService.backgroundMode() === 'transparent'"
+                      (click)="canvasService.setBackgroundMode('transparent')"
+                    >
+                      <mat-icon>grid_on</mat-icon>
+                      <span>Transparent</span>
+                    </button>
+                    <div class="bg-color-row" (click)="$event.stopPropagation()">
+                      <input
+                        type="color"
+                        class="bg-color-input"
+                        data-testid="canvas-bg-color"
+                        [ngModel]="canvasService.backgroundColor() || '#ffffff'"
+                        (ngModelChange)="canvasService.setBackgroundMode('custom', $event)"
+                      />
+                      <span class="bg-color-label">Color…</span>
+                    </div>
+                  </mat-menu>
+
                   <button mat-icon-button [matTooltip]="pageLocked() ? 'Unlock page' : 'Lock page'" (click)="togglePageLock()">
                     <mat-icon>{{ pageLocked() ? 'lock' : 'lock_open' }}</mat-icon>
                   </button>
@@ -975,6 +1020,53 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       flex-direction: column;
       align-items: center;
       gap: 12px;
+    }
+
+    /* PX-152 — checkerboard pattern under the fabric canvas when the
+       page background is set to "transparent". Lets the user actually
+       SEE the transparency (especially after Remove Background /
+       Magic Eraser, where the cut is invisible against a white page).
+       The fabric canvas's own backgroundColor is empty in this mode,
+       so the wrapper's pattern shows through. Tile size 20px feels
+       right for normal zoom levels. */
+    .canvas-wrapper.canvas-transparent {
+      background-image:
+        linear-gradient(45deg, #d1d5db 25%, transparent 25%),
+        linear-gradient(-45deg, #d1d5db 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #d1d5db 75%),
+        linear-gradient(-45deg, transparent 75%, #d1d5db 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: #ffffff;
+    }
+
+    /* PX-152 — page-bg menu styling. The custom-color row uses a
+       native <input type="color"> for the swatch so the user can pick
+       any color without leaving the menu. Stop-propagation on the row
+       so clicks inside the swatch don't dismiss the menu. */
+    ::ng-deep .canvas-bg-menu .mat-mdc-menu-item.active {
+      background: rgba(124, 58, 237, 0.08);
+      font-weight: 600;
+    }
+    ::ng-deep .canvas-bg-menu .bg-color-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    ::ng-deep .canvas-bg-menu .bg-color-input {
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 6px;
+      padding: 0;
+      cursor: pointer;
+      background: transparent;
+    }
+    ::ng-deep .canvas-bg-menu .bg-color-label {
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface);
     }
 
     /* PX-148 — pin the floating context toolbar to the top-center of
