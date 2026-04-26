@@ -682,6 +682,36 @@ describe('Editor', () => {
     expect(ed.isProcessing()).toBe(false);
   });
 
+  it('PX-144: beforeunload triggers a synchronous saveProject', async () => {
+    // Edits within the debounce window were getting lost on refresh
+    // because the timer never fired. The beforeunload handler now
+    // flushes saveProject synchronously so localStorage is current
+    // before the browser tears down the page.
+    const fixture = TestBed.createComponent(Editor);
+    const ed: any = fixture.componentInstance;
+    ed.canvasRef = { nativeElement: document.createElement('canvas') };
+    ed.containerRef = { nativeElement: { clientWidth: 800, clientHeight: 600 } };
+    ed.ngAfterViewInit();
+    const saveSpy = vi.spyOn(ed, 'saveProject');
+
+    window.dispatchEvent(new Event('beforeunload'));
+
+    expect(saveSpy).toHaveBeenCalled();
+  });
+
+  it('PX-144: pagehide also triggers saveProject (mobile / iOS)', async () => {
+    const fixture = TestBed.createComponent(Editor);
+    const ed: any = fixture.componentInstance;
+    ed.canvasRef = { nativeElement: document.createElement('canvas') };
+    ed.containerRef = { nativeElement: { clientWidth: 800, clientHeight: 600 } };
+    ed.ngAfterViewInit();
+    const saveSpy = vi.spyOn(ed, 'saveProject');
+
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(saveSpy).toHaveBeenCalled();
+  });
+
   it('PX-142: removeBackground rasterizes at natural resolution (multiplier = 1/scaleX)', async () => {
     // Image fitted to canvas at scaleX=0.25 (typical for a high-res photo
     // dropped into a smaller design). Naive toDataURL would give the

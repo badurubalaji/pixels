@@ -1827,6 +1827,8 @@ export class Editor implements AfterViewInit, OnDestroy {
   private pasteListener: ((e: ClipboardEvent) => void) | null = null;
   private onlineHandler: (() => void) | null = null;
   private offlineHandler: (() => void) | null = null;
+  /** PX-144: synchronous save flush before refresh / nav-away. */
+  private beforeUnloadHandler: (() => void) | null = null;
   /** PX-097: document-level deselect bridge (see ngAfterViewInit). */
   private docDeselectListener: ((e: Event) => void) | null = null;
   /** PX-098: explicit replace-photo handler (see ngAfterViewInit). */
@@ -2117,6 +2119,22 @@ export class Editor implements AfterViewInit, OnDestroy {
     window.addEventListener('online', this.onlineHandler);
     window.addEventListener('offline', this.offlineHandler);
 
+    // PX-144 — final-chance flush on browser unload / mobile pagehide.
+    // Even with a 1s debounce, a hot refresh within that window would
+    // lose the edit. These handlers cancel the pending debounce timer
+    // and call saveProject() synchronously so localStorage is current
+    // when the next page load reads it. ngOnDestroy doesn't reliably
+    // fire before the browser kills the page on refresh.
+    this.beforeUnloadHandler = () => {
+      if (this.debounceSaveTimer) {
+        clearTimeout(this.debounceSaveTimer);
+        this.debounceSaveTimer = null;
+      }
+      this.saveProject();
+    };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+    window.addEventListener('pagehide', this.beforeUnloadHandler);
+
     // Subscribe to Fabric right-click — more reliable than DOM contextmenu
     // because Fabric captures pointer events on its own upperCanvasEl.
     this.rightClickSub = this.canvasService.rightClick$.subscribe((e) => {
@@ -2149,12 +2167,17 @@ export class Editor implements AfterViewInit, OnDestroy {
     // Auto-save every 30 seconds
     this.autoSaveTimer = setInterval(() => this.saveProject(), 30000);
 
-    // Debounced auto-save on canvas changes (5s after last change)
+    // PX-144 — Debounced auto-save on canvas changes. Was 5000ms, now
+    // 1000ms because a 5-second window between edit and persist meant
+    // any refresh / navigate-away during that window lost the edit.
+    // localStorage write inside saveProject is synchronous, so the
+    // perceived "save" is sub-millisecond; the backend HTTP fan-out is
+    // already debounced internally by the project service.
     const canvas = this.canvasService.getCanvas();
     if (canvas) {
       const debounceSave = () => {
         if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
-        this.debounceSaveTimer = setTimeout(() => this.saveProject(), 5000);
+        this.debounceSaveTimer = setTimeout(() => this.saveProject(), 1000);
       };
       canvas.on('object:modified', debounceSave);
       canvas.on('object:added', debounceSave);
@@ -2200,6 +2223,10 @@ export class Editor implements AfterViewInit, OnDestroy {
     }
     if (this.onlineHandler) window.removeEventListener('online', this.onlineHandler);
     if (this.offlineHandler) window.removeEventListener('offline', this.offlineHandler);
+    if (this.beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+      window.removeEventListener('pagehide', this.beforeUnloadHandler);
+    }
     if (this.docDeselectListener) {
       document.removeEventListener('mousedown', this.docDeselectListener, true);
     }
