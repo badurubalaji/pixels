@@ -2727,6 +2727,16 @@ export class CanvasService {
 
     try {
       const parsed = JSON.parse(json);
+      // PX-143 — fabric serializes a FabricImage's `crossOrigin` only if it
+      // was set when the image was first created. Older projects (saved
+      // before `addImage` consistently set crossOrigin='anonymous') and any
+      // image dropped via a path that doesn't pre-set the property come
+      // back from `loadFromJSON` as plain (non-CORS) requests. The backend
+      // returns Access-Control-Allow-Origin headers, but the browser caches
+      // the non-CORS response and then refuses to reuse it for any
+      // subsequent CORS-mode request (taint, export, bg-removal). Inject
+      // crossOrigin defensively so every image goes out as a CORS request.
+      this.injectCrossOriginOnImages(parsed);
       await this.canvas.loadFromJSON(parsed);
 
       // PX-101 — projects saved before the toJSON fix lost their
@@ -2788,6 +2798,30 @@ export class CanvasService {
     } catch (e) {
       console.error('Failed to load canvas state:', e);
     }
+  }
+
+  /**
+   * PX-143 — recursively walk a parsed fabric JSON tree and ensure every
+   * `type: 'image'` entry has `crossOrigin: 'anonymous'`. Mutates in place.
+   *
+   * @remarks Why mutate rather than rewrite: fabric's `loadFromJSON` reads
+   *   the parsed object directly and uses each image's `crossOrigin` field
+   *   to set the underlying `<img>` element's attribute before the browser
+   *   issues the GET. So we only need to flip the field; fabric does the
+   *   rest. Also handles nested objects in groups / clipPaths.
+   */
+  private injectCrossOriginOnImages(node: any): void {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const child of node) this.injectCrossOriginOnImages(child);
+      return;
+    }
+    if (node.type === 'image' && (node.crossOrigin == null || node.crossOrigin === '')) {
+      node.crossOrigin = 'anonymous';
+    }
+    if (Array.isArray(node.objects)) this.injectCrossOriginOnImages(node.objects);
+    if (node.clipPath) this.injectCrossOriginOnImages(node.clipPath);
+    if (node.backgroundImage) this.injectCrossOriginOnImages(node.backgroundImage);
   }
 
   private getLayerName(obj: fabric.FabricObject, type: LayerType): string {

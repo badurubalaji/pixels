@@ -188,10 +188,18 @@ async def get_asset(
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="File not found on disk")
 
+    # PX-143 — `private, no-cache` lets browsers reuse the bytes only after
+    # revalidating with the existing ETag, and (critically) prevents a
+    # cached non-CORS response from being silently reused for a later
+    # CORS-mode request from canvas / fabric. The next request will
+    # round-trip and pick up the current Access-Control-Allow-Origin
+    # headers correctly. ETag still gives 304s on unchanged assets so the
+    # bandwidth impact is negligible.
     return FileResponse(
         filepath,
         media_type=doc.get("content_type", "application/octet-stream"),
         filename=doc.get("filename", "image"),
+        headers={"Cache-Control": "private, no-cache"},
     )
 
 

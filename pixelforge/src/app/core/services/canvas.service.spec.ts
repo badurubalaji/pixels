@@ -358,6 +358,84 @@ describe('CanvasService', () => {
       await service.loadFromJSON('{}');
       expect(service.layers().length).toBe(0);
     });
+
+    it('PX-143: injects crossOrigin=anonymous on top-level images that lack it', async () => {
+      const { service } = makeService();
+      const canvas = service.getCanvas()!;
+      const captured: any[] = [];
+      // Capture what fabric.loadFromJSON receives so we can assert the
+      // pre-mutation step happened.
+      (canvas as any).loadFromJSON = async (json: any) => {
+        captured.push(json);
+        return canvas;
+      };
+
+      const json = JSON.stringify({
+        version: '7',
+        objects: [
+          { type: 'image', src: 'http://localhost:8000/api/assets/abc' },
+          { type: 'rect' },
+        ],
+      });
+      await service.loadFromJSON(json);
+
+      expect(captured).toHaveLength(1);
+      const objs = captured[0].objects;
+      expect(objs[0].crossOrigin).toBe('anonymous');
+      // Non-image entries are untouched.
+      expect(objs[1].crossOrigin).toBeUndefined();
+    });
+
+    it('PX-143: leaves an explicit crossOrigin value untouched', async () => {
+      const { service } = makeService();
+      const canvas = service.getCanvas()!;
+      const captured: any[] = [];
+      (canvas as any).loadFromJSON = async (json: any) => {
+        captured.push(json);
+        return canvas;
+      };
+
+      const json = JSON.stringify({
+        version: '7',
+        objects: [{ type: 'image', src: 'x', crossOrigin: 'use-credentials' }],
+      });
+      await service.loadFromJSON(json);
+
+      expect(captured[0].objects[0].crossOrigin).toBe('use-credentials');
+    });
+
+    it('PX-143: walks nested groups and clipPaths recursively', async () => {
+      const { service } = makeService();
+      const canvas = service.getCanvas()!;
+      const captured: any[] = [];
+      (canvas as any).loadFromJSON = async (json: any) => {
+        captured.push(json);
+        return canvas;
+      };
+
+      const json = JSON.stringify({
+        version: '7',
+        objects: [
+          {
+            type: 'group',
+            objects: [
+              { type: 'image', src: 'a' },
+              {
+                type: 'group',
+                objects: [{ type: 'image', src: 'b' }],
+              },
+            ],
+            clipPath: { type: 'image', src: 'c' },
+          },
+        ],
+      });
+      await service.loadFromJSON(json);
+
+      const root = captured[0].objects[0];
+      expect(root.objects[0].crossOrigin).toBe('anonymous');
+      expect(root.objects[1].objects[0].crossOrigin).toBe('anonymous');
+      expect(root.clipPath.crossOrigin).toBe('anonymous');
+    });
   });
 
   describe('applyFocalBlur', () => {
