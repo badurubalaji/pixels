@@ -2616,6 +2616,22 @@ export class Editor implements AfterViewInit, OnDestroy {
     if (target.closest('.canvas-wrapper')) return;
     if (target.closest('.canvas-actions')) return;
     if (target.closest('.inline-add-page')) return;
+    // PX-150 — the PX-141 floating context toolbar lives INSIDE
+    // `.canvas-area` (PX-148 moved it there to pin it via absolute
+    // positioning). Without these guards, every click on the toolbar
+    // — including its Remove Background / Bold / Delete verbs — fires
+    // this handler's discardActiveObject() before the verb's click
+    // handler reads the active object, leaving the verbs unable to
+    // act on a selection. Also covers any button click (Material or
+    // native) inside the canvas-area for the same reason as PX-149.
+    if (target.closest('.context-toolbar, .floating-context-toolbar')) return;
+    if (
+      target.closest(
+        'button, [role="button"], a, input, textarea, select, label, [matMenuTriggerFor]',
+      )
+    ) {
+      return;
+    }
 
     const canvas = this.canvasService.getCanvas();
     if (!canvas) return;
