@@ -383,6 +383,285 @@ export const GRAPHIC_ELEMENTS: ReadonlyArray<GraphicElement> = [
       '<circle cx="50" cy="50" r="6" fill="#06b6d4"/>',
     ),
   },
+  // PX-133 — additional mandalas inspired by the visual style of the
+  // user-shared Freepik/PngTree references. Hand-authored from primitive
+  // paths so we stay clear of those services' license terms (attribution
+  // + no-redistribution). The intricacy is built up by layering 3-4
+  // concentric rings of geometric or floral motifs around a center.
+  {
+    name: 'Mandala — dot work',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="#7c2d12">' +
+      // 16 outer dots evenly spaced
+      '<circle cx="50" cy="6" r="1.6"/><circle cx="67" cy="9" r="1.6"/>' +
+      '<circle cx="82" cy="18" r="1.6"/><circle cx="91" cy="33" r="1.6"/>' +
+      '<circle cx="94" cy="50" r="1.6"/><circle cx="91" cy="67" r="1.6"/>' +
+      '<circle cx="82" cy="82" r="1.6"/><circle cx="67" cy="91" r="1.6"/>' +
+      '<circle cx="50" cy="94" r="1.6"/><circle cx="33" cy="91" r="1.6"/>' +
+      '<circle cx="18" cy="82" r="1.6"/><circle cx="9" cy="67" r="1.6"/>' +
+      '<circle cx="6" cy="50" r="1.6"/><circle cx="9" cy="33" r="1.6"/>' +
+      '<circle cx="18" cy="18" r="1.6"/><circle cx="33" cy="9" r="1.6"/>' +
+      '</g>' +
+      '<g fill="none" stroke="#7c2d12" stroke-width="0.8">' +
+      '<circle cx="50" cy="50" r="42"/>' +
+      '<circle cx="50" cy="50" r="32"/>' +
+      '<circle cx="50" cy="50" r="22"/>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="50" cy="22" r="2.5"/><circle cx="50" cy="78" r="2.5"/>' +
+      '<circle cx="22" cy="50" r="2.5"/><circle cx="78" cy="50" r="2.5"/>' +
+      '<circle cx="30" cy="30" r="2.5"/><circle cx="70" cy="30" r="2.5"/>' +
+      '<circle cx="30" cy="70" r="2.5"/><circle cx="70" cy="70" r="2.5"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="6" fill="#fbbf24"/>' +
+      '<circle cx="50" cy="50" r="2" fill="#7c2d12"/>',
+    ),
+  },
+  {
+    name: 'Mandala — henna',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="#9a3412" opacity="0.92">' +
+      // 8 paisley-style petals around the center
+      '<path d="M50 50 Q 60 30 50 10 Q 40 30 50 50" />' +
+      '<path d="M50 50 Q 70 40 90 50 Q 70 60 50 50" />' +
+      '<path d="M50 50 Q 60 70 50 90 Q 40 70 50 50" />' +
+      '<path d="M50 50 Q 30 40 10 50 Q 30 60 50 50" />' +
+      '<path d="M50 50 Q 65 35 78 22 Q 65 50 50 50" />' +
+      '<path d="M50 50 Q 65 65 78 78 Q 50 65 50 50" />' +
+      '<path d="M50 50 Q 35 65 22 78 Q 50 65 50 50" />' +
+      '<path d="M50 50 Q 35 35 22 22 Q 50 35 50 50" />' +
+      '</g>' +
+      '<g fill="none" stroke="#9a3412" stroke-width="0.8">' +
+      '<circle cx="50" cy="50" r="44"/>' +
+      '<circle cx="50" cy="50" r="14"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="4" fill="#dc2626"/>',
+    ),
+  },
+  {
+    name: 'Mandala — star burst',
+    category: 'mandala',
+    svg: wrap(
+      // Outer ring of triangle rays
+      '<g fill="#f59e0b">' +
+      '<polygon points="50,4 53,22 47,22"/>' +
+      '<polygon points="68,8 64,26 58,22"/>' +
+      '<polygon points="84,18 76,34 70,30"/>' +
+      '<polygon points="92,32 78,42 74,36"/>' +
+      '<polygon points="96,50 78,53 78,47"/>' +
+      '<polygon points="92,68 78,58 74,64"/>' +
+      '<polygon points="84,82 70,70 76,66"/>' +
+      '<polygon points="68,92 58,78 64,74"/>' +
+      '<polygon points="50,96 47,78 53,78"/>' +
+      '<polygon points="32,92 36,74 42,78"/>' +
+      '<polygon points="16,82 24,66 30,70"/>' +
+      '<polygon points="8,68 22,64 26,68"/>' +
+      '<polygon points="4,50 22,47 22,53"/>' +
+      '<polygon points="8,32 22,36 26,42"/>' +
+      '<polygon points="16,18 30,30 24,34"/>' +
+      '<polygon points="32,8 42,22 36,26"/>' +
+      '</g>' +
+      // Middle ring (smaller petals)
+      '<g fill="#dc2626">' +
+      '<ellipse cx="50" cy="30" rx="3" ry="8"/>' +
+      '<ellipse cx="50" cy="70" rx="3" ry="8"/>' +
+      '<ellipse cx="30" cy="50" rx="8" ry="3"/>' +
+      '<ellipse cx="70" cy="50" rx="8" ry="3"/>' +
+      '<ellipse cx="35" cy="35" rx="3" ry="8" transform="rotate(-45 35 35)"/>' +
+      '<ellipse cx="65" cy="35" rx="3" ry="8" transform="rotate(45 65 35)"/>' +
+      '<ellipse cx="35" cy="65" rx="3" ry="8" transform="rotate(45 35 65)"/>' +
+      '<ellipse cx="65" cy="65" rx="3" ry="8" transform="rotate(-45 65 65)"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="10" fill="#fbbf24"/>' +
+      '<circle cx="50" cy="50" r="4" fill="#7c2d12"/>',
+    ),
+  },
+  {
+    name: 'Mandala — chakra',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="none" stroke="#9333ea" stroke-width="1.5">' +
+      '<circle cx="50" cy="50" r="46"/>' +
+      // 8 spokes
+      '<line x1="50" y1="4" x2="50" y2="96"/>' +
+      '<line x1="4" y1="50" x2="96" y2="50"/>' +
+      '<line x1="17" y1="17" x2="83" y2="83"/>' +
+      '<line x1="83" y1="17" x2="17" y2="83"/>' +
+      '</g>' +
+      // Spoke caps (lotus heads)
+      '<g fill="#a855f7">' +
+      '<circle cx="50" cy="8" r="5"/><circle cx="50" cy="92" r="5"/>' +
+      '<circle cx="8" cy="50" r="5"/><circle cx="92" cy="50" r="5"/>' +
+      '<circle cx="20" cy="20" r="5"/><circle cx="80" cy="20" r="5"/>' +
+      '<circle cx="20" cy="80" r="5"/><circle cx="80" cy="80" r="5"/>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="50" cy="8" r="2"/><circle cx="50" cy="92" r="2"/>' +
+      '<circle cx="8" cy="50" r="2"/><circle cx="92" cy="50" r="2"/>' +
+      '<circle cx="20" cy="20" r="2"/><circle cx="80" cy="20" r="2"/>' +
+      '<circle cx="20" cy="80" r="2"/><circle cx="80" cy="80" r="2"/>' +
+      '</g>' +
+      // Inner ring
+      '<g fill="none" stroke="#9333ea" stroke-width="1">' +
+      '<circle cx="50" cy="50" r="22"/>' +
+      '</g>' +
+      '<g fill="#a855f7">' +
+      '<ellipse cx="50" cy="50" rx="3" ry="14"/>' +
+      '<ellipse cx="50" cy="50" rx="3" ry="14" transform="rotate(45 50 50)"/>' +
+      '<ellipse cx="50" cy="50" rx="3" ry="14" transform="rotate(90 50 50)"/>' +
+      '<ellipse cx="50" cy="50" rx="3" ry="14" transform="rotate(135 50 50)"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="5" fill="#fbbf24"/>' +
+      '<circle cx="50" cy="50" r="2" fill="#7c2d12"/>',
+    ),
+  },
+  {
+    name: 'Mandala — minimal',
+    category: 'mandala',
+    svg: wrap(
+      '<g fill="none" stroke="#0f172a" stroke-width="1">' +
+      '<circle cx="50" cy="50" r="44"/>' +
+      '<circle cx="50" cy="50" r="36"/>' +
+      '<circle cx="50" cy="50" r="14"/>' +
+      // 12 thin spokes
+      '<line x1="50" y1="6" x2="50" y2="36"/>' +
+      '<line x1="50" y1="64" x2="50" y2="94"/>' +
+      '<line x1="6" y1="50" x2="36" y2="50"/>' +
+      '<line x1="64" y1="50" x2="94" y2="50"/>' +
+      '<line x1="20" y1="20" x2="40" y2="40"/>' +
+      '<line x1="80" y1="20" x2="60" y2="40"/>' +
+      '<line x1="20" y1="80" x2="40" y2="60"/>' +
+      '<line x1="80" y1="80" x2="60" y2="60"/>' +
+      '<line x1="50" y1="14" x2="50" y2="22" stroke-width="2.5"/>' +
+      '<line x1="50" y1="78" x2="50" y2="86" stroke-width="2.5"/>' +
+      '<line x1="14" y1="50" x2="22" y2="50" stroke-width="2.5"/>' +
+      '<line x1="78" y1="50" x2="86" y2="50" stroke-width="2.5"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="4" fill="#0f172a"/>',
+    ),
+  },
+  {
+    name: 'Mandala — flower of life',
+    category: 'mandala',
+    svg: wrap(
+      // 7-circle "flower of life" pattern (sacred geometry)
+      '<g fill="none" stroke="#7c3aed" stroke-width="1.2">' +
+      '<circle cx="50" cy="50" r="20"/>' +
+      '<circle cx="50" cy="30" r="20"/>' +
+      '<circle cx="50" cy="70" r="20"/>' +
+      '<circle cx="33" cy="40" r="20"/>' +
+      '<circle cx="67" cy="40" r="20"/>' +
+      '<circle cx="33" cy="60" r="20"/>' +
+      '<circle cx="67" cy="60" r="20"/>' +
+      '<circle cx="50" cy="50" r="44"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="3" fill="#7c3aed"/>',
+    ),
+  },
+
+  // PX-133 — additional border variants matched to the user's references.
+  {
+    name: 'Mandala border — geometric chain',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="20" x2="100" y2="20" stroke="#7c2d12" stroke-width="1"/>' +
+      '<line x1="0" y1="80" x2="100" y2="80" stroke="#7c2d12" stroke-width="1"/>' +
+      '<g fill="none" stroke="#dc2626" stroke-width="1.2">' +
+      // Repeating diamond+circle chain
+      '<polygon points="10,30 20,50 10,70 0,50"/>' +
+      '<circle cx="20" cy="50" r="6"/>' +
+      '<polygon points="30,30 40,50 30,70 20,50"/>' +
+      '<circle cx="40" cy="50" r="6"/>' +
+      '<polygon points="50,30 60,50 50,70 40,50"/>' +
+      '<circle cx="60" cy="50" r="6"/>' +
+      '<polygon points="70,30 80,50 70,70 60,50"/>' +
+      '<circle cx="80" cy="50" r="6"/>' +
+      '<polygon points="90,30 100,50 90,70 80,50"/>' +
+      '</g>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="20" cy="50" r="1.5"/>' +
+      '<circle cx="40" cy="50" r="1.5"/>' +
+      '<circle cx="60" cy="50" r="1.5"/>' +
+      '<circle cx="80" cy="50" r="1.5"/>' +
+      '</g>',
+    ),
+  },
+  {
+    name: 'Mandala border — sun row',
+    category: 'mandala-border',
+    svg: wrap(
+      '<line x1="0" y1="50" x2="100" y2="50" stroke="#9a3412" stroke-width="0.8"/>' +
+      '<g fill="#fbbf24">' +
+      '<circle cx="10" cy="50" r="6"/>' +
+      '<circle cx="30" cy="50" r="6"/>' +
+      '<circle cx="50" cy="50" r="6"/>' +
+      '<circle cx="70" cy="50" r="6"/>' +
+      '<circle cx="90" cy="50" r="6"/>' +
+      '</g>' +
+      '<g fill="none" stroke="#dc2626" stroke-width="0.8">' +
+      // Sun rays around each circle
+      '<g transform="translate(10 50)">' +
+      '<line x1="0" y1="-9" x2="0" y2="-12"/>' +
+      '<line x1="0" y1="9" x2="0" y2="12"/>' +
+      '<line x1="-9" y1="0" x2="-12" y2="0"/>' +
+      '<line x1="9" y1="0" x2="12" y2="0"/>' +
+      '<line x1="-6" y1="-6" x2="-9" y2="-9"/>' +
+      '<line x1="6" y1="-6" x2="9" y2="-9"/>' +
+      '<line x1="-6" y1="6" x2="-9" y2="9"/>' +
+      '<line x1="6" y1="6" x2="9" y2="9"/>' +
+      '</g>' +
+      '<g transform="translate(30 50)">' +
+      '<line x1="0" y1="-9" x2="0" y2="-12"/>' +
+      '<line x1="0" y1="9" x2="0" y2="12"/>' +
+      '<line x1="-9" y1="0" x2="-12" y2="0"/>' +
+      '<line x1="9" y1="0" x2="12" y2="0"/>' +
+      '<line x1="-6" y1="-6" x2="-9" y2="-9"/>' +
+      '<line x1="6" y1="-6" x2="9" y2="-9"/>' +
+      '<line x1="-6" y1="6" x2="-9" y2="9"/>' +
+      '<line x1="6" y1="6" x2="9" y2="9"/>' +
+      '</g>' +
+      '<g transform="translate(50 50)">' +
+      '<line x1="0" y1="-9" x2="0" y2="-12"/>' +
+      '<line x1="0" y1="9" x2="0" y2="12"/>' +
+      '<line x1="-9" y1="0" x2="-12" y2="0"/>' +
+      '<line x1="9" y1="0" x2="12" y2="0"/>' +
+      '<line x1="-6" y1="-6" x2="-9" y2="-9"/>' +
+      '<line x1="6" y1="-6" x2="9" y2="-9"/>' +
+      '<line x1="-6" y1="6" x2="-9" y2="9"/>' +
+      '<line x1="6" y1="6" x2="9" y2="9"/>' +
+      '</g>' +
+      '<g transform="translate(70 50)">' +
+      '<line x1="0" y1="-9" x2="0" y2="-12"/>' +
+      '<line x1="0" y1="9" x2="0" y2="12"/>' +
+      '<line x1="-9" y1="0" x2="-12" y2="0"/>' +
+      '<line x1="9" y1="0" x2="12" y2="0"/>' +
+      '<line x1="-6" y1="-6" x2="-9" y2="-9"/>' +
+      '<line x1="6" y1="-6" x2="9" y2="-9"/>' +
+      '<line x1="-6" y1="6" x2="-9" y2="9"/>' +
+      '<line x1="6" y1="6" x2="9" y2="9"/>' +
+      '</g>' +
+      '<g transform="translate(90 50)">' +
+      '<line x1="0" y1="-9" x2="0" y2="-12"/>' +
+      '<line x1="0" y1="9" x2="0" y2="12"/>' +
+      '<line x1="-9" y1="0" x2="-12" y2="0"/>' +
+      '<line x1="9" y1="0" x2="12" y2="0"/>' +
+      '<line x1="-6" y1="-6" x2="-9" y2="-9"/>' +
+      '<line x1="6" y1="-6" x2="9" y2="-9"/>' +
+      '<line x1="-6" y1="6" x2="-9" y2="9"/>' +
+      '<line x1="6" y1="6" x2="9" y2="9"/>' +
+      '</g>' +
+      '</g>' +
+      '<g fill="#dc2626">' +
+      '<circle cx="10" cy="50" r="2"/>' +
+      '<circle cx="30" cy="50" r="2"/>' +
+      '<circle cx="50" cy="50" r="2"/>' +
+      '<circle cx="70" cy="50" r="2"/>' +
+      '<circle cx="90" cy="50" r="2"/>' +
+      '</g>',
+    ),
+  },
 
   // ===========================
   // MANDALA BORDERS — horizontal repeating decorative bands (PX-128)
