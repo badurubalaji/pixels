@@ -196,36 +196,68 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
               </div>
             }
 
-            <!-- ELEMENTS TAB -->
+            <!-- ELEMENTS TAB (PX-131 — Canva-style category drill-in) -->
             @if (tab === 'elements') {
-              <div class="section-label">Basic Shapes</div>
-              <div class="shape-grid">
-                @for (shape of basicShapes; track shape.type) {
-                  <button class="shape-btn" (click)="addShape.emit(shape.type)" [matTooltip]="shape.name">
-                    <mat-icon>{{ shape.icon }}</mat-icon>
-                    <span>{{ shape.name }}</span>
+              <!-- Category home: a 3-column grid of big tiles. Click to drill in. -->
+              @if (elementsView() === 'home') {
+                <div class="elements-cat-grid" data-testid="elements-cat-grid">
+                  @for (cat of elementCategoryTiles; track cat.id) {
+                    <button
+                      type="button"
+                      class="elements-cat-tile"
+                      [attr.data-cat-id]="cat.id"
+                      (click)="elementsView.set(cat.id)"
+                    >
+                      <span class="elements-cat-icon" [style.background]="cat.iconBg">
+                        <mat-icon>{{ cat.icon }}</mat-icon>
+                      </span>
+                      <span class="elements-cat-name">{{ cat.label }}</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Drill-in header: ← Back + section name -->
+              @if (elementsView() !== 'home') {
+                <div class="elements-drill-header">
+                  <button mat-icon-button (click)="elementsView.set('home')" matTooltip="Back to elements">
+                    <mat-icon>arrow_back</mat-icon>
                   </button>
-                }
-              </div>
+                  <h4>{{ elementCategoryLabel(elementsView()) }}</h4>
+                </div>
+              }
 
-              <div class="section-label">Logo Shapes</div>
-              <div class="shape-grid">
-                @for (shape of logoShapes; track shape.type) {
-                  <button class="shape-btn" (click)="addShape.emit(shape.type)" [matTooltip]="shape.name">
-                    <mat-icon>{{ shape.icon }}</mat-icon>
-                    <span>{{ shape.name }}</span>
+              @if (elementsView() === 'shapes') {
+                <div class="section-label">Basic Shapes</div>
+                <div class="shape-grid">
+                  @for (shape of basicShapes; track shape.type) {
+                    <button class="shape-btn" (click)="addShape.emit(shape.type)" [matTooltip]="shape.name">
+                      <mat-icon>{{ shape.icon }}</mat-icon>
+                      <span>{{ shape.name }}</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="section-label">Logo Shapes</div>
+                <div class="shape-grid">
+                  @for (shape of logoShapes; track shape.type) {
+                    <button class="shape-btn" (click)="addShape.emit(shape.type)" [matTooltip]="shape.name">
+                      <mat-icon>{{ shape.icon }}</mat-icon>
+                      <span>{{ shape.name }}</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="section-label">Lines</div>
+                <div class="shape-grid">
+                  <button class="shape-btn" (click)="addShape.emit('line')" matTooltip="Line">
+                    <mat-icon>horizontal_rule</mat-icon>
+                    <span>Line</span>
                   </button>
-                }
-              </div>
+                </div>
+              }
 
-              <div class="section-label">Lines</div>
-              <div class="shape-grid">
-                <button class="shape-btn" (click)="addShape.emit('line')" matTooltip="Line">
-                  <mat-icon>horizontal_rule</mat-icon>
-                  <span>Line</span>
-                </button>
-              </div>
-
+              @if (elementsView() === 'frames') {
               <!-- Photo frames / collage (PX-090 + PX-121 sub-categories) -->
               <div class="section-label">Photo frames</div>
               <p class="frames-hint">
@@ -262,7 +294,9 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   </div>
                 }
               }
+              }
 
+              @if (elementsView() === 'icons') {
               <!-- Stock Icons -->
               <div class="section-label">Icons</div>
               <mat-form-field appearance="outline" class="search-field">
@@ -287,7 +321,9 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                 }
               </div>
               <div class="icon-count">{{ filteredStockIcons().length }} icon{{ filteredStockIcons().length !== 1 ? 's' : '' }}</div>
+              }
 
+              @if (elementsView() === 'qr') {
               <!-- QR Code Generator -->
               <div class="section-label">QR Code</div>
               <div class="qr-generator">
@@ -299,7 +335,9 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   <mat-icon>qr_code_2</mat-icon> Add QR Code
                 </button>
               </div>
+              }
 
+              @if (elementsView() === 'decorative') {
               <!-- Decorative Elements -->
               <div class="section-label">Decorative</div>
               <div class="icon-grid">
@@ -309,7 +347,9 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                   </button>
                 }
               </div>
+              }
 
+              @if (elementsView() === 'graphics') {
               <!-- PX-126 / PX-128 — Graphic elements (license-clean, hand-authored).
                    Each section shows a preview of N items by default; users
                    click "See all (M)" to expand the full list (PX-128). -->
@@ -346,6 +386,7 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                     }
                   </div>
                 }
+              }
               }
             }
 
@@ -1162,6 +1203,62 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
     }
     .frame-cat-label:first-of-type {
       margin-top: 4px;
+    }
+
+    /* PX-131 — Canva-style category-tile grid for the Elements home view. */
+    .elements-cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 4px 0 16px;
+    }
+    .elements-cat-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 6px;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+    .elements-cat-tile:hover {
+      transform: translateY(-2px);
+      border-color: var(--px-violet, #7c3aed);
+      box-shadow: 0 8px 20px -10px rgba(124, 58, 237, 0.35);
+    }
+    .elements-cat-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      color: #ffffff;
+      mat-icon {
+        font-size: 30px;
+        width: 30px;
+        height: 30px;
+      }
+    }
+    .elements-cat-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--px-ink, #0f172a);
+    }
+    .elements-drill-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+      h4 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--px-ink, #0f172a);
+      }
     }
 
     /* PX-128 — section header with inline "See all" affordance. */
@@ -2607,6 +2704,29 @@ export class SidebarDrawerComponent {
   readonly frameCategories = getFramePresetsByCategory();
   /** PX-126 — license-clean graphic elements (modern, Indian, flowers, animals). */
   readonly graphicElementCategories = getGraphicElementsByCategory();
+
+  /**
+   * PX-131 — current Elements-tab view. `'home'` is the category-tile grid
+   * (Canva pattern); other values drill into a specific section.
+   */
+  readonly elementsView = signal<
+    'home' | 'shapes' | 'frames' | 'graphics' | 'icons' | 'qr' | 'decorative'
+  >('home');
+
+  /** PX-131 — top-level category tiles for the Elements home view. */
+  readonly elementCategoryTiles = [
+    { id: 'shapes' as const,     label: 'Shapes',    icon: 'category',         iconBg: 'linear-gradient(135deg, #fbbf24, #f59e0b)' },
+    { id: 'frames' as const,     label: 'Frames',    icon: 'crop_landscape',   iconBg: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
+    { id: 'graphics' as const,   label: 'Graphics',  icon: 'palette',          iconBg: 'linear-gradient(135deg, #ec4899, #be185d)' },
+    { id: 'icons' as const,      label: 'Icons',     icon: 'star',             iconBg: 'linear-gradient(135deg, #84cc16, #16a34a)' },
+    { id: 'decorative' as const, label: 'Decor',     icon: 'auto_awesome',     iconBg: 'linear-gradient(135deg, #a855f7, #7c3aed)' },
+    { id: 'qr' as const,         label: 'QR Code',   icon: 'qr_code_2',        iconBg: 'linear-gradient(135deg, #0f172a, #334155)' },
+  ];
+
+  /** PX-131 — display label for the current drill-in (used in the back-header). */
+  elementCategoryLabel(view: string): string {
+    return this.elementCategoryTiles.find(t => t.id === view)?.label ?? '';
+  }
   /** PX-128 — sections show this many items by default before "See all". */
   readonly graphicElementsPreviewLimit = 8;
   /** PX-128 — categories the user has expanded via "See all". */
