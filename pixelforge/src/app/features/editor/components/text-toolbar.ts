@@ -187,13 +187,16 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <button mat-stroked-button class="tb-btn" (click)="canvasService.cancelCrop()">
               Cancel
             </button>
-          } @else {
+            <span class="tb-sep"></span>
+          } @else if (!isPhotoFrame()) {
+            <!-- PX-155 — old startCrop() only for plain images. Photo-frames
+                 use the PX-122 enterCropMode() button below; showing both
+                 was the "two Crop buttons" the user reported. -->
             <button mat-stroked-button class="tb-btn" (click)="canvasService.startCrop()">
               <mat-icon>crop</mat-icon> Crop
             </button>
+            <span class="tb-sep"></span>
           }
-
-          <span class="tb-sep"></span>
 
           <button mat-icon-button [matMenuTriggerFor]="filtersMenu" matTooltip="Quick Filters">
             <mat-icon>auto_fix_high</mat-icon>
@@ -277,63 +280,72 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
         }
 
         <!-- COMMON CONTROLS (always shown for any selection) -->
-        <span class="tb-sep"></span>
+        <!-- PX-155 — Effects / Animate / Position are gated to text + shape
+             selections only. For images and photo-frames they were
+             redundant with the PX-141 floating context toolbar (Front /
+             Back) and the property panel's Animation + Appearance
+             sections. Showing them on the image branch was bloating the
+             toolbar with controls users could already reach more
+             contextually elsewhere. -->
+        @if (selectionType() === 'text' || selectionType() === 'shape') {
+          <span class="tb-sep"></span>
 
-        <!-- Effects dropdown (Canva-style) -->
-        <button mat-button class="grp-btn" [matMenuTriggerFor]="effectsMenu">
-          <mat-icon>auto_fix_high</mat-icon> Effects
-        </button>
-        <mat-menu #effectsMenu="matMenu" class="grp-menu">
-          <div class="grp-section-title" (click)="$event.stopPropagation()">Shadow</div>
-          <div class="menu-slider" (click)="$event.stopPropagation()">
-            <label>Blur</label>
-            <mat-slider min="0" max="50" step="1">
-              <input matSliderThumb [ngModel]="effectShadow()" (ngModelChange)="setEffectShadow($event)" />
-            </mat-slider>
-            <span class="menu-val">{{ effectShadow() }}</span>
-          </div>
-          <button mat-menu-item (click)="clearEffects()">
-            <mat-icon>block</mat-icon> No effects
+          <!-- Effects dropdown -->
+          <button mat-button class="grp-btn" [matMenuTriggerFor]="effectsMenu">
+            <mat-icon>gradient</mat-icon> Effects
           </button>
-        </mat-menu>
-
-        <!-- Animate dropdown -->
-        <button mat-button class="grp-btn" [matMenuTriggerFor]="animateMenu">
-          <mat-icon>animation</mat-icon> Animate
-        </button>
-        <mat-menu #animateMenu="matMenu" class="grp-menu">
-          <div class="grp-section-title" (click)="$event.stopPropagation()">Enter animation</div>
-          @for (preset of animationPresets; track preset.type) {
-            <button mat-menu-item (click)="setAnimationType(preset.type)"
-              [class.grp-active]="currentAnimation() === preset.type">
-              <mat-icon>{{ preset.icon }}</mat-icon>
-              {{ preset.label }}
+          <mat-menu #effectsMenu="matMenu" class="grp-menu">
+            <div class="grp-section-title" (click)="$event.stopPropagation()">Shadow</div>
+            <div class="menu-slider" (click)="$event.stopPropagation()">
+              <label>Blur</label>
+              <mat-slider min="0" max="50" step="1">
+                <input matSliderThumb [ngModel]="effectShadow()" (ngModelChange)="setEffectShadow($event)" />
+              </mat-slider>
+              <span class="menu-val">{{ effectShadow() }}</span>
+            </div>
+            <button mat-menu-item (click)="clearEffects()">
+              <mat-icon>block</mat-icon> No effects
             </button>
-          }
-        </mat-menu>
+          </mat-menu>
 
-        <!-- Position dropdown -->
-        <button mat-button class="grp-btn" [matMenuTriggerFor]="positionMenu">
-          <mat-icon>open_with</mat-icon> Position
-        </button>
-        <mat-menu #positionMenu="matMenu" class="grp-menu">
-          <div class="grp-section-title" (click)="$event.stopPropagation()">Layers</div>
-          <button mat-menu-item (click)="bringForward()">
-            <mat-icon>flip_to_front</mat-icon> Bring forward
+          <!-- Animate dropdown -->
+          <button mat-button class="grp-btn" [matMenuTriggerFor]="animateMenu">
+            <mat-icon>animation</mat-icon> Animate
           </button>
-          <button mat-menu-item (click)="sendBackward()">
-            <mat-icon>flip_to_back</mat-icon> Send backward
+          <mat-menu #animateMenu="matMenu" class="grp-menu">
+            <div class="grp-section-title" (click)="$event.stopPropagation()">Enter animation</div>
+            @for (preset of animationPresets; track preset.type) {
+              <button mat-menu-item (click)="setAnimationType(preset.type)"
+                [class.grp-active]="currentAnimation() === preset.type">
+                <mat-icon>{{ preset.icon }}</mat-icon>
+                {{ preset.label }}
+              </button>
+            }
+          </mat-menu>
+
+          <!-- Position dropdown -->
+          <button mat-button class="grp-btn" [matMenuTriggerFor]="positionMenu">
+            <mat-icon>open_with</mat-icon> Position
           </button>
-          <mat-divider />
-          <div class="grp-section-title" (click)="$event.stopPropagation()">Opacity</div>
-          <div class="menu-slider" (click)="$event.stopPropagation()">
-            <label>Opacity</label>
-            <mat-slider min="0" max="1" step="0.01">
-              <input matSliderThumb [ngModel]="opacity()" (ngModelChange)="setOpacity($event)" />
-            </mat-slider>
-            <span class="menu-val">{{ (opacity() * 100).toFixed(0) }}%</span>
-          </div>
-        </mat-menu>
+          <mat-menu #positionMenu="matMenu" class="grp-menu">
+            <div class="grp-section-title" (click)="$event.stopPropagation()">Layers</div>
+            <button mat-menu-item (click)="bringForward()">
+              <mat-icon>flip_to_front</mat-icon> Bring forward
+            </button>
+            <button mat-menu-item (click)="sendBackward()">
+              <mat-icon>flip_to_back</mat-icon> Send backward
+            </button>
+            <mat-divider />
+            <div class="grp-section-title" (click)="$event.stopPropagation()">Opacity</div>
+            <div class="menu-slider" (click)="$event.stopPropagation()">
+              <label>Opacity</label>
+              <mat-slider min="0" max="1" step="0.01">
+                <input matSliderThumb [ngModel]="opacity()" (ngModelChange)="setOpacity($event)" />
+              </mat-slider>
+              <span class="menu-val">{{ (opacity() * 100).toFixed(0) }}%</span>
+            </div>
+          </mat-menu>
+        }
 
         <span class="tb-sep"></span>
 
