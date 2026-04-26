@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, output, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -72,6 +72,28 @@ interface ObjectProps {
       <div class="panel-header">
         <h3>Properties</h3>
       </div>
+
+      <!-- PX-138 — quick-action when a plain image is selected. Lives above
+           the props expansion panels so it's reachable in one click without
+           navigating to the sidebar's Photos tab (which is where the same
+           action also lives). Hidden for photo-frames since they have their
+           own crop/replace UI; hidden for text/shape selections since the
+           action is image-specific. -->
+      @if (isImageSelected()) {
+        <div class="image-quick-actions">
+          <button
+            mat-flat-button
+            color="accent"
+            class="remove-bg-btn"
+            data-testid="remove-bg-image"
+            matTooltip="Remove background from this image using AI"
+            (click)="removeBackgroundRequested.emit()"
+          >
+            <mat-icon>auto_fix_high</mat-icon>
+            Remove Background
+          </button>
+        </div>
+      }
 
       @if (props(); as p) {
         <div class="panel-content">
@@ -1041,6 +1063,20 @@ interface ObjectProps {
       font-weight: 600 !important;
     }
 
+    /* PX-138 — Remove Background quick action for plain image selections.
+       Mirrors the photo-frame quick-actions layout so it feels familiar. */
+    .image-quick-actions {
+      padding: 0 4px 8px;
+    }
+    .remove-bg-btn {
+      width: 100%;
+      height: 40px !important;
+      font-weight: 600 !important;
+      border-radius: 10px !important;
+      background: linear-gradient(135deg, var(--px-violet, #7c3aed) 0%, #a855f7 100%) !important;
+      color: #ffffff !important;
+    }
+
     /* PX-103 — frame shape selector */
     .frame-shape-row {
       display: flex;
@@ -1284,6 +1320,26 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
   private readonly _isRect = signal(false);
   private readonly _isLocked = signal(false);
 
+  /**
+   * PX-138 — true when the active selection is a plain image (not a
+   * photo-frame, which has its own crop/replace surface). Drives the
+   * `Remove Background` quick action visible above the property panels.
+   */
+  private readonly _isImage = signal(false);
+  readonly isImageSelected = this._isImage.asReadonly();
+
+  /**
+   * PX-138 — fires when the user clicks the property-panel
+   * `Remove Background` button. The editor wires this to the same
+   * `removeBackground()` handler the sidebar Photos tab already uses,
+   * so there is exactly one place that knows how to actually remove
+   * an image's background.
+   *
+   * @remarks Only emits when a non-frame `FabricImage` is selected,
+   *   because the button is gated by {@link isImageSelected}.
+   */
+  removeBackgroundRequested = output<void>();
+
   /** PX-094: photo-frame state mirror for the pan/zoom controls. */
   readonly isPhotoFrame = signal<boolean>(false);
   /** True for an empty placeholder frame (no photo loaded yet) — drives the
@@ -1420,6 +1476,7 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     const onDeselect = () => {
       this.props.set(null);
       this._isText.set(false);
+      this._isImage.set(false);
     };
 
     canvas.on('selection:created', onSelect);
@@ -1837,6 +1894,7 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     if (!obj) {
       this.props.set(null);
       this._isText.set(false);
+      this._isImage.set(false);
       return;
     }
 
@@ -1844,6 +1902,11 @@ export class PropertyPanelComponent implements OnInit, OnDestroy {
     this._isText.set(isText);
     this._isRect.set(obj instanceof fabric.Rect);
     this._isLocked.set(!!(obj as any)._locked);
+    // PX-138 — gate the Remove Background quick action. Photo-frames are
+    // FabricImages too but have their own crop/replace UI, so exclude them.
+    this._isImage.set(
+      obj instanceof fabric.FabricImage && (obj as any).customType !== 'photo-frame',
+    );
 
     // Read shadow
     if (obj.shadow && obj.shadow instanceof fabric.Shadow) {

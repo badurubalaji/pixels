@@ -410,7 +410,7 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
           [class.collapsed]="panelsHidden() || (!hasSelection() && !layersPinned())"
         >
           @if (hasSelection() && !panelsHidden()) {
-            <app-property-panel />
+            <app-property-panel (removeBackgroundRequested)="removeBackground()" />
             <app-image-filters-panel />
           }
           @if ((hasSelection() || layersPinned()) && !panelsHidden()) {

@@ -519,8 +519,12 @@ export type SidebarTab = 'templates' | 'elements' | 'text' | 'uploads' | 'backgr
                 <button mat-stroked-button (click)="triggerBgImageUpload()">
                   <mat-icon>image</mat-icon> Upload Image
                 </button>
-                <button mat-stroked-button (click)="removeBgImage()">
-                  <mat-icon>clear</mat-icon> Remove
+                <button
+                  mat-stroked-button
+                  matTooltip="Remove the page-level background image"
+                  (click)="removeBgImage()"
+                >
+                  <mat-icon>clear</mat-icon> Clear page background
                 </button>
               </div>
               <input type="file" #bgImageInput accept="image/*" (change)="onBgImageSelected($event)" style="display: none" />
