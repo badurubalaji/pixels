@@ -80,6 +80,7 @@ vi.mock('fabric', () => {
   return { Canvas, FabricObject, Rect, Circle, Triangle, Polygon, Line, FabricText, IText, FabricImage, Group, ActiveSelection, Path, Pattern, PencilBrush, Point, util, loadSVGFromString: vi.fn(async () => ({ objects: [new FabricObject()], options: {} })) };
 });
 
+import * as fabric from 'fabric';
 import { Editor, TOAST_SHOWN_PROJECT_IDS } from './editor';
 import { BrandKitApplyService } from '../../core/services/brand-kit-apply.service';
 import { Component } from '@angular/core';
@@ -679,6 +680,63 @@ describe('Editor', () => {
     // Default getCanvas returns a stub where getActiveObject returns null.
     await ed.removeBackground();
     expect(ed.isProcessing()).toBe(false);
+  });
+
+  it('PX-142: removeBackground rasterizes at natural resolution (multiplier = 1/scaleX)', async () => {
+    // Image fitted to canvas at scaleX=0.25 (typical for a high-res photo
+    // dropped into a smaller design). Naive toDataURL would give the
+    // canvas-fitted display res; we want the underlying bitmap's natural
+    // res so resizing afterward doesn't pixelate. Multiplier should be 4.
+    const img: any = new (fabric as any).FabricImage();
+    img.scaleX = 0.25;
+    img.scaleY = 0.25;
+    const toDataURLSpy = vi
+      .fn()
+      .mockReturnValue('data:image/png;base64,NATURAL_RES');
+    img.toDataURL = toDataURLSpy;
+
+    const remove = vi.fn();
+    const renderAll = vi.fn();
+    canvasStub.getCanvas.mockReturnValue({
+      getActiveObject: () => img,
+      remove,
+      renderAll,
+    });
+
+    const fixture = TestBed.createComponent(Editor);
+    const ed = fixture.componentInstance;
+    await ed.removeBackground();
+
+    expect(toDataURLSpy).toHaveBeenCalledWith({
+      format: 'png',
+      multiplier: 4,
+    });
+  });
+
+  it('PX-142: multiplier is capped at 8 to avoid OOM on outlier inputs', async () => {
+    // scaleX=0.05 implies multiplier=20 — too high. Cap at 8.
+    const img: any = new (fabric as any).FabricImage();
+    img.scaleX = 0.05;
+    img.scaleY = 0.05;
+    const toDataURLSpy = vi
+      .fn()
+      .mockReturnValue('data:image/png;base64,CAPPED');
+    img.toDataURL = toDataURLSpy;
+
+    canvasStub.getCanvas.mockReturnValue({
+      getActiveObject: () => img,
+      remove: vi.fn(),
+      renderAll: vi.fn(),
+    });
+
+    const fixture = TestBed.createComponent(Editor);
+    const ed = fixture.componentInstance;
+    await ed.removeBackground();
+
+    expect(toDataURLSpy).toHaveBeenCalledWith({
+      format: 'png',
+      multiplier: 8,
+    });
   });
 
   it('onKeyDown saves on Ctrl+S', () => {

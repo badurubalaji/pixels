@@ -2566,7 +2566,21 @@ export class Editor implements AfterViewInit, OnDestroy {
 
     this.isProcessing.set(true);
 
-    const dataUrl = activeObj.toDataURL({ format: 'png' });
+    // PX-142 — capture at the image's *natural* resolution, not the
+    // canvas-fitted display size. fabric's `toDataURL` defaults to
+    // `multiplier: 1` which means "rasterize at displayed size", so an
+    // image that addImage scaled down to fit a smaller canvas would
+    // come back from bg-removal at the down-scaled size and lose pixels
+    // when the user then resized it back up. Compensating with
+    // `multiplier = 1 / scaleX` recaptures at the underlying bitmap's
+    // natural resolution, regardless of any subsequent user resizes.
+    // Capped at 8× as a defensive limit against OOM on outlier inputs.
+    const sx = activeObj.scaleX ?? 1;
+    const naturalMultiplier = sx > 0 ? 1 / sx : 1;
+    const dataUrl = activeObj.toDataURL({
+      format: 'png',
+      multiplier: Math.min(naturalMultiplier, 8),
+    });
     const resultUrl = await this.bgRemovalService.removeFromDataURL(dataUrl);
 
     if (resultUrl) {
