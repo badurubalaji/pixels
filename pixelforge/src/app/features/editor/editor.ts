@@ -1098,16 +1098,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       line-height: 0;
       /* Smooth fade so the canvas-as-target ring doesn't snap on/off. */
       transition: outline-color 0.12s ease, outline-offset 0.12s ease;
-    }
-
-    /* PX-157 — Canva-style "canvas-as-target" ring. Shown when the user
-       clicks the empty canvas (mouse:down with no fabric target). Lives
-       outside box-shadow so it sits clear of the existing drop shadow
-       and doesn't fight Fabric's selection chrome on objects. */
-    .canvas-wrapper.canvas-focused {
-      outline: 2px solid var(--px-violet, #7c3aed);
-      outline-offset: 4px;
-    }
       /* Fabric wraps our <canvas> in a .canvas-container div — make sure
          it's a block and sizes exactly to the backing canvas. */
       ::ng-deep .canvas-container {
@@ -1117,6 +1107,15 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       canvas {
         display: block;
       }
+    }
+
+    /* PX-157 — Canva-style "canvas-as-target" ring. Shown when the user
+       clicks the empty canvas (mouse:down with no fabric target). Lives
+       outside box-shadow so it sits clear of the existing drop shadow
+       and doesn't fight Fabric's selection chrome on objects. */
+    .canvas-wrapper.canvas-focused {
+      outline: 2px solid var(--px-violet, #7c3aed);
+      outline-offset: 4px;
     }
 
     .inline-add-page {
