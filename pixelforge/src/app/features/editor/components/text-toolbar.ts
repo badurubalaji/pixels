@@ -762,8 +762,13 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     canvas.on('selection:created', readState);
     canvas.on('selection:updated', readState);
     canvas.on('selection:cleared', () => {
-      this.selectionType.set('none');
       this.isPhotoFrame.set(false);
+      // PX-157: defer to canvasFocused so the canvas-as-target toolbar
+      // sticks around when the user clicks the empty canvas. Without
+      // this, fabric's selection:cleared (which fires AFTER mouse:down
+      // when an object was deselected) would overwrite the 'canvas'
+      // selection type the editor's mouse:down handler just set.
+      this.selectionType.set(this.canvasFocused() ? 'canvas' : 'none');
     });
     canvas.on('text:changed', readState);
     canvas.on('object:modified', readState);
@@ -777,8 +782,8 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     // really selected.
     const syncOnUp = () => {
       if (!canvas.getActiveObject()) {
-        this.selectionType.set('none');
         this.isPhotoFrame.set(false);
+        this.selectionType.set(this.canvasFocused() ? 'canvas' : 'none');
       }
     };
     canvas.on('mouse:up', syncOnUp);
