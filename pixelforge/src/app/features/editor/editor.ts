@@ -332,7 +332,10 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       }
 
       <!-- Floating text toolbar (shows only when text is selected) -->
-      <app-text-toolbar />
+      <app-text-toolbar
+        [canvasFocused]="canvasFocused()"
+        (resizeCanvas)="openResizeDialog()"
+      />
 
       <div class="editor-body">
         <!-- Left Sidebar (Canva-style) -->

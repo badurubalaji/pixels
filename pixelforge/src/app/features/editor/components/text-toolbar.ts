@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, input, output, effect, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,7 +19,7 @@ import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../cor
 import { ApiService } from '../../../core/services/api.service';
 import * as fabric from 'fabric';
 
-type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
+type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
 @Component({
   selector: 'app-text-toolbar',
@@ -44,6 +44,44 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
         role="toolbar"
         [attr.aria-label]="'Format ' + selectionType()"
       >
+        <!-- CANVAS CONTROLS — shown when the user clicks the empty
+             canvas (PX-157 canvas-as-target). Mirrors Canva's "page
+             selected" toolbar: background color, background mode,
+             page animation, resize. -->
+        @if (selectionType() === 'canvas') {
+          <app-color-picker
+            [value]="canvasBgColor()"
+            (valueChange)="setCanvasBgColor($event)"
+            label=""
+          />
+          <span class="tb-label">Background</span>
+
+          <button
+            mat-icon-button
+            [matTooltip]="canvasService.backgroundMode() === 'transparent' ? 'Transparent canvas' : 'Solid canvas'"
+            (click)="toggleCanvasTransparent()"
+          >
+            <mat-icon>{{ canvasService.backgroundMode() === 'transparent' ? 'grid_on' : 'format_color_fill' }}</mat-icon>
+          </button>
+
+          <button mat-button class="grp-btn" (click)="resizeCanvas.emit()">
+            <mat-icon>aspect_ratio</mat-icon> Resize
+          </button>
+
+          <button mat-button class="grp-btn" [matMenuTriggerFor]="pageAnimateMenu">
+            <mat-icon>animation</mat-icon> Animate
+          </button>
+          <mat-menu #pageAnimateMenu="matMenu" class="grp-menu">
+            <div class="grp-section-title" (click)="$event.stopPropagation()">Apply to all elements</div>
+            @for (preset of animationPresets; track preset.type) {
+              <button mat-menu-item (click)="applyAnimationToAll(preset.type)">
+                <mat-icon>{{ preset.icon }}</mat-icon>
+                {{ preset.label }}
+              </button>
+            }
+          </mat-menu>
+        }
+
         <!-- TEXT CONTROLS -->
         @if (selectionType() === 'text') {
           <mat-form-field appearance="outline" class="font-select">
@@ -545,6 +583,21 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   readonly transformations = TRANSFORMATIONS;
   readonly animationPresets = ANIMATION_PRESETS;
 
+  /**
+   * PX-157 — true when the editor's `canvasFocused` signal is set
+   * (user clicked the empty canvas). Drives the canvas-as-target
+   * branch of the toolbar, which mirrors Canva's "page selected"
+   * controls (background color / mode / animate / resize).
+   */
+  readonly canvasFocused = input<boolean>(false);
+
+  /** PX-157 — fires when the user clicks Resize in the canvas toolbar. */
+  readonly resizeCanvas = output<void>();
+
+  /** Local mirror of the canvas's solid background color so the picker
+   * stays in sync without subscribing to canvas internals. */
+  readonly canvasBgColor = signal('#ffffff');
+
   // Effects
   readonly effectShadow = signal(0);
 
@@ -583,6 +636,35 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     if (type !== 'none') {
       this.animationService.playAll();
     }
+  }
+
+  // ========== PX-157 — CANVAS-AS-TARGET METHODS ==========
+
+  /** Apply a solid color to the page background. Routes through
+   * setBackgroundMode('custom', color) so PX-115 opacity logic still
+   * applies. */
+  setCanvasBgColor(color: string): void {
+    this.canvasBgColor.set(color);
+    this.canvasService.setBackgroundMode('custom', color);
+    this.brandKit.trackRecentColor(color);
+  }
+
+  /** Flip between solid and transparent canvas background. */
+  toggleCanvasTransparent(): void {
+    const next = this.canvasService.backgroundMode() === 'transparent' ? 'white' : 'transparent';
+    this.canvasService.setBackgroundMode(next);
+  }
+
+  /** Apply an animation preset to every object on the page. Mirrors the
+   * Canva "animate page" verb on the canvas-selected toolbar. */
+  applyAnimationToAll(type: AnimationType): void {
+    const canvas = this.canvasService.getCanvas();
+    if (!canvas) return;
+    canvas.getObjects().forEach(o => {
+      if ((o as any)._isGuideline || (o as any)._isGrid) return;
+      this.animationService.setAnimation(o, { type, duration: 600, delay: 0 });
+    });
+    if (type !== 'none') this.animationService.playAll();
   }
 
   @ViewChild('replaceInput') replaceInputRef!: ElementRef<HTMLInputElement>;
@@ -634,6 +716,26 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   ];
 
   private listeners: (() => void)[] = [];
+
+  constructor() {
+    // PX-157 — react to the editor's canvasFocused input. When set, flip
+    // selectionType to 'canvas' so the canvas-as-target controls render
+    // (background color / mode / animate / resize). Skip when an actual
+    // object is selected — object formatting wins over canvas formatting.
+    effect(() => {
+      const focused = this.canvasFocused();
+      const fcanvas = this.canvasService.getCanvas();
+      const active = fcanvas?.getActiveObject();
+      if (focused && !active) {
+        this.selectionType.set('canvas');
+        // Seed the picker from the current canvas background.
+        const bg = (fcanvas?.backgroundColor as string | undefined) ?? '#ffffff';
+        if (typeof bg === 'string') this.canvasBgColor.set(bg);
+      } else if (!focused && this.selectionType() === 'canvas') {
+        this.selectionType.set('none');
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.attachWhenReady();
