@@ -51,7 +51,7 @@ import { AuditDialog } from './components/audit-dialog';
 import { PresentationMode } from './components/presentation-mode';
 import { CommentsOverlay } from './components/comments-overlay';
 import { CommentsService } from '../../core/services/comments.service';
-import { CollabOverlay } from './components/collab-overlay';
+import { CollabOverlay, CollabStatusDot } from './components/collab-overlay';
 import { CollaborationService } from '../../core/services/collaboration.service';
 import { AiDesignService } from '../../core/services/ai-design.service';
 import { QualityScoreService, QualityBreakdown } from '../../core/services/quality-score.service';
@@ -118,6 +118,7 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     PresentationMode,
     CommentsOverlay,
     CollabOverlay,
+    CollabStatusDot,
     OnboardingTour,
     AnimationTimeline,
     ImageFiltersPanelComponent,
@@ -238,9 +239,11 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
         </div>
 
         <div class="topbar-right">
-          <button mat-icon-button matTooltip="Delete Selected (Del)" (click)="deleteSelected()">
-            <mat-icon>delete_outline</mat-icon>
-          </button>
+          <!-- PX-157: live presence dot. Renders nothing when the collab
+               socket is offline; a single pulsing green dot when connected
+               (hover for collaborator count). Replaces the floating "Live"
+               bar that used to sit on top of the canvas. -->
+          <app-collab-status-dot />
 
           <!-- PX-093: hide/unhide the right properties panel -->
           <button
@@ -310,10 +313,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
               <span class="q-num">{{ q.total }}</span>
             </button>
           }
-
-          <button mat-icon-button matTooltip="Audit design" (click)="openAuditDialog()">
-            <mat-icon>verified_user</mat-icon>
-          </button>
 
           <button mat-icon-button matTooltip="Keyboard Shortcuts (?)" (click)="openShortcutsDialog()">
             <mat-icon>keyboard</mat-icon>

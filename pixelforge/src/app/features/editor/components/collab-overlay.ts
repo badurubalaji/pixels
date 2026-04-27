@@ -7,24 +7,7 @@ import { CanvasService } from '../../../core/services/canvas.service';
   selector: 'app-collab-overlay',
   imports: [MatTooltipModule],
   template: `
-    @if (collab.connected()) {
-      <div class="collab-bar">
-        <div class="connection-dot"></div>
-        <span class="bar-label">Live</span>
-
-        @for (user of collab.remoteUsers(); track user.userId) {
-          <div class="user-chip" [matTooltip]="user.userName" [style.background]="user.color">
-            {{ initial(user.userName) }}
-          </div>
-        }
-
-        @if (collab.remoteUsers().length === 0) {
-          <span class="alone">You're the only one here</span>
-        }
-      </div>
-    }
-
-    <!-- Remote cursors layer -->
+    <!-- Remote cursors layer (full-viewport, fixed) -->
     <div class="cursors-layer">
       @for (user of collab.remoteUsers(); track user.userId) {
         @if (user.cursorX !== undefined && user.cursorY !== undefined) {
@@ -43,62 +26,7 @@ import { CanvasService } from '../../../core/services/canvas.service';
     </div>
   `,
   styles: [`
-    :host {
-      display: contents;
-    }
-
-    .collab-bar {
-      position: fixed;
-      top: 64px;
-      right: 320px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      background: rgba(24, 24, 27, 0.85);
-      backdrop-filter: blur(8px);
-      border-radius: 16px;
-      z-index: 100;
-      font-size: 0.78rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .connection-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .bar-label {
-      color: #d4d4d8;
-      font-weight: 600;
-    }
-
-    .alone {
-      color: #71717a;
-      font-size: 0.72rem;
-      margin-left: 8px;
-    }
-
-    .user-chip {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.72rem;
-      font-weight: 700;
-      border: 2px solid #18181b;
-    }
+    :host { display: contents; }
 
     .cursors-layer {
       position: fixed;
@@ -136,8 +64,54 @@ export class CollabOverlay {
   screenY(canvasY: number): number {
     return canvasY;
   }
+}
 
-  initial(name: string): string {
-    return name?.charAt(0).toUpperCase() ?? '?';
+/**
+ * PX-157 — minimal "live" indicator for the editor topbar. Renders a
+ * single pulsing green dot whenever the collab socket is connected; nothing
+ * at all otherwise. Hover for "Live • N collaborator(s)". Designed to be
+ * dropped inline in the topbar so the live state is visible without
+ * eating canvas real estate the way the old floating bar did.
+ */
+@Component({
+  selector: 'app-collab-status-dot',
+  imports: [MatTooltipModule],
+  template: `
+    @if (collab.connected()) {
+      <span
+        class="live-dot"
+        data-testid="live-dot"
+        [matTooltip]="tooltipLabel()"
+        matTooltipPosition="below"
+      ></span>
+    }
+  `,
+  styles: [`
+    :host {
+      display: inline-flex;
+      align-items: center;
+      margin: 0 6px;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+      animation: live-pulse 2s ease-in-out infinite;
+    }
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  `],
+})
+export class CollabStatusDot {
+  readonly collab = inject(CollaborationService);
+
+  tooltipLabel(): string {
+    const n = this.collab.remoteUsers().length;
+    if (n === 0) return 'Live';
+    return `Live · ${n} collaborator${n === 1 ? '' : 's'}`;
   }
 }
