@@ -385,7 +385,11 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
               (ungroupSelected)="canvasService.ungroupSelected()"
             />
             <div class="canvas-stack">
-              <div class="canvas-wrapper" [class.canvas-transparent]="canvasService.backgroundMode() === 'transparent'">
+              <div
+                class="canvas-wrapper"
+                [class.canvas-transparent]="canvasService.backgroundMode() === 'transparent'"
+                [class.canvas-focused]="canvasFocused()"
+              >
                 <canvas
                   #editorCanvas
                   role="img"
@@ -1092,6 +1096,18 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
         0 12px 48px rgba(0,0,0,0.3);
       border-radius: 4px;
       line-height: 0;
+      /* Smooth fade so the canvas-as-target ring doesn't snap on/off. */
+      transition: outline-color 0.12s ease, outline-offset 0.12s ease;
+    }
+
+    /* PX-157 — Canva-style "canvas-as-target" ring. Shown when the user
+       clicks the empty canvas (mouse:down with no fabric target). Lives
+       outside box-shadow so it sits clear of the existing drop shadow
+       and doesn't fight Fabric's selection chrome on objects. */
+    .canvas-wrapper.canvas-focused {
+      outline: 2px solid var(--px-violet, #7c3aed);
+      outline-offset: 4px;
+    }
       /* Fabric wraps our <canvas> in a .canvas-container div — make sure
          it's a block and sizes exactly to the backing canvas. */
       ::ng-deep .canvas-container {
@@ -1735,6 +1751,14 @@ export class Editor implements AfterViewInit, OnDestroy {
 
   /** Active object's lock state — drives the floating toolbar's lock icon. */
   readonly selectionLocked = signal(false);
+
+  /**
+   * PX-157 — `true` when the user has clicked the canvas itself with no
+   * object underneath (the "canvas-as-target" Canva pattern). Drives the
+   * violet outline ring around the canvas-wrapper. Cleared on object
+   * selection or when the user clicks anywhere outside the canvas.
+   */
+  readonly canvasFocused = signal(false);
   readonly layersPinned = signal(false);
   readonly pageLocked = signal(false);
   /**
@@ -2336,11 +2360,27 @@ export class Editor implements AfterViewInit, OnDestroy {
         this.hasSelection.set(!!active);
         this.selectionContext.set(this.classifySelection(active));
         this.selectionLocked.set(!!(active as any)?._locked);
+        // Selecting an object clears the canvas-itself focus state.
+        if (active) this.canvasFocused.set(false);
       };
       fcanvas.on('selection:created', syncSel);
       fcanvas.on('selection:updated', syncSel);
       fcanvas.on('selection:cleared', syncSel);
       fcanvas.on('object:removed', syncSel);
+
+      // PX-157 — Canva-style "canvas as target". A mouse:down with no
+      // object underneath promotes the canvas itself to the active
+      // selection so canvas-level affordances (background, page color,
+      // resize) feel reachable. The violet outline class is the visual
+      // signal; it disappears as soon as an object is selected or the
+      // user clicks anywhere outside the canvas.
+      fcanvas.on('mouse:down', (opt) => {
+        const evt = opt.e as MouseEvent | undefined;
+        if (evt && evt.button !== 0) return; // only left-click
+        if (!opt.target) {
+          this.canvasFocused.set(true);
+        }
+      });
     }
 
     // Auto-save every 30 seconds
@@ -2775,6 +2815,8 @@ export class Editor implements AfterViewInit, OnDestroy {
       canvas.discardActiveObject();
       canvas.requestRenderAll();
     }
+    // PX-157 — leaving the canvas wrapper drops the canvas-focused ring.
+    this.canvasFocused.set(false);
   }
 
   // --- Drag & Drop ---
