@@ -54,7 +54,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             </mat-select>
           </mat-form-field>
 
-          <span class="tb-sep"></span>
 
           <button mat-icon-button class="size-btn" (click)="decreaseFontSize()" matTooltip="Decrease size">
             <mat-icon>remove</mat-icon>
@@ -64,7 +63,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <mat-icon>add</mat-icon>
           </button>
 
-          <span class="tb-sep"></span>
 
           <app-color-picker
             [value]="textColor()"
@@ -73,7 +71,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           />
           <span class="tb-label">Text</span>
 
-          <span class="tb-sep"></span>
 
           <button mat-icon-button [class.active]="isBold()" (click)="toggleBold()" matTooltip="Bold">
             <mat-icon>format_bold</mat-icon>
@@ -88,7 +85,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <mat-icon>strikethrough_s</mat-icon>
           </button>
 
-          <span class="tb-sep"></span>
 
           <button mat-icon-button (click)="cycleAlign()" [matTooltip]="'Align: ' + textAlign()">
             <mat-icon>{{ alignIcon() }}</mat-icon>
@@ -97,7 +93,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <mat-icon>text_fields</mat-icon>
           </button>
 
-          <span class="tb-sep"></span>
 
           <button mat-icon-button [matMenuTriggerFor]="spacingMenu" matTooltip="Letter Spacing">
             <mat-icon>space_bar</mat-icon>
@@ -167,7 +162,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <mat-icon>fit_screen</mat-icon> Fit
           </button>
 
-          <span class="tb-sep"></span>
 
           @if (canvasService.isCropping()) {
             <button mat-flat-button class="tb-btn primary" (click)="canvasService.applyCrop()">
@@ -176,16 +170,14 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <button mat-stroked-button class="tb-btn" (click)="canvasService.cancelCrop()">
               Cancel
             </button>
-            <span class="tb-sep"></span>
-          } @else if (!isPhotoFrame()) {
+            } @else if (!isPhotoFrame()) {
             <!-- PX-155 — old startCrop() only for plain images. Photo-frames
                  use the PX-122 enterCropMode() button below; showing both
                  was the "two Crop buttons" the user reported. -->
             <button mat-stroked-button class="tb-btn" (click)="canvasService.startCrop()">
               <mat-icon>crop</mat-icon> Crop
             </button>
-            <span class="tb-sep"></span>
-          }
+            }
 
           <button mat-icon-button [matMenuTriggerFor]="filtersMenu" matTooltip="Quick Filters">
             <mat-icon>auto_fix_high</mat-icon>
@@ -204,8 +196,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           </button>
 
           @if (isPhotoFrame()) {
-            <span class="tb-sep"></span>
-            <span class="tb-label">Fit</span>
+              <span class="tb-label">Fit</span>
             <mat-button-toggle-group
               class="tb-fit-toggle"
               [value]="frameFit()"
@@ -226,8 +217,7 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             <!-- PX-122 — modal-mode Crop button. Enters cropMode and the
                  right property panel switches to a focused Crop UI with
                  chips + sliders + Smart Crop + Apply/Cancel. -->
-            <span class="tb-sep"></span>
-            <button
+              <button
               mat-flat-button
               class="tb-btn primary"
               data-testid="frame-crop-mode"
@@ -246,7 +236,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
             label="Fill"
           />
 
-          <span class="tb-sep"></span>
 
           <app-color-picker
             [value]="strokeColor()"
@@ -277,7 +266,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
              toolbar with controls users could already reach more
              contextually elsewhere. -->
         @if (selectionType() === 'text' || selectionType() === 'shape') {
-          <span class="tb-sep"></span>
 
           <!-- Effects dropdown -->
           <button mat-button class="grp-btn" [matMenuTriggerFor]="effectsMenu">
@@ -352,14 +340,14 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 
     /* Docked-but-elevated text toolbar. Stays in normal flow (no jumpy
        follow-the-selection positioning) while looking like a card so it
-       reads as a discrete formatting surface, not a header strip. */
+       reads as a discrete formatting surface, not a header strip.
+       Borderless — shadow alone defines the elevation, like Canva. */
     .ctx-toolbar {
       display: flex;
       align-items: center;
-      gap: 2px;
-      padding: 0 12px;
+      gap: 6px;
+      padding: 0 14px;
       background: var(--px-surface, #ffffff);
-      border: 1px solid var(--px-line, #e2e8f0);
       border-radius: 12px;
       height: 48px;
       width: 100%;
@@ -394,14 +382,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           border-color: #3f3f46 !important;
         }
       }
-    }
-
-    .tb-sep {
-      width: 1px;
-      height: 24px;
-      background: var(--px-line, #e2e8f0);
-      margin: 0 4px;
-      flex-shrink: 0;
     }
 
     .tb-label {

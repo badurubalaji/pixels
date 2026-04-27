@@ -1466,7 +1466,10 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       padding: 0 18px;
       background: rgba(255, 255, 255, 0.92);
       backdrop-filter: saturate(1.4) blur(10px);
-      border-bottom: 1px solid var(--px-line, #e2e8f0);
+      /* PX-157: drop the hairline border under the header — the toolbar
+         card immediately below carries its own shadow, and a stacked
+         border + shadow read as a double line. The faint box-shadow
+         alone keeps just enough separation from the editor body. */
       box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
     }
 
