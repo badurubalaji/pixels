@@ -195,6 +195,42 @@ export class CanvasService {
       this._activeLayerId.set(null);
     });
 
+    // PX-157 — hover-border affordance. When the cursor enters an object's
+    // hit-region we draw a violet outline on the upper canvas so the user
+    // can tell the layer is clickable before committing to a click. Cleared
+    // on mouse:out and skipped for the currently-active object (whose
+    // selection chrome is already rendered by Fabric).
+    let hoverObj: fabric.FabricObject | null = null;
+    const drawHoverOutline = () => {
+      if (!this.canvas) return;
+      const ctx = (this.canvas as any).contextTop as CanvasRenderingContext2D | undefined;
+      if (!ctx) return;
+      if (!hoverObj) return;
+      if (hoverObj === this.canvas.getActiveObject()) return;
+      // Skip our own internal helper objects (guides, grid, etc.)
+      if ((hoverObj as any)._isGuideline || (hoverObj as any)._isGrid) return;
+      const b = hoverObj.getBoundingRect();
+      ctx.save();
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.strokeRect(b.left + 0.5, b.top + 0.5, b.width - 1, b.height - 1);
+      ctx.restore();
+    };
+    this.canvas.on('mouse:over', (opt) => {
+      const t = opt.target;
+      if (!t) return;
+      if ((t as any)._isGuideline || (t as any)._isGrid) return;
+      hoverObj = t;
+      this.canvas!.requestRenderAll();
+    });
+    this.canvas.on('mouse:out', () => {
+      if (!hoverObj) return;
+      hoverObj = null;
+      this.canvas!.requestRenderAll();
+    });
+    this.canvas.on('after:render', drawHoverOutline);
+
     // --- Smart snapping guides + grid snap ---
     this.canvas.on('object:moving', (e) => {
       if (this._snapToGrid()) {

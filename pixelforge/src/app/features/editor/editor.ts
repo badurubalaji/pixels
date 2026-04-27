@@ -60,7 +60,6 @@ import { AnimationTimeline } from './components/animation-timeline';
 import { ImageFiltersPanelComponent } from './components/image-filters-panel';
 import { ContextMenuComponent } from './components/context-menu';
 import { TextToolbarComponent } from './components/text-toolbar';
-import { CanvasRulersComponent } from './components/canvas-rulers';
 import { FontService } from '../../core/services/font.service';
 import { TemplateService } from '../../core/services/template.service';
 import { BrandKitService } from '../../core/services/brand-kit.service';
@@ -113,7 +112,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     LayerPanelComponent,
     PropertyPanelComponent,
     ContextToolbarComponent,
-    CanvasRulersComponent,
     CommandPalette,
     PresentationMode,
     CommentsOverlay,
@@ -356,8 +354,7 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
           (change)="onFrameImageFile($event)"
         />
 
-        <!-- Canvas Area with Rulers -->
-        <app-canvas-rulers>
+        <!-- Canvas Area -->
           <div
             class="canvas-area"
             #canvasContainer
@@ -469,7 +466,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
               </div>
             }
           </div>
-        </app-canvas-rulers>
 
         <!-- Right Panel: collapses when nothing is selected (Canva-style),
              or when the user explicitly hid it via the topbar toggle (PX-093). -->
