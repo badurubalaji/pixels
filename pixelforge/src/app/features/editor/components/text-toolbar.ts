@@ -390,9 +390,9 @@ type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 
       height: 48px;
       width: 100%;
       box-sizing: border-box;
-      box-shadow:
-        0 6px 20px -8px rgba(15, 23, 42, 0.20),
-        0 1px 2px rgba(15, 23, 42, 0.04);
+      /* PX-157: soft single-stop shadow. The earlier two-stop shadow had
+         a 1px hairline that read as a stray border under the card. */
+      box-shadow: 0 4px 16px -8px rgba(15, 23, 42, 0.18);
       overflow-x: auto;
       overflow-y: hidden;
       color: var(--px-ink, #0f172a);
@@ -417,7 +417,7 @@ type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 
         .mdc-notched-outline__leading,
         .mdc-notched-outline__trailing,
         .mdc-notched-outline__notch {
-          border-color: #3f3f46 !important;
+          border-color: var(--px-line, #e2e8f0) !important;
         }
       }
     }
@@ -442,13 +442,15 @@ type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 
       }
     }
 
+    /* PX-157: relight to match the white card. Was dark-themed because
+       the toolbar used to float over the dark canvas viewport. */
     .size-input {
       width: 48px;
       text-align: center;
-      background: var(--px-line, #e2e8f0);
-      border: 1px solid #3f3f46;
+      background: var(--px-surface, #ffffff);
+      border: 1px solid var(--px-line, #e2e8f0);
       border-radius: 6px;
-      color: #fafafa;
+      color: var(--px-ink, #0f172a);
       font-size: 0.85rem;
       padding: 4px;
       outline: none;
@@ -460,7 +462,8 @@ type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 
         -webkit-appearance: none;
       }
 
-      &:focus { border-color: var(--mat-sys-primary); }
+      &:hover { border-color: var(--px-line-strong, #cbd5e1); }
+      &:focus { border-color: var(--px-violet, #7c3aed); }
     }
 
     .size-btn { transform: scale(0.85); }
@@ -469,11 +472,12 @@ type SelectionType = 'none' | 'canvas' | 'text' | 'image' | 'shape' | 'group' | 
       padding: 4px !important;
     }
 
+    /* PX-157: relight swatch border to match the white card. */
     .color-swatch {
       width: 24px;
       height: 24px;
       border-radius: 4px;
-      border: 2px solid #3f3f46;
+      border: 2px solid var(--px-line, #e2e8f0);
 
       &.outline {
         background: transparent !important;
