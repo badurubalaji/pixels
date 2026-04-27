@@ -996,14 +996,18 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       min-height: 0;
       min-width: 0;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      /* PX-157: the safe keyword falls back to start-aligned when
+         content overflows. Without it, centered overflow gets clipped
+         at both edges and no amount of scrolling can reach the
+         canvas-actions row at the top (lock / duplicate / download) or
+         the inline Add page button at the bottom. */
+      align-items: safe center;
+      justify-content: safe center;
       position: relative;
       overflow: auto;
-      /* Top padding tightened in PX-157 — the docked text toolbar now
-         provides the visual separation that the old 40px top padding gave
-         the floating toolbar room to land in. */
-      padding: 24px 40px 40px;
+      /* Top padding bumped to clear the canvas-actions row that sits
+         44px above the canvas-wrapper (PX-157). */
+      padding: 56px 40px 40px;
       background-color: #09090b;
 
       &.drag-over {
