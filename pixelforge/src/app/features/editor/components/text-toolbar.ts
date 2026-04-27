@@ -343,22 +343,30 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
     :host {
       display: block;
       flex-shrink: 0;
+      /* Padded slot under the editor header — the dark canvas-area
+         background shows around the card so the toolbar visually
+         "floats" above the workspace, Canva-style. */
+      padding: 10px 16px 6px;
+      background: transparent;
     }
 
-    /* Docked top toolbar — sits in normal flow between the editor header
-       and the editor body. Spans full width, scrolls horizontally only as
-       a last resort on very narrow viewports. Stationary placement keeps
-       formatting controls in one predictable spot regardless of which
-       object the user has selected. */
+    /* Docked-but-elevated text toolbar. Stays in normal flow (no jumpy
+       follow-the-selection positioning) while looking like a card so it
+       reads as a discrete formatting surface, not a header strip. */
     .ctx-toolbar {
       display: flex;
       align-items: center;
       gap: 2px;
       padding: 0 12px;
       background: var(--px-surface, #ffffff);
-      border-bottom: 1px solid var(--px-line, #e2e8f0);
+      border: 1px solid var(--px-line, #e2e8f0);
+      border-radius: 12px;
       height: 48px;
       width: 100%;
+      box-sizing: border-box;
+      box-shadow:
+        0 6px 20px -8px rgba(15, 23, 42, 0.20),
+        0 1px 2px rgba(15, 23, 42, 0.04);
       overflow-x: auto;
       overflow-y: hidden;
       color: var(--px-ink, #0f172a);
