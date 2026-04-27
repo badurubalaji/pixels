@@ -369,24 +369,24 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
             (mousedown)="onCanvasAreaMouseDown($event)"
             [class.drag-over]="isDragOver()"
           >
-            <!-- PX-141 / PX-148 — floating context toolbar; lives at the
-                 top of the canvas-area (sibling of canvas-stack, NOT
-                 inside it) so it stays pinned above the canvas as the
-                 user pans / zooms instead of scrolling away with the
-                 design content. Hides itself when selectionContext() is
-                 'none'. -->
+            <!-- PX-141 / PX-148 / PX-157 — floating object-verb toolbar.
+                 Self-positions above the active selection's bounding rect
+                 (or below it when there's no room above). Owns object
+                 verbs only — formatting controls live in the docked
+                 app-text-toolbar under the editor header. Hides itself
+                 when selectionContext() is 'none'. -->
             <app-context-toolbar
-              class="floating-context-toolbar"
               [context]="selectionContext()"
-              (removeBackground)="removeBackground()"
-              (toggleBold)="canvasService.toggleTextStringProp('fontWeight', 'bold', 'normal')"
-              (toggleItalic)="canvasService.toggleTextStringProp('fontStyle', 'italic', 'normal')"
-              (toggleUnderline)="canvasService.toggleTextBooleanProp('underline')"
-              (groupSelected)="canvasService.groupSelected()"
-              (ungroupSelected)="canvasService.ungroupSelected()"
+              [locked]="selectionLocked()"
+              (toggleLock)="toggleSelectionLock()"
+              (duplicateSelected)="duplicateSelection()"
+              (deleteSelected)="canvasService.removeActiveObject()"
               (bringToFront)="canvasService.bringActiveToFront()"
               (sendToBack)="canvasService.sendActiveToBack()"
-              (deleteSelected)="canvasService.removeActiveObject()"
+              (alignSelected)="canvasService.alignObjects($event)"
+              (removeBackground)="removeBackground()"
+              (groupSelected)="canvasService.groupSelected()"
+              (ungroupSelected)="canvasService.ungroupSelected()"
             />
             <div class="canvas-stack">
               <div class="canvas-wrapper" [class.canvas-transparent]="canvasService.backgroundMode() === 'transparent'">
@@ -999,7 +999,10 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
       justify-content: center;
       position: relative;
       overflow: auto;
-      padding: 40px;
+      /* Top padding tightened in PX-157 — the docked text toolbar now
+         provides the visual separation that the old 40px top padding gave
+         the floating toolbar room to land in. */
+      padding: 24px 40px 40px;
       background-color: #09090b;
 
       &.drag-over {
@@ -1078,21 +1081,6 @@ const BRAND_KIT_APPLIED_FRESHNESS_MS = 30 * 60 * 1000;
     ::ng-deep .canvas-bg-menu .bg-color-label {
       font-size: 0.875rem;
       color: var(--mat-sys-on-surface);
-    }
-
-    /* PX-148 — pin the floating context toolbar to the top-center of
-       the canvas viewport so it doesn't slide off-screen when the user
-       pans or scrolls a large design. canvas-area is position:relative
-       and centers its content via flex; absolute positioning here
-       takes the toolbar out of flow and parks it at the top, while
-       canvas-stack continues to live in the centered flex line. */
-    .floating-context-toolbar {
-      position: absolute;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 5;
-      pointer-events: auto;
     }
 
     .canvas-wrapper {
@@ -1730,36 +1718,40 @@ export class Editor implements AfterViewInit, OnDestroy {
   readonly selectionContext = signal<ContextToolbarContext>('none');
 
   /**
-   * PX-141 — map a fabric active-object instance to one of the four
-   * supported context kinds. ActiveSelection (multi-select) and Group
-   * both render the group context. Photo-frames have their own
-   * crop/replace UI (property panel), so they fall back to `'none'` to
-   * keep the floating toolbar out of their way.
+   * PX-141 / PX-157 — map a fabric active-object instance to one of the
+   * supported context kinds. ActiveSelection (multi-select drag-box / shift-
+   * click) shows the Group verb; a real fabric.Group shows Ungroup. Photo-
+   * frames have their own crop/replace UI (property panel), so they fall
+   * back to `'none'` to keep the floating toolbar out of their way.
    */
   private classifySelection(
     obj: fabric.FabricObject | null | undefined,
   ): ContextToolbarContext {
     if (!obj) return 'none';
     if ((obj as any).customType === 'photo-frame') return 'none';
-    if (obj instanceof fabric.ActiveSelection) return 'group';
+    if (obj instanceof fabric.ActiveSelection) return 'multiple';
     if (obj instanceof fabric.Group) return 'group';
     if (obj instanceof fabric.FabricImage) return 'image';
     if (obj instanceof fabric.IText || obj instanceof fabric.FabricText) return 'text';
     return 'shape';
   }
+
+  /** Active object's lock state — drives the floating toolbar's lock icon. */
+  readonly selectionLocked = signal(false);
   readonly layersPinned = signal(false);
   readonly pageLocked = signal(false);
   /**
-   * User-driven hide for the right properties panel (PX-093).
+   * User-driven hide for the right properties panel (PX-093 / PX-157).
    *
    * @remarks
    * Independent of `hasSelection` — when this is `true` the panel
-   * stays collapsed even if an object is selected. Auto-collapse on
-   * empty selection (the original Canva-style behavior) still works
-   * by default; this signal lets the user reclaim canvas width when
-   * they don't need property edits during a layout pass.
+   * stays collapsed even if an object is selected. Defaults to `true`
+   * after PX-157 so the editor matches the clean Canva layout out of
+   * the box (formatting docked up top, object verbs floating, canvas
+   * centered with no right rail). The topbar toggle still lets power
+   * users open the panel for fine-grained property edits when needed.
    */
-  readonly panelsHidden = signal(false);
+  readonly panelsHidden = signal(true);
 
   // Per-page notes (ephemeral; persisted in the `pages` array below)
   readonly currentPageNotes = computed(() => this.pages()[this.activePage()]?.notes ?? '');
@@ -1852,6 +1844,49 @@ export class Editor implements AfterViewInit, OnDestroy {
   /** Alias for {@link duplicatePage} used by the page-list toolbar. */
   duplicateCurrentPage(): void {
     this.duplicatePage();
+  }
+
+  /**
+   * PX-157 — Toggle the lock state of the currently-selected object from
+   * the floating context toolbar. Mirrors the per-object lock behavior
+   * that used to live on the floating text toolbar before formatting and
+   * object verbs were split apart.
+   *
+   * @remarks
+   * Sets the same fabric flags as the page-lock path (`lockMovement*`,
+   * `lockScaling*`, etc.) plus `_locked` so the page-lock unlock logic
+   * keeps individually-locked objects locked.
+   */
+  toggleSelectionLock(): void {
+    const canvas = this.canvasService.getCanvas();
+    const obj = canvas?.getActiveObject();
+    if (!obj) return;
+    const locked = !(obj as any)._locked;
+    (obj as any)._locked = locked;
+    obj.set({
+      selectable: true,
+      evented: true,
+      lockMovementX: locked,
+      lockMovementY: locked,
+      lockRotation: locked,
+      lockScalingX: locked,
+      lockScalingY: locked,
+      lockSkewingX: locked,
+      lockSkewingY: locked,
+      hasControls: !locked,
+      hasBorders: true,
+      hoverCursor: locked ? 'not-allowed' : 'move',
+    });
+    this.selectionLocked.set(locked);
+    canvas!.requestRenderAll();
+    this.canvasService.commitChange(obj);
+  }
+
+  /** PX-157 — duplicate the active selection via the existing clipboard
+   * service so the floating context toolbar's Duplicate verb mirrors the
+   * Ctrl+D shortcut exactly. */
+  duplicateSelection(): void {
+    this.clipboardService.duplicate();
   }
 
   /** Navigate back to the dashboard with the "new design" action. */
@@ -2303,6 +2338,7 @@ export class Editor implements AfterViewInit, OnDestroy {
         const active = fcanvas.getActiveObject();
         this.hasSelection.set(!!active);
         this.selectionContext.set(this.classifySelection(active));
+        this.selectionLocked.set(!!(active as any)?._locked);
       };
       fcanvas.on('selection:created', syncSel);
       fcanvas.on('selection:updated', syncSel);

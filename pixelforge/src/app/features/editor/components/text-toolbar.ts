@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,7 +13,6 @@ import { MatSliderModule } from '@angular/material/slider';
 import { ColorPickerComponent } from '../../../shared/components/color-picker.component';
 import { CanvasService } from '../../../core/services/canvas.service';
 import { FontService } from '../../../core/services/font.service';
-import { ClipboardService } from '../../../core/services/clipboard.service';
 import { BrandKitService } from '../../../core/services/brand-kit.service';
 import { MagicWriteService, TRANSFORMATIONS, Transformation } from '../../../core/services/magic-write.service';
 import { AnimationService, ANIMATION_PRESETS, AnimationType } from '../../../core/services/animation.service';
@@ -42,19 +41,9 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
     @if (selectionType() !== 'none') {
       <div
         class="ctx-toolbar"
-        [class.dragging]="isDragging()"
-        [style.top.px]="toolbarTop()"
-        [style.left.px]="toolbarLeft()"
+        role="toolbar"
+        [attr.aria-label]="'Format ' + selectionType()"
       >
-        <!-- Drag handle: lets the user move the toolbar out of the way -->
-        <span
-          class="tb-drag-handle"
-          matTooltip="Drag to move toolbar"
-          (mousedown)="onDragHandleDown($event)"
-        >
-          <mat-icon>drag_indicator</mat-icon>
-        </span>
-
         <!-- TEXT CONTROLS -->
         @if (selectionType() === 'text') {
           <mat-form-field appearance="outline" class="font-select">
@@ -347,114 +336,36 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
           </mat-menu>
         }
 
-        <span class="tb-sep"></span>
-
-        <!-- PX-104: align/group/lock absorbed from the old quick-action-bar
-             so the user only ever sees ONE floating toolbar per selection. -->
-        <button mat-icon-button [matMenuTriggerFor]="alignMenu" matTooltip="Align to page">
-          <mat-icon>format_align_center</mat-icon>
-        </button>
-        <mat-menu #alignMenu="matMenu">
-          <button mat-menu-item (click)="alignTo('left')"><mat-icon>align_horizontal_left</mat-icon>Left</button>
-          <button mat-menu-item (click)="alignTo('center-h')"><mat-icon>align_horizontal_center</mat-icon>Center horizontally</button>
-          <button mat-menu-item (click)="alignTo('right')"><mat-icon>align_horizontal_right</mat-icon>Right</button>
-          <button mat-menu-item (click)="alignTo('top')"><mat-icon>align_vertical_top</mat-icon>Top</button>
-          <button mat-menu-item (click)="alignTo('center-v')"><mat-icon>align_vertical_center</mat-icon>Center vertically</button>
-          <button mat-menu-item (click)="alignTo('bottom')"><mat-icon>align_vertical_bottom</mat-icon>Bottom</button>
-        </mat-menu>
-
-        @if (isMultiSelection()) {
-          <button mat-icon-button matTooltip="Group (Ctrl+G)" (click)="groupSelection()">
-            <mat-icon>group_work</mat-icon>
-          </button>
-        } @else if (isGroup()) {
-          <button mat-icon-button matTooltip="Ungroup (Ctrl+Shift+G)" (click)="ungroupSelection()">
-            <mat-icon>workspaces</mat-icon>
-          </button>
-        }
-
-        <button
-          mat-icon-button
-          [matTooltip]="isLocked() ? 'Unlock' : 'Lock (Alt+Shift+L)'"
-          (click)="toggleLock()"
-        >
-          <mat-icon>{{ isLocked() ? 'lock' : 'lock_open' }}</mat-icon>
-        </button>
-
-        <button mat-icon-button (click)="duplicate()" matTooltip="Duplicate (Ctrl+D)">
-          <mat-icon>content_copy</mat-icon>
-        </button>
-
-        <button mat-icon-button class="tb-delete" (click)="deleteSelected()" matTooltip="Delete">
-          <mat-icon>delete</mat-icon>
-        </button>
       </div>
     }
   `,
   styles: [`
     :host {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      z-index: 50;
+      display: block;
+      flex-shrink: 0;
     }
 
+    /* Docked top toolbar — sits in normal flow between the editor header
+       and the editor body. Spans full width, scrolls horizontally only as
+       a last resort on very narrow viewports. Stationary placement keeps
+       formatting controls in one predictable spot regardless of which
+       object the user has selected. */
     .ctx-toolbar {
-      position: fixed;
       display: flex;
       align-items: center;
       gap: 2px;
-      padding: 6px 10px;
+      padding: 0 12px;
       background: var(--px-surface, #ffffff);
-      border: 1px solid var(--px-line, #e2e8f0);
-      border-radius: 10px;
+      border-bottom: 1px solid var(--px-line, #e2e8f0);
       height: 48px;
-      max-width: 92vw;
+      width: 100%;
       overflow-x: auto;
-      flex-shrink: 0;
-      box-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.22),
-        0 0 0 1px rgba(15, 23, 42, 0.04);
-      pointer-events: auto;
-      transform: translateX(-50%);
-      transition: top 0.1s ease-out, left 0.1s ease-out;
+      overflow-y: hidden;
       color: var(--px-ink, #0f172a);
+      scrollbar-width: thin;
     }
-
-    /* Disable smooth transition while user is actively dragging */
-    .ctx-toolbar.dragging {
-      transition: none;
-      cursor: grabbing;
-      user-select: none;
-    }
-
-    .tb-drag-handle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 20px;
-      height: 32px;
-      margin-right: 4px;
-      color: #71717a;
-      cursor: grab;
-      border-radius: 4px;
-      flex-shrink: 0;
-
-      &:hover {
-        color: #a1a1aa;
-        background: var(--px-line, #e2e8f0);
-      }
-
-      &:active {
-        cursor: grabbing;
-      }
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
+    .ctx-toolbar::-webkit-scrollbar { height: 4px; }
+    .ctx-toolbar::-webkit-scrollbar-thumb { background: var(--px-line, #e2e8f0); border-radius: 2px; }
 
     .font-select {
       width: 160px;
@@ -639,7 +550,6 @@ type SelectionType = 'none' | 'text' | 'image' | 'shape' | 'group' | 'multiple';
 export class TextToolbarComponent implements OnInit, OnDestroy {
   readonly canvasService = inject(CanvasService);
   private readonly fontService = inject(FontService);
-  private readonly clipboardService = inject(ClipboardService);
   private readonly brandKit = inject(BrandKitService);
   private readonly magicWrite = inject(MagicWriteService);
   private readonly animationService = inject(AnimationService);
@@ -701,22 +611,6 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
   /** Current fit mode of the active photo-frame (`'cover'` default). */
   readonly frameFit = signal<'cover' | 'contain' | 'fill'>('cover');
 
-  // Floating toolbar position (viewport pixels)
-  readonly toolbarTop = signal(0);
-  readonly toolbarLeft = signal(0);
-
-  // Manual drag state: offsets applied on top of the auto-positioned values so
-  // the toolbar stays glued to the selection but in the user's chosen offset.
-  readonly isDragging = signal(false);
-  private userOffsetX = 0;
-  private userOffsetY = 0;
-  private dragStartX = 0;
-  private dragStartY = 0;
-  private dragStartOffsetX = 0;
-  private dragStartOffsetY = 0;
-  private dragMoveListener: ((e: MouseEvent) => void) | null = null;
-  private dragUpListener: ((e: MouseEvent) => void) | null = null;
-
   // Text state
   readonly fontFamily = signal('Roboto');
   readonly fontSize = signal(48);
@@ -738,11 +632,6 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
 
   // Common state
   readonly opacity = signal(1);
-
-  // PX-104 — absorbed from the old quick-action-bar
-  readonly isMultiSelection = signal(false);
-  readonly isGroup = signal(false);
-  readonly isLocked = signal(false);
 
   readonly fonts = this.fontService.getAllFontFamilies();
   readonly alignIcon = signal('format_align_left');
@@ -775,33 +664,19 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const readState = () => {
-      this.updateSelectionState();
-      this.repositionToolbar();
-    };
-    const onNewSelection = () => {
-      // Reset manual drag offset when the user picks a different object so the
-      // toolbar returns to its default auto-position above the new selection.
-      this.resetDragOffset();
-      readState();
-    };
-    const reposOnly = () => this.repositionToolbar();
+    // The docked top toolbar only needs to react to selection changes — no
+    // bbox tracking now that it lives in normal flow under the editor
+    // header instead of floating above the active object.
+    const readState = () => this.updateSelectionState();
 
-    canvas.on('selection:created', onNewSelection);
-    canvas.on('selection:updated', onNewSelection);
+    canvas.on('selection:created', readState);
+    canvas.on('selection:updated', readState);
     canvas.on('selection:cleared', () => {
-      this.resetDragOffset();
       this.selectionType.set('none');
       this.isPhotoFrame.set(false);
     });
     canvas.on('text:changed', readState);
     canvas.on('object:modified', readState);
-    // Keep toolbar glued to the object as it moves/resizes
-    canvas.on('object:moving', reposOnly);
-    canvas.on('object:scaling', reposOnly);
-    canvas.on('object:rotating', reposOnly);
-    // Follow zoom/pan
-    canvas.on('after:render', reposOnly);
 
     // PX-097: belt-and-suspenders — after every mouse:up, re-sync the
     // toolbar's visibility against the canvas's actual active object.
@@ -819,15 +694,11 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     canvas.on('mouse:up', syncOnUp);
 
     this.listeners = [
-      () => canvas.off('selection:created', onNewSelection),
-      () => canvas.off('selection:updated', onNewSelection),
+      () => canvas.off('selection:created', readState),
+      () => canvas.off('selection:updated', readState),
       () => canvas.off('selection:cleared'),
       () => canvas.off('text:changed', readState),
       () => canvas.off('object:modified', readState),
-      () => canvas.off('object:moving', reposOnly),
-      () => canvas.off('object:scaling', reposOnly),
-      () => canvas.off('object:rotating', reposOnly),
-      () => canvas.off('after:render', reposOnly),
       () => canvas.off('mouse:up', syncOnUp),
     ];
 
@@ -837,86 +708,6 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.listeners.forEach(fn => fn());
-  }
-
-  /**
-   * Position the floating toolbar above the selected object's bounding rect,
-   * clamped to the viewport. Falls back to below the object if no room above.
-   */
-  private repositionToolbar(): void {
-    const canvas = this.canvasService.getCanvas();
-    const obj = canvas?.getActiveObject();
-    if (!canvas || !obj) return;
-
-    const upperEl = canvas.upperCanvasEl as HTMLCanvasElement | undefined;
-    if (!upperEl) return;
-
-    // Bounding rect in canvas coordinates (already accounts for zoom/pan because
-    // getBoundingRect() respects the viewport transform)
-    const b = obj.getBoundingRect();
-    const canvasRect = upperEl.getBoundingClientRect();
-
-    // Convert to screen coordinates
-    const screenLeft = canvasRect.left + b.left;
-    const screenTop = canvasRect.top + b.top;
-    const screenBottom = screenTop + b.height;
-    const screenCenterX = screenLeft + b.width / 2;
-
-    const toolbarHeight = 56;
-    const gap = 16;
-
-    let top: number;
-    if (screenTop - toolbarHeight - gap > 8) {
-      // room above — place there
-      top = screenTop - toolbarHeight - gap;
-    } else {
-      // otherwise below
-      top = screenBottom + gap;
-    }
-
-    // Clamp horizontally within viewport
-    const vw = window.innerWidth;
-    const halfToolbar = Math.min(400, vw / 2 - 16);
-    let left = screenCenterX;
-    if (left - halfToolbar < 8) left = halfToolbar + 8;
-    if (left + halfToolbar > vw - 8) left = vw - halfToolbar - 8;
-
-    this.toolbarTop.set(top + this.userOffsetY);
-    this.toolbarLeft.set(left + this.userOffsetX);
-  }
-
-  /** Start dragging the toolbar from its grip handle. */
-  onDragHandleDown(event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.isDragging.set(true);
-    this.dragStartX = event.clientX;
-    this.dragStartY = event.clientY;
-    this.dragStartOffsetX = this.userOffsetX;
-    this.dragStartOffsetY = this.userOffsetY;
-
-    this.dragMoveListener = (e: MouseEvent) => {
-      this.userOffsetX = this.dragStartOffsetX + (e.clientX - this.dragStartX);
-      this.userOffsetY = this.dragStartOffsetY + (e.clientY - this.dragStartY);
-      this.repositionToolbar();
-    };
-    this.dragUpListener = () => {
-      this.isDragging.set(false);
-      if (this.dragMoveListener) window.removeEventListener('mousemove', this.dragMoveListener);
-      if (this.dragUpListener) window.removeEventListener('mouseup', this.dragUpListener);
-      this.dragMoveListener = null;
-      this.dragUpListener = null;
-    };
-
-    window.addEventListener('mousemove', this.dragMoveListener);
-    window.addEventListener('mouseup', this.dragUpListener);
-  }
-
-  /** Reset any user drag offset (called when selection changes). */
-  private resetDragOffset(): void {
-    this.userOffsetX = 0;
-    this.userOffsetY = 0;
   }
 
   private updateSelectionState(): void {
@@ -929,11 +720,6 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     if (customType === 'photo-frame' && (obj as any).fitMode) {
       this.frameFit.set((obj as any).fitMode);
     }
-
-    // PX-104 — drive the new align/group/lock affordances
-    this.isMultiSelection.set(obj instanceof fabric.ActiveSelection);
-    this.isGroup.set(obj instanceof fabric.Group && !(obj instanceof fabric.ActiveSelection));
-    this.isLocked.set(!!(obj as any)?._locked);
 
     if (!obj) {
       this.selectionType.set('none');
@@ -1275,53 +1061,6 @@ export class TextToolbarComponent implements OnInit, OnDestroy {
     const obj = canvas?.getActiveObject();
     if (!obj) return;
     canvas!.sendObjectBackwards(obj);
-    this.canvasService.commitChange(obj);
-  }
-
-  duplicate(): void {
-    this.clipboardService.duplicate();
-  }
-
-  deleteSelected(): void {
-    this.canvasService.removeActiveObject();
-  }
-
-  // ========== PX-104: align / group / lock ==========
-
-  alignTo(direction: 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom'): void {
-    this.canvasService.alignObjects(direction);
-  }
-
-  groupSelection(): void {
-    this.canvasService.groupSelected();
-  }
-
-  ungroupSelection(): void {
-    this.canvasService.ungroupSelected();
-  }
-
-  toggleLock(): void {
-    const canvas = this.canvasService.getCanvas();
-    const obj = canvas?.getActiveObject();
-    if (!obj) return;
-    const locked = !(obj as any)._locked;
-    (obj as any)._locked = locked;
-    obj.set({
-      selectable: true,
-      evented: true,
-      lockMovementX: locked,
-      lockMovementY: locked,
-      lockRotation: locked,
-      lockScalingX: locked,
-      lockScalingY: locked,
-      lockSkewingX: locked,
-      lockSkewingY: locked,
-      hasControls: !locked,
-      hasBorders: true,
-      hoverCursor: locked ? 'not-allowed' : 'move',
-    });
-    this.isLocked.set(locked);
-    canvas!.requestRenderAll();
     this.canvasService.commitChange(obj);
   }
 
