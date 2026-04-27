@@ -195,41 +195,51 @@ export class CanvasService {
       this._activeLayerId.set(null);
     });
 
-    // PX-157 — hover-border affordance. When the cursor enters an object's
-    // hit-region we draw a violet outline on the upper canvas so the user
-    // can tell the layer is clickable before committing to a click. Cleared
-    // on mouse:out and skipped for the currently-active object (whose
-    // selection chrome is already rendered by Fabric).
+    // PX-157 — hover-border affordance. Draw a violet outline on the
+    // upper canvas when the cursor enters a layer's hit-region so the
+    // user can tell it's clickable before committing to a click. We
+    // draw directly on contextTop in the mouse:over handler (no
+    // requestRenderAll, no after:render hook) — that way Fabric's own
+    // selection / drag-rectangle / mouse-down processing is never
+    // perturbed by our painting. The outline gets cleared naturally on
+    // the next Fabric render (selection change, object modification,
+    // etc.) which is exactly when we'd want it gone.
     let hoverObj: fabric.FabricObject | null = null;
     const drawHoverOutline = () => {
-      if (!this.canvas) return;
+      if (!this.canvas || !hoverObj) return;
+      if (hoverObj === this.canvas.getActiveObject()) return;
       const ctx = (this.canvas as any).contextTop as CanvasRenderingContext2D | undefined;
       if (!ctx) return;
-      if (!hoverObj) return;
-      if (hoverObj === this.canvas.getActiveObject()) return;
-      // Skip our own internal helper objects (guides, grid, etc.)
-      if ((hoverObj as any)._isGuideline || (hoverObj as any)._isGrid) return;
       const b = hoverObj.getBoundingRect();
       ctx.save();
       ctx.strokeStyle = '#7c3aed';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([]);
-      ctx.strokeRect(b.left + 0.5, b.top + 0.5, b.width - 1, b.height - 1);
+      ctx.strokeRect(b.left + 0.5, b.top + 0.5, Math.max(0, b.width - 1), Math.max(0, b.height - 1));
       ctx.restore();
+    };
+    const clearHoverOutline = () => {
+      if (!this.canvas) return;
+      const ctx = (this.canvas as any).contextTop as CanvasRenderingContext2D | undefined;
+      const upperEl = this.canvas.upperCanvasEl as HTMLCanvasElement | undefined;
+      if (!ctx || !upperEl) return;
+      ctx.clearRect(0, 0, upperEl.width, upperEl.height);
+      // If there's an active selection, ask Fabric to repaint its chrome
+      // (we just wiped contextTop where it was drawn).
+      if (this.canvas.getActiveObject()) this.canvas.requestRenderAll();
     };
     this.canvas.on('mouse:over', (opt) => {
       const t = opt.target;
       if (!t) return;
       if ((t as any)._isGuideline || (t as any)._isGrid) return;
       hoverObj = t;
-      this.canvas!.requestRenderAll();
+      drawHoverOutline();
     });
     this.canvas.on('mouse:out', () => {
       if (!hoverObj) return;
       hoverObj = null;
-      this.canvas!.requestRenderAll();
+      clearHoverOutline();
     });
-    this.canvas.on('after:render', drawHoverOutline);
 
     // --- Smart snapping guides + grid snap ---
     this.canvas.on('object:moving', (e) => {
